@@ -1,0 +1,72 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # 수동 실행 버튼
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create config.ts from secret
+        working-directory: mobile/src
+        run: echo "${{ secrets.CONFIG_TS }}" > config.ts
+
+      - name: Grant execute permission for gradlew
+        working-directory: mobile/android
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Get version name
+        id: version
+        run: |
+          VERSION=$(node -e "const p=require('./mobile/package.json'); console.log(p.version)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION-$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Upload APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "다시봄 ${{ steps.version.outputs.tag }}"
+          body: |
+            ## 다시봄 자동 빌드
+
+            **빌드 시각**: ${{ github.event.head_commit.timestamp }}
+            **커밋**: ${{ github.sha }}
+            **메시지**: ${{ github.event.head_commit.message }}
+
+            ### 설치 방법
+            1. `dasibom-release.apk` 다운로드
+            2. 안드로이드 설정 → 알 수 없는 앱 설치 허용
+            3. APK 파일 실행하여 설치
+          files: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          token: ${{ secrets.GITHUB_TOKEN }}

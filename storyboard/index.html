@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다시봄 — 앱 스토리보드</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    background: #F0EEF5;
+    color: #2D2D2D;
+    min-height: 100vh;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    color: #E8556D;
+    letter-spacing: 2px;
+  }
+  .header p {
+    font-size: 15px;
+    color: #888;
+    margin-top: 6px;
+  }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 48px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #555;
+  }
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+  }
+
+  /* ── Flow Sections ── */
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #AAA;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding-left: 4px;
+  }
+
+  /* ── Flow Row ── */
+  .flow-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ── Arrow ── */
+  .arrow {
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    margin-top: 60px;
+    color: #AAAAAA;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .arrow.down {
+    transform: rotate(90deg);
+    margin-top: 40px;
+  }
+  .arrow-label {
+    font-size: 10px;
+    color: #AAA;
+    text-align: center;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .arrow-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 52px;
+  }
+
+  /* ── Phone Frame ── */
+  .phone-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .phone-wrapper:hover .phone { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.18); }
+  .phone {
+    width: 160px;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 3px solid #2D2D2D;
+    background: #fff;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  }
+  .phone-notch {
+    background: #2D2D2D;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .phone-notch-inner {
+    width: 50px;
+    height: 10px;
+    background: #111;
+    border-radius: 0 0 8px 8px;
+  }
+  .phone-screen {
+    min-height: 280px;
+    position: relative;
+    overflow: hidden;
+  }
+  .phone-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #555;
+    text-align: center;
+    margin-top: 4px;
+  }
+  .phone-sublabel {
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+  }
+
+  /* ── Screen Themes ── */
+  .screen-auth { background: #FFF8F5; }
+  .screen-questionnaire { background: #FFF8F5; }
+  .screen-suggestions { background: #FFF8F5; }
+  .screen-matches { background: #FFF8F5; }
+  .screen-profile { background: #FFF8F5; }
+  .screen-chat { background: #B2C7D9; }
+  .screen-splash { background: #FFF8F5; }
+
+  /* ── UI Elements ── */
+  .ui-center { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 12px; }
+  .ui-logo-emoji { font-size: 36px; }
+  .ui-logo-text { font-size: 22px; font-weight: 800; color: #E8556D; letter-spacing: 1px; margin-top: 4px; }
+  .ui-tagline { font-size: 9px; color: #888; margin-top: 2px; }
+
+  .ui-tab-row { display: flex; background: #EEE8E5; border-radius: 8px; padding: 3px; margin: 8px 12px; }
+  .ui-tab { flex: 1; padding: 5px; border-radius: 6px; font-size: 10px; text-align: center; color: #999; }
+  .ui-tab.active { background: #fff; color: #E8556D; font-weight: 700; }
+
+  .ui-input { background: #FFFAF8; border: 1.5px solid #E0D5D0; border-radius: 6px; height: 26px; margin: 4px 12px; }
+  .ui-btn { background: #E8556D; border-radius: 8px; padding: 8px 12px; margin: 6px 12px; text-align: center; color: #fff; font-size: 10px; font-weight: 700; }
+  .ui-btn-outline { background: #fff; border: 1.5px solid #E8556D; border-radius: 8px; padding: 8px 12px; margin: 6px 12px; text-align: center; color: #E8556D; font-size: 10px; font-weight: 700; }
+
+  /* Progress bar */
+  .ui-progress-track { height: 4px; background: #EEE; margin: 0 12px 4px; border-radius: 2px; }
+  .ui-progress-fill { height: 4px; background: #E8556D; border-radius: 2px; }
+  .ui-step-count { font-size: 9px; color: #AAA; text-align: center; margin-bottom: 6px; }
+  .ui-step-title { font-size: 13px; font-weight: 700; margin: 0 12px 2px; }
+  .ui-step-sub { font-size: 9px; color: #888; margin: 0 12px 8px; }
+  .ui-option-row { display: flex; gap: 4px; margin: 4px 12px; flex-wrap: wrap; }
+  .ui-option { border: 1.5px solid #E0D5D0; border-radius: 6px; padding: 4px 8px; font-size: 9px; color: #555; }
+  .ui-option.sel { border-color: #E8556D; background: #FCEEF1; color: #E8556D; font-weight: 700; }
+  .ui-chip-row { display: flex; gap: 3px; margin: 4px 12px; flex-wrap: wrap; }
+  .ui-chip { border: 1.5px solid #E0D5D0; border-radius: 12px; padding: 2px 7px; font-size: 8px; color: #555; }
+  .ui-chip.sel { border-color: #E8556D; background: #FCEEF1; color: #E8556D; }
+
+  /* Bottom Tab Bar */
+  .ui-tabbar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #fff;
+    border-top: 1px solid #E0D5D0;
+    display: flex;
+    padding: 6px 0 4px;
+  }
+  .ui-tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .ui-tab-icon { font-size: 16px; }
+  .ui-tab-text { font-size: 8px; color: #AAA; }
+  .ui-tab-text.active { color: #E8556D; font-weight: 700; }
+
+  /* Cards */
+  .ui-card {
+    background: #fff;
+    border-radius: 10px;
+    margin: 6px 10px;
+    padding: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .ui-card-header { display: flex; gap: 8px; align-items: center; }
+  .ui-avatar { width: 36px; height: 36px; border-radius: 18px; background: #E8556D; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .ui-avatar-photo { width: 36px; height: 36px; border-radius: 18px; object-fit: cover; flex-shrink: 0; }
+  .ui-name { font-size: 11px; font-weight: 700; }
+  .ui-city { font-size: 9px; color: #888; }
+  .ui-badge { background: #27AE60; border-radius: 10px; padding: 2px 6px; font-size: 9px; color: #fff; font-weight: 700; margin-left: auto; }
+  .ui-badge.amber { background: #F9A825; }
+  .ui-bio { font-size: 9px; color: #666; margin-top: 6px; line-height: 1.4; }
+  .ui-action-row { display: flex; gap: 6px; margin-top: 8px; }
+  .ui-pass-btn { flex: 1; border: 1.5px solid #E0D5D0; border-radius: 6px; padding: 5px; text-align: center; font-size: 9px; color: #888; }
+  .ui-like-btn { flex: 1; background: #E8556D; border-radius: 6px; padding: 5px; text-align: center; font-size: 9px; color: #fff; font-weight: 700; }
+  .ui-chat-arrow { font-size: 9px; color: #E8556D; font-weight: 700; margin-left: auto; }
+
+  /* Chat Screen */
+  .ui-chat-header { background: #FFF8F5; padding: 10px 12px; font-size: 12px; font-weight: 700; color: #E8556D; border-bottom: 1px solid #E0D5D0; }
+  .ui-chat-area { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .ui-bubble-row { display: flex; gap: 5px; align-items: flex-end; }
+  .ui-bubble-row.mine { flex-direction: row-reverse; }
+  .ui-bubble-avatar { width: 24px; height: 24px; border-radius: 12px; background: #ccc; flex-shrink: 0; }
+  .ui-bubble { border-radius: 12px; padding: 6px 9px; max-width: 100px; font-size: 9px; line-height: 1.4; }
+  .ui-bubble.theirs { background: #fff; border-radius: 12px 12px 12px 0; }
+  .ui-bubble.mine { background: #FEE500; border-radius: 12px 12px 0 12px; }
+  .ui-time { font-size: 8px; color: #AAA; align-self: flex-end; }
+  .ui-date-sep { text-align: center; font-size: 8px; color: #777; background: rgba(255,255,255,0.5); border-radius: 10px; padding: 2px 8px; margin: 0 auto; }
+  .ui-input-row { position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #E0D5D0; padding: 6px 8px; display: flex; gap: 6px; align-items: center; }
+  .ui-chat-input { flex: 1; background: #F5F5F5; border-radius: 16px; height: 26px; }
+  .ui-send-btn { background: #E8556D; border-radius: 13px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+  /* Profile Screen */
+  .ui-profile-photo-area { display: flex; flex-direction: column; align-items: center; padding: 12px 0 6px; }
+  .ui-profile-avatar { width: 60px; height: 60px; border-radius: 30px; background: #E8556D; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; font-weight: 700; position: relative; }
+  .ui-camera-badge { position: absolute; bottom: 0; right: 0; width: 18px; height: 18px; background: #555; border-radius: 9px; font-size: 10px; display: flex; align-items: center; justify-content: center; color: #fff; }
+  .ui-profile-name { font-size: 14px; font-weight: 700; margin-top: 6px; }
+  .ui-profile-age { font-size: 10px; color: #888; }
+  .ui-section-title { font-size: 10px; font-weight: 700; color: #AAA; letter-spacing: 0.5px; margin: 8px 12px 4px; text-transform: uppercase; }
+  .ui-row { display: flex; padding: 3px 12px; }
+  .ui-row-label { font-size: 9px; color: #888; width: 60px; flex-shrink: 0; }
+  .ui-row-value { font-size: 9px; color: #333; font-weight: 600; }
+
+  /* Screen Title bar */
+  .ui-header { background: #FFF8F5; padding: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #E0D5D0; }
+  .ui-header-title { font-size: 14px; font-weight: 800; color: #2D2D2D; }
+  .ui-header-sub { font-size: 9px; color: #999; }
+
+  /* ── Section containers ── */
+  .section-block {
+    margin-bottom: 56px;
+  }
+
+  /* ── Connector lines (SVG overlay) ── */
+  .connector { color: #D0CADC; }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    background: #2D2D2D;
+    color: #fff;
+    font-size: 11px;
+    border-radius: 8px;
+    padding: 8px 12px;
+    max-width: 180px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* Main layout */
+  .canvas {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .flow-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .branch-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .vertical-connector {
+    display: flex;
+    justify-content: center;
+    color: #AAAAAA;
+    font-size: 20px;
+    margin: 4px 0;
+  }
+
+  .condition-badge {
+    background: #FFF3CD;
+    border: 1px solid #F9A825;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 10px;
+    color: #7D5A00;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .condition-badge.green {
+    background: #E8F5E9;
+    border-color: #27AE60;
+    color: #155724;
+  }
+  .condition-badge.blue {
+    background: #E3F2FD;
+    border-color: #2196F3;
+    color: #0D47A1;
+  }
+
+  .phase-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 32px;
+  }
+  .phase-divider-line { flex: 1; height: 1px; background: #D5CDE0; }
+  .phase-divider-text { font-size: 11px; font-weight: 700; color: #B0A0C0; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+
+  .sprint-badge {
+    display: inline-block;
+    background: #E8556D;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-bottom: 4px;
+  }
+  .sprint-badge.done { background: #27AE60; }
+  .sprint-badge.planned { background: #999; }
+
+  /* Screen areas with content overflow handled */
+  .phone-screen { position: relative; }
+
+  /* Highlight ring for active tab */
+  .tab-active-ring { box-shadow: inset 0 0 0 2px #E8556D; }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .phone { width: 130px; }
+    .flow-row { gap: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- Header -->
+  <div class="header">
+    <div style="font-size:48px; margin-bottom:8px">🌸</div>
+    <h1>다시봄</h1>
+    <p>앱 화면 흐름 스토리보드 · 2026-03-14 업데이트</p>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#27AE60"></div>
+      <span>구현 완료</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#E8556D"></div>
+      <span>개발 중</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#999"></div>
+      <span>예정 (사진·푸시·인증)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#2196F3"></div>
+      <span>분기 조건</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- PHASE 1: AUTH FLOW                       -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="phase-divider">
+    <div class="phase-divider-line"></div>
+    <div class="phase-divider-text">① 앱 진입 플로우</div>
+    <div class="phase-divider-line"></div>
+  </div>
+
+  <div class="flow-row">
+
+    <!-- SPLASH -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge done">완료</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-splash ui-center" style="min-height:280px;">
+            <div class="ui-logo-emoji">🌸</div>
+            <div class="ui-logo-text">다시봄</div>
+            <div style="margin-top:20px;">
+              <div style="width:30px;height:30px;border:3px solid #E8556D;border-top-color:transparent;border-radius:50%;margin:0 auto;animation:spin 1s linear infinite;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">스플래시</div>
+        <div class="phone-sublabel">로딩 + 세션 확인</div>
+      </div>
+    </div>
+
+    <!-- Arrow + condition -->
+    <div class="arrow-wrapper">
+      <div class="arrow">→</div>
+      <div class="condition-badge blue" style="max-width:90px;">세션 없음</div>
+    </div>
+
+    <!-- AUTH SCREEN -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge done">완료</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-auth" style="min-height:280px;">
+            <div class="ui-center" style="padding:16px 12px 4px;">
+              <div class="ui-logo-emoji" style="font-size:28px;">🌸</div>
+              <div class="ui-logo-text" style="font-size:16px;">다시봄</div>
+              <div class="ui-tagline">진지한 만남, 소중한 인연</div>
+            </div>
+            <div class="ui-tab-row">
+              <div class="ui-tab active">로그인</div>
+              <div class="ui-tab">회원가입</div>
+            </div>
+            <div style="margin:0 12px; font-size:9px; color:#888; margin-bottom:4px;">이메일</div>
+            <div class="ui-input"></div>
+            <div style="margin:4px 12px; font-size:9px; color:#888; margin-bottom:4px;">비밀번호</div>
+            <div class="ui-input"></div>
+            <div class="ui-btn">로그인</div>
+            <div style="text-align:center; font-size:9px; color:#AAA; margin-top:6px;">50대 이상의 진지한 만남</div>
+          </div>
+        </div>
+        <div class="phone-label">인증 화면</div>
+        <div class="phone-sublabel">로그인 / 회원가입</div>
+      </div>
+    </div>
+
+    <!-- Arrow + condition: questionnaire not done -->
+    <div class="arrow-wrapper">
+      <div class="arrow">→</div>
+      <div class="condition-badge blue" style="max-width:90px;">설문 미완료</div>
+    </div>
+
+    <!-- QUESTIONNAIRE -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge done">완료</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-questionnaire" style="min-height:280px;">
+            <div class="ui-progress-track" style="margin-top:8px;">
+              <div class="ui-progress-fill" style="width:25%;"></div>
+            </div>
+            <div class="ui-step-count">2 / 8 — 관계 목표</div>
+            <div class="ui-step-title">관계 목표</div>
+            <div class="ui-step-sub">어떤 관계를 원하시나요?</div>
+            <div style="margin: 4px 12px;">
+              <div style="border:1.5px solid #E8556D; background:#FCEEF1; border-radius:8px; padding:7px; margin-bottom:5px;">
+                <div style="font-size:10px; font-weight:700; color:#E8556D;">결혼</div>
+                <div style="font-size:8px; color:#888;">진지하게 결혼을 생각하고 있어요</div>
+              </div>
+              <div style="border:1.5px solid #E0D5D0; border-radius:8px; padding:7px; margin-bottom:5px;">
+                <div style="font-size:10px; font-weight:700; color:#555;">동반자 관계</div>
+                <div style="font-size:8px; color:#888;">함께하는 삶의 동반자를 찾아요</div>
+              </div>
+              <div style="border:1.5px solid #E0D5D0; border-radius:8px; padding:7px;">
+                <div style="font-size:10px; font-weight:700; color:#555;">우정</div>
+                <div style="font-size:8px; color:#888;">편안한 관계를 원해요</div>
+              </div>
+            </div>
+            <div style="position:absolute; bottom:0; left:0; right:0; background:#FFF8F5; border-top:1px solid #E0D5D0; display:flex; justify-content:flex-end; padding:8px 12px;">
+              <div style="background:#E8556D; border-radius:8px; padding:6px 16px; font-size:10px; color:#fff; font-weight:700;">다음 →</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">가치관 설문</div>
+        <div class="phone-sublabel">8단계 온보딩</div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow-wrapper">
+      <div class="arrow">→</div>
+      <div class="condition-badge green" style="max-width:80px;">설문 완료</div>
+    </div>
+
+    <!-- MAIN APP indicator -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div style="height:20px;"></div>
+      <div style="background:#E8F5E9; border:2px solid #27AE60; border-radius:16px; padding:20px 18px; text-align:center; font-size:13px; font-weight:700; color:#27AE60; margin-top:40px;">
+        🏠 메인 앱<br>
+        <span style="font-size:10px; color:#888; font-weight:400;">탭 네비게이션</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Questionnaire steps detail (새 순서) -->
+  <div style="display:flex; justify-content:center; margin-bottom:8px;">
+    <div style="background:#fff; border-radius:12px; padding:16px 24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); width:100%; max-width:900px;">
+      <div style="font-size:11px; font-weight:700; color:#888; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">8단계 설문 순서 — 감성 → 주변 → 현실</div>
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <div style="background:#FCEEF1; border:1px solid #E8556D; border-radius:8px; padding:5px 10px; font-size:10px; color:#E8556D; font-weight:700;">
+          1. 기본정보<br><span style="font-weight:400;opacity:0.8;">이름·나이·성별</span>
+        </div>
+        <div style="color:#CCC; font-size:14px;">→</div>
+        <div style="background:#FFF3CD; border:1px solid #F9A825; border-radius:8px; padding:5px 10px; font-size:10px; color:#7D5A00; font-weight:700;">
+          2. 성격&감성 ✨<br><span style="font-weight:400;opacity:0.8;">내향/외향·사교</span>
+        </div>
+        <div style="color:#CCC; font-size:14px;">→</div>
+        <div style="background:#FFF3CD; border:1px solid #F9A825; border-radius:8px; padding:5px 10px; font-size:10px; color:#7D5A00; font-weight:700;">
+          3. 일상&생활<br><span style="font-weight:400;opacity:0.8;">운동·흡연·음주</span>
+        </div>
+        <div style="color:#CCC; font-size:14px;">→</div>
+        <div style="background:#FFF3CD; border:1px solid #F9A825; border-radius:8px; padding:5px 10px; font-size:10px; color:#7D5A00; font-weight:700;">
+          4. 취미&관심사<br><span style="font-weight:400;opacity:0.8;">공통 취미 찾기</span>
+        </div>
+        <div style="color:#CCC; font-size:14px;">→</div>
+        <div style="background:#E3F2FD; border:1px solid #2196F3; border-radius:8px; padding:5px 10px; font-size:10px; color:#0D47A1; font-weight:700;">
+          5. 가족&주변<br><span style="font-weight:400;opacity:0.8;">자녀·이사의향</span>
+        </div>
+        <div style="color:#CCC; font-size:14px;">→</div>
+        <div style="background:#E3F2FD; border:1px solid #2196F3; border-radius:8px; padding:5px 10px; font-size:10px; color:#0D47A1; font-weight:700;">
+          6. 관계&가치관<br><span style="font-weight:400;opacity:0.8;">관계목표·가족중요도</span>
+        </div>
+        <div style="color:#CCC; font-size:14px;">→</div>
+        <div style="background:#E3F2FD; border:1px solid #2196F3; border-radius:8px; padding:5px 10px; font-size:10px; color:#0D47A1; font-weight:700;">
+          7. 종교&신념<br><span style="font-weight:400;opacity:0.8;">종교·중요도</span>
+        </div>
+        <div style="color:#CCC; font-size:14px;">→</div>
+        <div style="background:#F5F5F5; border:1px solid #BBB; border-radius:8px; padding:5px 10px; font-size:10px; color:#555; font-weight:700;">
+          8. 현실조건<br><span style="font-weight:400;opacity:0.8;">건강·재정·희망조건</span>
+        </div>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:16px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#7D5A00;"><div style="width:10px;height:10px;background:#F9A825;border-radius:2px;"></div>감성/성격 (먼저 물어봄)</div>
+        <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#0D47A1;"><div style="width:10px;height:10px;background:#2196F3;border-radius:2px;"></div>주변/가족</div>
+        <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#555;"><div style="width:10px;height:10px;background:#AAA;border-radius:2px;"></div>현실 조건 (마지막)</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- PHASE 2: MAIN TABS                       -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="phase-divider">
+    <div class="phase-divider-line"></div>
+    <div class="phase-divider-text">② 메인 탭 (로그인 후)</div>
+    <div class="phase-divider-line"></div>
+  </div>
+
+  <div class="flow-row" style="gap:24px; align-items:flex-start;">
+
+    <!-- TAB 1: SUGGESTIONS -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge done">완료</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-suggestions" style="min-height:320px;">
+            <div class="ui-header">
+              <div>
+                <div class="ui-header-title">🌸 추천</div>
+                <div class="ui-header-sub">오늘의 인연</div>
+              </div>
+            </div>
+
+            <!-- Card 1 -->
+            <div class="ui-card">
+              <div class="ui-card-header">
+                <div class="ui-avatar">김</div>
+                <div>
+                  <div class="ui-name">김영숙, 62세</div>
+                  <div class="ui-city">📍 서울</div>
+                  <div style="font-size:8px; color:#E8556D;">💝 동반자 관계</div>
+                </div>
+                <div class="ui-badge">78%</div>
+              </div>
+              <div class="ui-bio">등산과 요리를 좋아하는 서울 사람입니다. 소박하고 따뜻한 사람...</div>
+              <div style="display:flex; gap:4px; margin-top:5px; flex-wrap:wrap;">
+                <div style="background:#F0F0F0; border-radius:10px; padding:2px 7px; font-size:8px; color:#555;">불교</div>
+                <div style="background:#F0F0F0; border-radius:10px; padding:2px 7px; font-size:8px; color:#555;">등산</div>
+                <div style="background:#F0F0F0; border-radius:10px; padding:2px 7px; font-size:8px; color:#555;">요리</div>
+              </div>
+              <div class="ui-action-row">
+                <div class="ui-pass-btn">👋 패스</div>
+                <div class="ui-like-btn">💌 좋아요</div>
+              </div>
+            </div>
+
+            <!-- Card 2 (partial) -->
+            <div class="ui-card" style="opacity:0.5;">
+              <div class="ui-card-header">
+                <div class="ui-avatar" style="background:#9C27B0;">박</div>
+                <div>
+                  <div class="ui-name">박순자, 58세</div>
+                  <div class="ui-city">📍 부산</div>
+                </div>
+                <div class="ui-badge amber">55%</div>
+              </div>
+            </div>
+
+            <div class="ui-tabbar">
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon">🌸</div>
+                <div class="ui-tab-text active">추천</div>
+              </div>
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon" style="opacity:0.5;">💌</div>
+                <div class="ui-tab-text">매칭</div>
+              </div>
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon" style="opacity:0.5;">👤</div>
+                <div class="ui-tab-text">내 프로필</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">🌸 추천</div>
+        <div class="phone-sublabel">AI 매칭 점수 · 좋아요/패스</div>
+      </div>
+    </div>
+
+    <!-- TAB 2: MATCHES -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge done">완료</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-matches" style="min-height:320px;">
+            <div class="ui-header">
+              <div>
+                <div class="ui-header-title">💌 매칭</div>
+                <div class="ui-header-sub">서로 좋아요한 인연</div>
+              </div>
+            </div>
+
+            <div class="ui-card" style="display:flex; gap:8px; align-items:center; padding:10px;">
+              <div class="ui-avatar">이</div>
+              <div style="flex:1;">
+                <div class="ui-name">이정희, 60세</div>
+                <div class="ui-city">📍 서울</div>
+                <div style="font-size:8px; color:#AAA; margin-top:1px;">3월 10일에 매칭됨</div>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+                <div class="ui-badge">82%</div>
+                <div class="ui-chat-arrow">채팅 →</div>
+              </div>
+            </div>
+
+            <div class="ui-card" style="display:flex; gap:8px; align-items:center; padding:10px;">
+              <div class="ui-avatar" style="background:#4CAF50;">최</div>
+              <div style="flex:1;">
+                <div class="ui-name">최영자, 65세</div>
+                <div class="ui-city">📍 대전</div>
+                <div style="font-size:8px; color:#AAA; margin-top:1px;">3월 8일에 매칭됨</div>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+                <div class="ui-badge amber">61%</div>
+                <div class="ui-chat-arrow">채팅 →</div>
+              </div>
+            </div>
+
+            <div class="ui-tabbar">
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon" style="opacity:0.5;">🌸</div>
+                <div class="ui-tab-text">추천</div>
+              </div>
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon">💌</div>
+                <div class="ui-tab-text active">매칭</div>
+              </div>
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon" style="opacity:0.5;">👤</div>
+                <div class="ui-tab-text">내 프로필</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">💌 매칭</div>
+        <div class="phone-sublabel">상호 매칭 목록 → 채팅</div>
+      </div>
+    </div>
+
+    <!-- Arrow + 본인인증 게이트 -->
+    <div style="display:flex; flex-direction:column; align-items:center; margin-top:100px;">
+      <div class="arrow" style="margin-top:0;">→</div>
+      <div style="font-size:9px; color:#AAA; text-align:center;">"채팅 →" 탭</div>
+      <!-- 분기 조건 -->
+      <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
+        <div style="background:#E3F2FD; border:1px solid #2196F3; border-radius:8px; padding:3px 8px; font-size:9px; color:#0D47A1; text-align:center;">인증 완료 → 채팅방</div>
+        <div style="background:#FFF3CD; border:1px solid #F9A825; border-radius:8px; padding:3px 8px; font-size:9px; color:#7D5A00; text-align:center;">미인증 → 본인인증 화면</div>
+      </div>
+    </div>
+
+    <!-- 본인인증 화면 -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge" style="background:#27AE60;">구현완료</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-auth" style="min-height:320px; padding:12px;">
+            <div style="text-align:center; margin-bottom:10px;">
+              <div style="font-size:28px;">📱</div>
+              <div style="font-size:12px; font-weight:700; margin-top:4px;">본인인증</div>
+              <div style="font-size:8px; color:#888; margin-top:2px; line-height:1.4;">이정희님과 채팅을 시작하려면<br>휴대폰 인증이 필요합니다</div>
+            </div>
+            <div style="background:#FFF9E6; border-radius:8px; padding:8px; margin-bottom:8px; border:1px solid #F9E09A; font-size:8px; color:#7D5A00; line-height:1.5;">
+              인증 정보는 매칭에 활용되지 않으며 신뢰할 수 있는 만남을 보장합니다
+            </div>
+            <div style="background:#fff; border-radius:8px; padding:8px; border:1px solid #E0D5D0; margin-bottom:8px;">
+              <div style="font-size:8px; color:#555; margin-bottom:4px;">휴대폰 번호</div>
+              <div style="display:flex; gap:4px;">
+                <div style="flex:1; background:#FFFAF8; border:1px solid #E0D5D0; border-radius:5px; height:22px; font-size:8px; padding:0 6px; line-height:22px; color:#AAA;">010-0000-0000</div>
+                <div style="background:#E8556D; border-radius:5px; padding:0 8px; font-size:8px; color:#fff; display:flex; align-items:center;">발송</div>
+              </div>
+              <div style="font-size:8px; color:#555; margin:6px 0 4px;">인증번호 (6자리)</div>
+              <div style="background:#FFFAF8; border:1px solid #E0D5D0; border-radius:5px; height:22px; text-align:center; font-size:10px; letter-spacing:6px; line-height:22px; color:#AAA;">000000</div>
+            </div>
+            <div style="background:#E8556D; border-radius:8px; padding:7px; text-align:center; font-size:10px; color:#fff; font-weight:700;">인증 완료</div>
+            <div style="text-align:center; font-size:8px; color:#AAA; margin-top:6px; text-decoration:underline;">나중에 인증하기</div>
+          </div>
+        </div>
+        <div class="phone-label">본인인증</div>
+        <div class="phone-sublabel">채팅 전 1회 필수</div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow-wrapper" style="margin-top:100px;">
+      <div class="arrow">→</div>
+      <div style="font-size:9px; color:#AAA;">인증 완료</div>
+    </div>
+
+    <!-- CHAT ROOM -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge done">완료</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-chat" style="min-height:320px; position:relative;">
+            <div class="ui-chat-header" style="display:flex; align-items:center; gap:8px;">
+              <div style="color:#E8556D; font-size:12px;">← </div>
+              <div style="width:22px; height:22px; border-radius:11px; background:#E8556D; display:flex; align-items:center; justify-content:center; color:#fff; font-size:9px; font-weight:700;">이</div>
+              이정희
+            </div>
+            <div class="ui-chat-area">
+              <div class="ui-date-sep">오늘</div>
+
+              <div class="ui-bubble-row">
+                <div class="ui-bubble-avatar" style="background:#E8556D;"></div>
+                <div class="ui-bubble theirs">안녕하세요! 반갑습니다 😊</div>
+                <div class="ui-time">오후 2:30</div>
+              </div>
+
+              <div class="ui-bubble-row mine">
+                <div>
+                  <div style="font-size:8px; color:#888; text-align:right; margin-bottom:1px;">1</div>
+                  <div class="ui-bubble mine">네 반갑습니다! 서울 어느 지역에 사세요?</div>
+                </div>
+                <div class="ui-time">오후 2:31</div>
+              </div>
+
+              <div class="ui-bubble-row">
+                <div class="ui-bubble-avatar" style="background:#E8556D;"></div>
+                <div class="ui-bubble theirs">강남구에 살아요. 혹시 등산 좋아하세요?</div>
+                <div class="ui-time">오후 2:33</div>
+              </div>
+
+              <div class="ui-bubble-row mine">
+                <div class="ui-bubble mine">네, 북한산 자주 다녀요 ⛰️</div>
+                <div class="ui-time">오후 2:34</div>
+              </div>
+            </div>
+
+            <div class="ui-input-row">
+              <div class="ui-chat-input"></div>
+              <div class="ui-send-btn">➤</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">채팅방</div>
+        <div class="phone-sublabel">Supabase Broadcast · 읽음처리 완료</div>
+      </div>
+    </div>
+
+    <!-- TAB 3: PROFILE -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px; margin-left:24px;">
+      <div class="sprint-badge done">완료</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-profile" style="min-height:320px; overflow:hidden;">
+            <div class="ui-profile-photo-area">
+              <div class="ui-profile-avatar">
+                김
+                <div class="ui-camera-badge">📷</div>
+              </div>
+              <div class="ui-profile-name">김민수</div>
+              <div class="ui-profile-age">66세 · 서울</div>
+              <div style="margin-top:6px; border:1.5px solid #E8556D; border-radius:8px; padding:4px 12px; font-size:9px; color:#E8556D; font-weight:700;">사진 추가</div>
+            </div>
+
+            <div class="ui-section-title">기본 정보</div>
+            <div class="ui-row"><div class="ui-row-label">성별</div><div class="ui-row-value">남성</div></div>
+            <div class="ui-row"><div class="ui-row-label">찾는 상대</div><div class="ui-row-value">여성</div></div>
+            <div class="ui-row"><div class="ui-row-label">목표</div><div class="ui-row-value">동반자 관계</div></div>
+
+            <div class="ui-section-title" style="margin-top:4px;">생활 방식</div>
+            <div class="ui-row"><div class="ui-row-label">성격</div><div class="ui-row-value">외향적</div></div>
+            <div class="ui-row"><div class="ui-row-label">운동</div><div class="ui-row-value">주 3회 이상</div></div>
+
+            <div class="ui-tabbar">
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon" style="opacity:0.5;">🌸</div>
+                <div class="ui-tab-text">추천</div>
+              </div>
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon" style="opacity:0.5;">💌</div>
+                <div class="ui-tab-text">매칭</div>
+              </div>
+              <div class="ui-tab-item">
+                <div class="ui-tab-icon">👤</div>
+                <div class="ui-tab-text active">내 프로필</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">내 프로필</div>
+        <div class="phone-sublabel">사진 · 크레딧 · 가치관 수정</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- PHASE 3: PLANNED FEATURES               -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="phase-divider">
+    <div class="phase-divider-line"></div>
+    <div class="phase-divider-text">③ 계획된 기능 (예정)</div>
+    <div class="phase-divider-line"></div>
+  </div>
+
+  <div class="flow-row" style="gap:24px; align-items:flex-start;">
+
+    <!-- DEALBREAKER (Sprint 2) -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge planned">Sprint 2</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-questionnaire" style="min-height:260px;">
+            <div class="ui-header" style="padding:10px 12px;">
+              <div class="ui-header-title" style="font-size:12px;">딜브레이커 설정</div>
+            </div>
+            <div style="padding:10px 12px; font-size:9px; color:#555; line-height:1.6;">
+              절대 안 되는 조건 3가지를 선택하세요
+            </div>
+            <div style="padding:0 12px; display:flex; flex-direction:column; gap:5px;">
+              <div style="border:1.5px solid #E8556D; background:#FCEEF1; border-radius:8px; padding:6px 10px; font-size:10px; color:#E8556D; font-weight:700;">✓ 흡연</div>
+              <div style="border:1.5px solid #E8556D; background:#FCEEF1; border-radius:8px; padding:6px 10px; font-size:10px; color:#E8556D; font-weight:700;">✓ 종교 차이</div>
+              <div style="border:1.5px solid #E0D5D0; border-radius:8px; padding:6px 10px; font-size:10px; color:#555;">이사 불가</div>
+              <div style="border:1.5px solid #E0D5D0; border-radius:8px; padding:6px 10px; font-size:10px; color:#555;">자녀와 동거</div>
+              <div style="border:1.5px solid #E0D5D0; border-radius:8px; padding:6px 10px; font-size:10px; color:#555;">음주 과다</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">딜브레이커</div>
+        <div class="phone-sublabel">절대 조건 3개 선택</div>
+      </div>
+    </div>
+
+    <!-- QUESTIONNAIRE EXPANSION (Sprint 1) -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge planned">Sprint 1</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-questionnaire" style="min-height:260px;">
+            <div class="ui-header" style="padding:10px 12px;">
+              <div class="ui-header-title" style="font-size:12px;">가치관 질문 고도화</div>
+            </div>
+            <div style="padding:8px 12px; font-size:9px; color:#888;">현재 8개 → 확장 예정</div>
+            <div style="padding:0 12px; display:flex; flex-direction:column; gap:5px;">
+              <div style="background:#F5F5F5; border-radius:8px; padding:8px 10px;">
+                <div style="font-size:9px; font-weight:700; color:#333;">+ 자산/수입 수준</div>
+              </div>
+              <div style="background:#F5F5F5; border-radius:8px; padding:8px 10px;">
+                <div style="font-size:9px; font-weight:700; color:#333;">+ 데이트 스타일</div>
+              </div>
+              <div style="background:#F5F5F5; border-radius:8px; padding:8px 10px;">
+                <div style="font-size:9px; font-weight:700; color:#333;">+ 생활 습관 (기상·취침)</div>
+              </div>
+              <div style="background:#F5F5F5; border-radius:8px; padding:8px 10px;">
+                <div style="font-size:9px; font-weight:700; color:#333;">+ 반려동물 여부</div>
+              </div>
+              <div style="background:#FCEEF1; border-radius:8px; padding:8px 10px; border:1px dashed #E8556D;">
+                <div style="font-size:9px; color:#E8556D;">계속 진화 예정 🔄</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">질문 고도화</div>
+        <div class="phone-sublabel">매칭 정확도 향상</div>
+      </div>
+    </div>
+
+    <!-- CREDITS / BM (Sprint 5) -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge planned">Sprint 5</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-auth" style="min-height:260px;">
+            <div class="ui-header" style="padding:10px 12px;">
+              <div class="ui-header-title" style="font-size:12px;">💎 크레딧 상점</div>
+            </div>
+            <div style="padding:8px 12px;">
+              <div style="font-size:9px; color:#888; margin-bottom:8px;">현재 보유: <b style="color:#E8556D;">5 크레딧</b></div>
+              <div style="border:1.5px solid #E0D5D0; border-radius:8px; padding:8px 10px; margin-bottom:5px;">
+                <div style="font-size:10px; font-weight:700;">매칭 횟수 추가</div>
+                <div style="font-size:8px; color:#888;">1크레딧 = 추천 5명 추가</div>
+                <div style="font-size:9px; color:#E8556D; font-weight:700; margin-top:3px;">₩2,900</div>
+              </div>
+              <div style="border:1.5px solid #E0D5D0; border-radius:8px; padding:8px 10px; margin-bottom:5px;">
+                <div style="font-size:10px; font-weight:700;">슈퍼 좋아요</div>
+                <div style="font-size:8px; color:#888;">상대방에게 강조 표시</div>
+                <div style="font-size:9px; color:#E8556D; font-weight:700; margin-top:3px;">₩1,900</div>
+              </div>
+              <div style="background:#E8556D; border-radius:8px; padding:6px; text-align:center; font-size:10px; color:#fff; font-weight:700; margin-top:6px;">구매하기</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">크레딧 상점</div>
+        <div class="phone-sublabel">수익화 · 기능별 과금</div>
+      </div>
+    </div>
+
+    <!-- PHONE VERIFICATION (Sprint 6) -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <div class="sprint-badge planned">Sprint 6</div>
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"><div class="phone-notch-inner"></div></div>
+          <div class="phone-screen screen-auth" style="min-height:260px;">
+            <div class="ui-center" style="padding:16px 12px;">
+              <div style="font-size:28px; margin-bottom:8px;">📱</div>
+              <div style="font-size:13px; font-weight:700; margin-bottom:4px;">본인 인증</div>
+              <div style="font-size:9px; color:#888; text-align:center; margin-bottom:12px; line-height:1.5;">신뢰할 수 있는 만남을 위해<br>휴대폰 본인 인증이 필요합니다</div>
+              <div class="ui-input" style="width:100%; margin:0 0 6px;"></div>
+              <div style="background:#E8556D; border-radius:8px; padding:6px 20px; font-size:10px; color:#fff; font-weight:700; margin-bottom:8px;">인증번호 받기</div>
+              <div class="ui-input" style="width:100%; margin:0 0 6px;"></div>
+              <div style="border:1.5px solid #E8556D; border-radius:8px; padding:6px 20px; font-size:10px; color:#E8556D; font-weight:700;">확인</div>
+              <div style="font-size:8px; color:#AAA; margin-top:8px; text-align:center;">NICE 본인인증 연동 예정</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">본인 인증</div>
+        <div class="phone-sublabel">NICE 연동 · 신뢰도 향상</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- BACKEND / TECH STACK                     -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="phase-divider">
+    <div class="phase-divider-line"></div>
+    <div class="phase-divider-text">④ 기술 스택 & 백엔드</div>
+    <div class="phase-divider-line"></div>
+  </div>
+
+  <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:40px;">
+    <div style="background:#fff; border-radius:12px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); min-width:160px;">
+      <div style="font-size:11px; font-weight:700; color:#888; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">📱 Mobile</div>
+      <div style="font-size:12px; color:#333; line-height:2;">React Native 0.84<br>TypeScript<br>React Navigation<br>Zustand</div>
+    </div>
+    <div style="background:#fff; border-radius:12px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); min-width:160px;">
+      <div style="font-size:11px; font-weight:700; color:#888; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">⚙️ Backend</div>
+      <div style="font-size:12px; color:#333; line-height:2;">Express.js<br>Railway 배포<br>multer (파일 업로드)<br>JWT 인증</div>
+    </div>
+    <div style="background:#fff; border-radius:12px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); min-width:160px;">
+      <div style="font-size:11px; font-weight:700; color:#888; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">🗄️ Supabase</div>
+      <div style="font-size:12px; color:#333; line-height:2;">PostgreSQL<br>Auth<br>Storage (사진)<br>Broadcast (실시간)</div>
+    </div>
+    <div style="background:#fff; border-radius:12px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); min-width:160px;">
+      <div style="font-size:11px; font-weight:700; color:#888; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">🗺️ 데이터 흐름</div>
+      <div style="font-size:11px; color:#333; line-height:2;">앱 → Express → Supabase<br>사진: multer → Storage<br>채팅: Broadcast Ch.<br>매칭: 호환도 점수 알고리즘</div>
+    </div>
+  </div>
+
+  <!-- Sprint Roadmap -->
+  <div style="background:#fff; border-radius:16px; padding:24px; box-shadow:0 2px 12px rgba(0,0,0,0.07); margin-bottom:40px;">
+    <div style="font-size:14px; font-weight:800; color:#2D2D2D; margin-bottom:16px;">🗓️ 스프린트 로드맵</div>
+    <div style="display:flex; gap:0; overflow-x:auto;">
+      <div style="min-width:130px; padding-right:16px; border-right:2px solid #E0D5D0; margin-right:16px;">
+        <div style="background:#27AE60; color:#fff; border-radius:6px; padding:3px 8px; font-size:10px; font-weight:700; display:inline-block; margin-bottom:6px;">완료</div>
+        <div style="font-size:12px; font-weight:700; color:#333; margin-bottom:4px;">Sprint 3+4</div>
+        <div style="font-size:11px; color:#666; line-height:1.7;">✅ 프로필 사진 업로드<br>✅ 카카오톡 채팅 UI<br>✅ Broadcast 실시간</div>
+      </div>
+      <div style="min-width:130px; padding-right:16px; border-right:2px solid #E0D5D0; margin-right:16px;">
+        <div style="background:#E8556D; color:#fff; border-radius:6px; padding:3px 8px; font-size:10px; font-weight:700; display:inline-block; margin-bottom:6px;">다음</div>
+        <div style="font-size:12px; font-weight:700; color:#333; margin-bottom:4px;">Sprint 2</div>
+        <div style="font-size:11px; color:#666; line-height:1.7;">⬜ 딜브레이커 선택<br>⬜ 매칭 알고리즘 개선<br>⬜ 가중치 시스템</div>
+      </div>
+      <div style="min-width:130px; padding-right:16px; border-right:2px solid #E0D5D0; margin-right:16px;">
+        <div style="background:#999; color:#fff; border-radius:6px; padding:3px 8px; font-size:10px; font-weight:700; display:inline-block; margin-bottom:6px;">예정</div>
+        <div style="font-size:12px; font-weight:700; color:#333; margin-bottom:4px;">Sprint 1</div>
+        <div style="font-size:11px; color:#666; line-height:1.7;">⬜ 질문 고도화<br>⬜ 카테고리 확장<br>⬜ 중요도 가중치</div>
+      </div>
+      <div style="min-width:130px; padding-right:16px; border-right:2px solid #E0D5D0; margin-right:16px;">
+        <div style="background:#999; color:#fff; border-radius:6px; padding:3px 8px; font-size:10px; font-weight:700; display:inline-block; margin-bottom:6px;">예정</div>
+        <div style="font-size:12px; font-weight:700; color:#333; margin-bottom:4px;">Sprint 5</div>
+        <div style="font-size:11px; color:#666; line-height:1.7;">⬜ 크레딧 시스템<br>⬜ 인앱 결제<br>⬜ 수익화 BM</div>
+      </div>
+      <div style="min-width:130px;">
+        <div style="background:#999; color:#fff; border-radius:6px; padding:3px 8px; font-size:10px; font-weight:700; display:inline-block; margin-bottom:6px;">예정</div>
+        <div style="font-size:12px; font-weight:700; color:#333; margin-bottom:4px;">Sprint 6</div>
+        <div style="font-size:11px; color:#666; line-height:1.7;">⬜ NICE 본인인증<br>⬜ 신뢰도 배지<br>⬜ 런칭 준비</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+</body>
+</html>
