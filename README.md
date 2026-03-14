@@ -209,8 +209,19 @@ railway up
 
 ---
 
-## APK 빌드 및 설치
+## APK 다운로드
 
+**[최신 APK 다운로드](https://github.com/ksnap87/dasibom/releases/latest)**
+
+- `main` 브랜치에 push할 때마다 자동 빌드 → GitHub Releases에 업로드
+- `app-debug.apk` 파일 다운로드 후 설치
+
+**설치 방법:**
+1. 위 링크에서 `app-debug.apk` 다운로드
+2. 안드로이드 설정 → "알 수 없는 앱 설치" 허용
+3. APK 파일 실행하여 설치
+
+**로컬 직접 빌드 시:**
 ```bash
 cd dasibom/mobile/android
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
@@ -222,10 +233,23 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 로드맵
 
+**완료:**
 - [x] Supabase Realtime (Broadcast) 채팅 실시간화
 - [x] Railway 백엔드 배포
+- [x] 가치관 설문 (성격·생활습관·종교·가족·취미 등 40+ 항목)
+- [x] 호환성 점수 기반 추천 (하루 5명 제한)
+- [x] 추천 카드 미리 볼 질문 5개 설정
+- [x] 절대 안 되는 조건 3개 설정 (필터링)
+- [x] 지역 필터 설정 (같은 시/도 · 수도권 · 전국)
+- [x] 매칭 후 상대 전체 프로필 확인
+- [x] 본인인증 후 채팅 시작
+- [x] 크레딧 기반 가치관 수정
+- [x] GitHub Actions 자동 APK 빌드 배포
+
+**예정:**
 - [ ] 카카오 / PASS 본인인증 실인증 연동
 - [ ] 사진 업로드 (Supabase Storage)
 - [ ] 푸시 알림 (Firebase FCM)
+- [ ] 크레딧으로 하루 추천 추가 열람
+- [ ] 크레딧으로 필수 조건 3개 초과 설정
 - [ ] Play Store 출시
-- [ ] 프리미엄 구독 (매칭 우선순위, 무제한 관심 표현)
