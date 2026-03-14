@@ -232,20 +232,68 @@ export default function QuestionnaireScreen() {
   // ── 유효성 검사 ───────────────────────────────────────────
 
   const validateStep = (): boolean => {
+    const warn = (msg: string) => { Alert.alert('알림', msg); return false; };
+
     switch (step) {
+      // ── 0: 기본 정보 ──
       case 0:
-        if (!form.name.trim()) { Alert.alert('알림', '이름을 입력해주세요.'); return false; }
-        if (!form.birth_year || isNaN(Number(form.birth_year))) { Alert.alert('알림', '출생연도를 입력해주세요.'); return false; }
-        if (!form.gender) { Alert.alert('알림', '성별을 선택해주세요.'); return false; }
-        if (!form.looking_for) { Alert.alert('알림', '찾는 상대를 선택해주세요.'); return false; }
-        if (!form.city.trim()) { Alert.alert('알림', '거주 도시를 입력해주세요.'); return false; }
+        if (!form.name.trim()) return warn('이름을 입력해주세요.');
+        if (!form.birth_year || isNaN(Number(form.birth_year))) return warn('출생연도를 입력해주세요.');
+        if (!form.gender) return warn('성별을 선택해주세요.');
+        if (!form.looking_for) return warn('찾는 상대를 선택해주세요.');
+        if (!form.city.trim()) return warn('거주 도시를 입력해주세요.');
         return true;
+
+      // ── 1: 성격 & 감성 (5문항 모두 필수) ──
       case 1:
-        if (!form.personality_type) { Alert.alert('알림', '성격 유형을 선택해주세요.'); return false; }
+        if (!form.personality_type) return warn('\'평소 나는...\' 질문에 답해주세요.');
+        if (!form.emotional_expression) return warn('\'힘들거나 속상한 일이 생기면...\' 질문에 답해주세요.');
+        if (!form.communication_style) return warn('\'누군가와 이야기할 때...\' 질문에 답해주세요.');
+        if (!form.conflict_style) return warn('\'의견이 맞지 않을 때...\' 질문에 답해주세요.');
+        if (!form.social_frequency) return warn('\'새로운 사람을 사귀는 건...\' 질문에 답해주세요.');
         return true;
+
+      // ── 2: 일상 & 생활 습관 (6문항 모두 필수) ──
+      case 2:
+        if (!form.chronotype) return warn('\'나는...(생활 패턴)\' 질문에 답해주세요.');
+        if (!form.rest_style) return warn('\'쉬는 날에는...\' 질문에 답해주세요.');
+        if (!form.exercise_frequency) return warn('\'운동은...\' 질문에 답해주세요.');
+        if (!form.meal_style) return warn('\'식사는...\' 질문에 답해주세요.');
+        if (!form.smoking) return warn('\'흡연은...\' 질문에 답해주세요.');
+        if (!form.drinking) return warn('\'술자리는...\' 질문에 답해주세요.');
+        return true;
+
+      // ── 3: 취미 & 관심사 (최소 1개 선택) ──
+      case 3:
+        if (!form.hobbies || form.hobbies.length === 0) return warn('취미를 최소 1개 이상 선택해주세요.');
+        return true;
+
+      // ── 4: 가족 & 주변 상황 (모두 필수) ──
+      case 4:
+        if (form.has_children === null) return warn('\'자녀에 대해서는...\' 질문에 답해주세요.');
+        if (form.has_children === true && form.children_living_together === null) return warn('\'자녀와의 생활은...\' 질문에 답해주세요.');
+        if (form.wants_more_children === null) return warn('\'앞으로 자녀를 더 원하시나요?\' 질문에 답해주세요.');
+        if (form.willing_to_relocate === null) return warn('\'상대방이 다른 지역에 산다면...\' 질문에 답해주세요.');
+        return true;
+
+      // ── 5: 관계 & 가치관 (모두 필수) ──
       case 5:
-        if (!form.relationship_goal) { Alert.alert('알림', '관계 목표를 선택해주세요.'); return false; }
+        if (!form.relationship_goal) return warn('\'이런 만남을 원해요...\' 질문에 답해주세요.');
         return true;
+
+      // ── 6: 종교 & 신념 (모두 필수) ──
+      case 6:
+        if (!form.religion) return warn('\'신앙에 대해서는...\' 질문에 답해주세요.');
+        return true;
+
+      // ── 7: 현실 조건 (모두 필수) ──
+      case 7:
+        if (!form.health_status) return warn('\'건강은...\' 질문에 답해주세요.');
+        if (!form.financial_stability) return warn('\'생활은...\' 질문에 답해주세요.');
+        if (!form.living_situation) return warn('\'지금 사는 곳은...\' 질문에 답해주세요.');
+        if (!form.age_min || !form.age_max) return warn('희망 나이 범위를 입력해주세요.');
+        return true;
+
       default:
         return true;
     }
@@ -257,6 +305,7 @@ export default function QuestionnaireScreen() {
   // ── 제출 ─────────────────────────────────────────────────
 
   const submit = async () => {
+    if (!validateStep()) return;
     setSaving(true);
     try {
       const payload = {

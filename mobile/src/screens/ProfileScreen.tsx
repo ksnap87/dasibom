@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  SafeAreaView, ActivityIndicator, Alert, Image, Switch,
+  SafeAreaView, ActivityIndicator, Alert, Image, Switch, Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getMyProfile, uploadPhoto, deleteMyAccount } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Profile, RootStackParamList } from '../types';
+import {
+  PERSONALITY_QA, DAILY_LIFE_QA, FAMILY_QA, RELATIONSHIP_QA,
+  RELIGION_QA, REALITY_QA, HOBBY_LABELS as HOBBY_LABELS_QA,
+  QAItem, getAnswerText,
+} from '../data/questionLabels';
 
 // ── 설정 상수 ────────────────────────────────────────────
 
@@ -99,6 +104,32 @@ function Row({ label, value }: { label: string; value?: string | null }) {
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={styles.rowValue}>{value}</Text>
+    </View>
+  );
+}
+
+function QARow({ qa, profile }: { qa: QAItem; profile: any }) {
+  const answer = getAnswerText(qa, profile);
+  if (!answer) return null;
+  return (
+    <View style={styles.qaRow}>
+      <Text style={styles.qaQuestion}>Q. {qa.question}</Text>
+      <Text style={styles.qaAnswer}>{answer}</Text>
+    </View>
+  );
+}
+
+function QASection({ title, icon, qaList, profile }: {
+  title: string; icon: string; qaList: QAItem[]; profile: any;
+}) {
+  const hasAny = qaList.some(qa => getAnswerText(qa, profile) !== null);
+  if (!hasAny) return null;
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{icon} {title}</Text>
+      </View>
+      {qaList.map(qa => <QARow key={qa.field} qa={qa} profile={profile} />)}
     </View>
   );
 }
@@ -488,75 +519,40 @@ export default function ProfileScreen() {
             ? `${profile.age_min}–${profile.age_max}세` : null} />
         </Section>
 
-        {/* 성격 & 감성 */}
-        <Section title="성격 & 감성">
-          <Row label="평소 나는" value={l('personality_type', profile.personality_type)} />
-          <Row label="힘들 때" value={l('emotional_expression', profile.emotional_expression)} />
-          <Row label="대화할 때" value={l('communication_style', profile.communication_style)} />
-          <Row label="의견 충돌 시" value={l('conflict_style', profile.conflict_style)} />
-          <Row label="새로운 만남" value={l('social_frequency', profile.social_frequency)} />
-        </Section>
+        {/* 성격 & 감성 - Q&A 형식 */}
+        <QASection title="성격 & 감성" icon="💭" qaList={PERSONALITY_QA} profile={profile} />
 
-        {/* 일상 & 생활 */}
-        <Section title="일상 & 생활 습관">
-          <Row label="생활 패턴" value={l('chronotype', profile.chronotype)} />
-          <Row label="쉬는 날" value={l('rest_style', profile.rest_style)} />
-          <Row label="운동" value={l('exercise_frequency', profile.exercise_frequency)} />
-          <Row label="식사" value={l('meal_style', profile.meal_style)} />
-          <Row label="흡연" value={l('smoking', profile.smoking)} />
-          <Row label="음주" value={l('drinking', profile.drinking)} />
-        </Section>
+        {/* 일상 & 생활 습관 - Q&A 형식 */}
+        <QASection title="일상 & 생활 습관" icon="🌅" qaList={DAILY_LIFE_QA} profile={profile} />
 
         {/* 취미 */}
         {profile.hobbies && profile.hobbies.length > 0 && (
-          <Section title="취미 & 관심사">
-            <View style={styles.chipRow}>
-              {profile.hobbies.map(h => (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>🎨 취미 & 관심사</Text>
+            </View>
+            <Text style={styles.qaQuestion}>Q. 여가 시간에 나는...</Text>
+            <View style={[styles.chipRow, { marginTop: 8 }]}>
+              {profile.hobbies.map((h: string) => (
                 <View key={h} style={styles.chip}>
-                  <Text style={styles.chipText}>{HOBBY_LABELS[h] ?? h}</Text>
+                  <Text style={styles.chipText}>{HOBBY_LABELS_QA[h] ?? h}</Text>
                 </View>
               ))}
             </View>
-          </Section>
+          </View>
         )}
 
-        {/* 가족 & 주변 */}
-        <Section title="가족 & 주변 상황">
-          <Row label="자녀" value={
-            profile.has_children === true ? '있음' :
-            profile.has_children === false ? '없음' : null
-          } />
-          {profile.has_children && (
-            <Row label="자녀와 동거" value={
-              profile.children_living_together === true ? '예' : '아니요'
-            } />
-          )}
-          <Row label="이사 의향" value={
-            profile.willing_to_relocate === true ? '있음' :
-            profile.willing_to_relocate === false ? '없음' : null
-          } />
-          <Row label="가족 중요도" value={profile.family_importance
-            ? `${profile.family_importance} / 5` : null} />
-        </Section>
+        {/* 가족 & 주변 상황 - Q&A 형식 */}
+        <QASection title="가족 & 주변 상황" icon="👨‍👩‍👧" qaList={FAMILY_QA} profile={profile} />
 
-        {/* 관계 & 가치관 */}
-        <Section title="관계 & 가치관">
-          <Row label="관계 목표" value={l('relationship_goal', profile.relationship_goal)} />
-        </Section>
+        {/* 관계 & 가치관 - Q&A 형식 */}
+        <QASection title="관계 & 가치관" icon="💝" qaList={RELATIONSHIP_QA} profile={profile} />
 
-        {/* 종교 */}
-        <Section title="종교 & 신념">
-          <Row label="종교" value={l('religion', profile.religion)} />
-          <Row label="종교 중요도" value={profile.religion_importance
-            ? `${profile.religion_importance} / 5` : null} />
-        </Section>
+        {/* 종교 & 신념 - Q&A 형식 */}
+        <QASection title="종교 & 신념" icon="⛪" qaList={RELIGION_QA} profile={profile} />
 
-        {/* 현실 조건 */}
-        <Section title="현실 조건">
-          <Row label="건강 상태" value={l('health_status', profile.health_status)} />
-          <Row label="재정 상황" value={l('financial_stability', profile.financial_stability)} />
-          <Row label="거주 형태" value={l('living_situation', profile.living_situation)} />
-        </Section>
+        {/* 현실 조건 - Q&A 형식 */}
+        <QASection title="현실 조건" icon="🏠" qaList={REALITY_QA} profile={profile} />
 
         {/* 로그아웃 */}
         <TouchableOpacity style={styles.signOutBtn} onPress={() => {
@@ -566,6 +562,13 @@ export default function ProfileScreen() {
           ]);
         }}>
           <Text style={styles.signOutText}>로그아웃</Text>
+        </TouchableOpacity>
+
+        {/* 개인정보처리방침 */}
+        <TouchableOpacity style={styles.privacyBtn} onPress={() => {
+          Linking.openURL('https://ksnap87.github.io/dasibom/privacy-policy.html');
+        }}>
+          <Text style={styles.privacyText}>개인정보처리방침</Text>
         </TouchableOpacity>
 
         {/* 계정 삭제 */}
@@ -734,11 +737,34 @@ const styles = StyleSheet.create({
   checkmark: { fontSize: 12, color: '#FFF', fontWeight: '700' },
   checkLabel: { fontSize: 15, color: C.text },
 
+  // Q&A 스타일
+  qaRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0ECEA',
+  },
+  qaQuestion: {
+    fontSize: 14,
+    color: C.sub,
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  qaAnswer: {
+    fontSize: 16,
+    color: C.text,
+    fontWeight: '600',
+    lineHeight: 22,
+    paddingLeft: 4,
+  },
+
   signOutBtn: {
     marginTop: 10, borderWidth: 1.5, borderColor: '#DDD', borderRadius: 12,
     paddingVertical: 14, alignItems: 'center',
   },
   signOutText: { fontSize: 16, color: C.sub, fontWeight: '600' },
+
+  privacyBtn: { marginTop: 16, alignItems: 'center', paddingVertical: 10 },
+  privacyText: { fontSize: 14, color: C.sub, textDecorationLine: 'underline' },
 
   deleteBtn: {
     marginTop: 10, marginBottom: 40, paddingVertical: 14, alignItems: 'center',
