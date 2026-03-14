@@ -1,0 +1,31 @@
+# 환경 변수 (절대 GitHub에 올리면 안 됨)
+backend/.env
+mobile/.env
+mobile/src/config.ts
+
+# Node.js 의존성
+node_modules/
+backend/node_modules/
+mobile/node_modules/
+
+# Android 빌드 결과물
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/app/release/
+
+# iOS
+mobile/ios/build/
+mobile/ios/Pods/
+mobile/ios/*.xcworkspace/xcuserdata
+
+# React Native
+mobile/.bundle/
+
+# Claude 작업 파일
+.claude/
+
+# 기타
+.DS_Store
+*.log

@@ -1,0 +1,248 @@
+/**
+ * PhoneVerificationScreen
+ * 채팅 시작 전 본인인증 화면.
+ * 인증 완료 후 원래 가려던 ChatRoom으로 이동.
+ *
+ * 현재: SMS OTP 모의(mock) — 어떤 번호 + "000000" 입력하면 통과
+ * 추후: NICE 본인인증 SDK 연동
+ */
+import React, { useState, useRef } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  SafeAreaView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+} from 'react-native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuthStore } from '../store/authStore';
+import { RootStackParamList } from '../types';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Route = RouteProp<RootStackParamList, 'PhoneVerification'>;
+
+const C = {
+  primary: '#E8556D',
+  primaryLight: '#FCEEF1',
+  bg: '#FFF8F5',
+  card: '#FFFFFF',
+  text: '#2D2D2D',
+  sub: '#777777',
+  border: '#E0D5D0',
+  green: '#27AE60',
+};
+
+export default function PhoneVerificationScreen() {
+  const nav = useNavigation<Nav>();
+  const route = useRoute<Route>();
+  const { match_id, other_name } = route.params;
+
+  const { setPhoneVerified } = useAuthStore();
+
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [loading, setLoading] = useState(false);
+
+  const otpRef = useRef<TextInput>(null);
+
+  const formatPhone = (text: string) => {
+    const digits = text.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  };
+
+  const handleSendOTP = async () => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) {
+      Alert.alert('알림', '올바른 휴대폰 번호를 입력해주세요.');
+      return;
+    }
+    setLoading(true);
+    // 모의: 1초 딜레이 후 OTP 발송 완료
+    await new Promise(r => setTimeout(r, 1000));
+    setLoading(false);
+    setStep('otp');
+    setTimeout(() => otpRef.current?.focus(), 200);
+    Alert.alert('인증번호 발송', `${phone}으로 인증번호를 발송했습니다.\n\n(테스트: 000000 입력)`);
+  };
+
+  const handleVerify = async () => {
+    if (otp.length < 6) {
+      Alert.alert('알림', '6자리 인증번호를 입력해주세요.');
+      return;
+    }
+    if (otp !== '000000') {
+      Alert.alert('오류', '인증번호가 일치하지 않습니다.\n다시 확인해주세요.');
+      return;
+    }
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 800));
+    await setPhoneVerified(true);
+    setLoading(false);
+
+    // 인증 완료 → 채팅방으로 이동 (뒤로가기 스택에서 이 화면 제거)
+    nav.replace('ChatRoom', { match_id, other_name });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.inner}>
+          {/* 헤더 */}
+          <View style={styles.headerArea}>
+            <Text style={styles.headerEmoji}>📱</Text>
+            <Text style={styles.headerTitle}>본인인증</Text>
+            <Text style={styles.headerSub}>
+              {other_name}님과 채팅을 시작하려면{'\n'}휴대폰 본인인증이 필요합니다
+            </Text>
+          </View>
+
+          {/* 인증 이유 설명 */}
+          <View style={styles.reasonCard}>
+            <Text style={styles.reasonTitle}>왜 인증이 필요한가요?</Text>
+            <Text style={styles.reasonText}>
+              다시봄은 50대 이상을 위한 진지한 만남을 제공합니다.{'\n'}
+              본인인증을 통해 신뢰할 수 있는 만남을 보장합니다. 인증 정보는 매칭에 활용되지 않습니다.
+            </Text>
+          </View>
+
+          {/* 전화번호 입력 */}
+          <View style={styles.card}>
+            <Text style={styles.inputLabel}>휴대폰 번호</Text>
+            <View style={styles.phoneRow}>
+              <TextInput
+                style={[styles.phoneInput, step === 'otp' && styles.inputDone]}
+                value={phone}
+                onChangeText={t => setPhone(formatPhone(t))}
+                placeholder="010-0000-0000"
+                keyboardType="phone-pad"
+                editable={step === 'phone'}
+                placeholderTextColor={C.sub}
+              />
+              {step === 'phone' && (
+                <TouchableOpacity
+                  style={[styles.sendBtn, loading && styles.btnDisabled]}
+                  onPress={handleSendOTP}
+                  disabled={loading}
+                >
+                  {loading
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text style={styles.sendBtnText}>발송</Text>
+                  }
+                </TouchableOpacity>
+              )}
+              {step === 'otp' && (
+                <TouchableOpacity
+                  style={styles.resendBtn}
+                  onPress={() => { setStep('phone'); setOtp(''); }}
+                >
+                  <Text style={styles.resendText}>재발송</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* OTP 입력 (2단계) */}
+            {step === 'otp' && (
+              <>
+                <Text style={[styles.inputLabel, { marginTop: 16 }]}>인증번호 (6자리)</Text>
+                <TextInput
+                  ref={otpRef}
+                  style={styles.otpInput}
+                  value={otp}
+                  onChangeText={t => setOtp(t.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  placeholderTextColor={C.sub}
+                />
+                <Text style={styles.otpHint}>📩 {phone}으로 발송된 6자리 번호를 입력하세요</Text>
+              </>
+            )}
+          </View>
+
+          {/* 확인 버튼 */}
+          {step === 'otp' && (
+            <TouchableOpacity
+              style={[styles.verifyBtn, loading && styles.btnDisabled]}
+              onPress={handleVerify}
+              disabled={loading}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.verifyBtnText}>인증 완료</Text>
+              }
+            </TouchableOpacity>
+          )}
+
+          {/* 건너뛰기 (나중에 인증) */}
+          <TouchableOpacity
+            style={styles.skipBtn}
+            onPress={() => nav.goBack()}
+          >
+            <Text style={styles.skipText}>나중에 인증하기</Text>
+          </TouchableOpacity>
+
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  inner: { flex: 1, padding: 24 },
+
+  headerArea: { alignItems: 'center', marginBottom: 24 },
+  headerEmoji: { fontSize: 52, marginBottom: 12 },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: C.text, marginBottom: 8 },
+  headerSub: { fontSize: 15, color: C.sub, textAlign: 'center', lineHeight: 22 },
+
+  reasonCard: {
+    backgroundColor: '#FFF9E6', borderRadius: 12, padding: 16, marginBottom: 20,
+    borderWidth: 1, borderColor: '#F9E09A',
+  },
+  reasonTitle: { fontSize: 14, fontWeight: '700', color: '#7D5A00', marginBottom: 6 },
+  reasonText: { fontSize: 13, color: '#9E7500', lineHeight: 20 },
+
+  card: { backgroundColor: C.card, borderRadius: 16, padding: 20, marginBottom: 16, elevation: 2 },
+  inputLabel: { fontSize: 15, fontWeight: '600', color: C.text, marginBottom: 8 },
+
+  phoneRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  phoneInput: {
+    flex: 1, borderWidth: 1.5, borderColor: C.border, borderRadius: 10,
+    paddingHorizontal: 16, paddingVertical: 14, fontSize: 18, color: C.text,
+    backgroundColor: '#FFFAF8',
+  },
+  inputDone: { borderColor: C.green, backgroundColor: '#F0FBF4' },
+  sendBtn: {
+    backgroundColor: C.primary, borderRadius: 10,
+    paddingHorizontal: 18, paddingVertical: 14,
+  },
+  sendBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  resendBtn: {
+    paddingHorizontal: 14, paddingVertical: 14,
+  },
+  resendText: { color: C.sub, fontSize: 14, textDecorationLine: 'underline' },
+
+  otpInput: {
+    borderWidth: 1.5, borderColor: C.border, borderRadius: 10,
+    paddingHorizontal: 16, paddingVertical: 14, fontSize: 24,
+    color: C.text, letterSpacing: 8, backgroundColor: '#FFFAF8',
+    textAlign: 'center',
+  },
+  otpHint: { fontSize: 12, color: C.sub, marginTop: 8 },
+
+  verifyBtn: {
+    backgroundColor: C.primary, borderRadius: 14, paddingVertical: 18,
+    alignItems: 'center', marginBottom: 12,
+  },
+  verifyBtnText: { fontSize: 18, fontWeight: '700', color: '#FFF' },
+
+  skipBtn: { alignItems: 'center', paddingVertical: 12 },
+  skipText: { fontSize: 15, color: C.sub, textDecorationLine: 'underline' },
+
+  btnDisabled: { opacity: 0.6 },
+});
