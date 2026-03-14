@@ -7,7 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getMyProfile, uploadPhoto } from '../api/client';
+import { getMyProfile, uploadPhoto, deleteMyAccount } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Profile, RootStackParamList } from '../types';
 
@@ -568,6 +568,40 @@ export default function ProfileScreen() {
           <Text style={styles.signOutText}>로그아웃</Text>
         </TouchableOpacity>
 
+        {/* 계정 삭제 */}
+        <TouchableOpacity style={styles.deleteBtn} onPress={() => {
+          Alert.alert(
+            '계정 삭제',
+            '정말 계정을 삭제하시겠습니까?\n\n모든 프로필, 매칭, 채팅 기록이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.',
+            [
+              { text: '취소', style: 'cancel' },
+              {
+                text: '계정 영구 삭제',
+                style: 'destructive',
+                onPress: () => {
+                  Alert.alert('마지막 확인', '정말로 삭제하시겠습니까?', [
+                    { text: '취소', style: 'cancel' },
+                    {
+                      text: '삭제',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await deleteMyAccount();
+                          signOut();
+                        } catch {
+                          Alert.alert('오류', '계정 삭제 중 문제가 발생했습니다.');
+                        }
+                      },
+                    },
+                  ]);
+                },
+              },
+            ]
+          );
+        }}>
+          <Text style={styles.deleteText}>계정 삭제</Text>
+        </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -705,4 +739,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14, alignItems: 'center',
   },
   signOutText: { fontSize: 16, color: C.sub, fontWeight: '600' },
+
+  deleteBtn: {
+    marginTop: 10, marginBottom: 40, paddingVertical: 14, alignItems: 'center',
+  },
+  deleteText: { fontSize: 14, color: '#D44', textDecorationLine: 'underline' },
 });

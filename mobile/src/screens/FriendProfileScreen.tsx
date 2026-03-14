@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getProfile } from '../api/client';
+import { getProfile, reportUser, blockUser } from '../api/client';
 import { Profile, RootStackParamList } from '../types';
 import { useAuthStore } from '../store/authStore';
 
@@ -86,10 +86,57 @@ export default function FriendProfileScreen() {
 
   const handleChat = () => {
     if (phoneVerified) {
-      nav.navigate('ChatRoom', { match_id, other_name });
+      nav.navigate('ChatRoom', { match_id, other_name, other_user_id: user_id });
     } else {
-      nav.navigate('PhoneVerification', { match_id, other_name });
+      nav.navigate('PhoneVerification', { match_id, other_name, other_user_id: user_id });
     }
+  };
+
+  const handleReport = () => {
+    const reasons = [
+      { text: '부적절한 사진', value: 'inappropriate_photo' },
+      { text: '허위 프로필', value: 'fake_profile' },
+      { text: '불쾌한 대화', value: 'offensive_chat' },
+      { text: '기타', value: 'other' },
+    ];
+    Alert.alert('신고 사유 선택', '어떤 이유로 신고하시겠어요?', [
+      ...reasons.map(r => ({
+        text: r.text,
+        onPress: async () => {
+          try {
+            await reportUser(user_id, r.value);
+            Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+          } catch {
+            Alert.alert('오류', '신고 처리 중 문제가 발생했습니다.');
+          }
+        },
+      })),
+      { text: '취소', style: 'cancel' },
+    ]);
+  };
+
+  const handleBlock = () => {
+    Alert.alert(
+      '차단하기',
+      `${other_name}님을 차단하시겠어요?\n차단하면 매칭이 해제되고 서로 추천에 나타나지 않습니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '차단',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await blockUser(user_id);
+              Alert.alert('차단 완료', `${other_name}님이 차단되었습니다.`, [
+                { text: '확인', onPress: () => nav.goBack() },
+              ]);
+            } catch {
+              Alert.alert('오류', '차단 처리 중 문제가 발생했습니다.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -196,6 +243,16 @@ export default function FriendProfileScreen() {
           <Row label="거주 형태" value={l('living_situation', profile.living_situation)} />
         </Section>
 
+        {/* 신고/차단 */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.reportBtn} onPress={handleReport}>
+            <Text style={styles.reportBtnText}>신고</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.blockBtn} onPress={handleBlock}>
+            <Text style={styles.blockBtnText}>차단</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* 채팅 버튼 공간 확보 */}
         <View style={{ height: 80 }} />
       </ScrollView>
@@ -253,4 +310,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', elevation: 3,
   },
   chatBtnText: { fontSize: 17, fontWeight: '700', color: '#FFF' },
+
+  actionRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 8 },
+  reportBtn: { paddingVertical: 10, paddingHorizontal: 20 },
+  reportBtnText: { fontSize: 14, color: C.sub },
+  blockBtn: { paddingVertical: 10, paddingHorizontal: 20 },
+  blockBtnText: { fontSize: 14, color: '#D44' },
 });

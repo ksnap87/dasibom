@@ -33,7 +33,7 @@ const C = {
 export default function PhoneVerificationScreen() {
   const nav = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { match_id, other_name } = route.params;
+  const { match_id, other_name, other_user_id } = route.params;
 
   const { setPhoneVerified } = useAuthStore();
 
@@ -81,7 +81,7 @@ export default function PhoneVerificationScreen() {
     setLoading(false);
 
     // 인증 완료 → 채팅방으로 이동 (뒤로가기 스택에서 이 화면 제거)
-    nav.replace('ChatRoom', { match_id, other_name });
+    nav.replace('ChatRoom', { match_id, other_name, other_user_id });
   };
 
   return (

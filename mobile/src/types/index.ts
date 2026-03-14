@@ -108,8 +108,8 @@ export type RootStackParamList = {
   Auth: undefined;
   Questionnaire: undefined;
   Main: undefined;
-  ChatRoom: { match_id: string; other_name: string };
-  PhoneVerification: { match_id: string; other_name: string };  // 채팅 전 본인인증
+  ChatRoom: { match_id: string; other_name: string; other_user_id: string };
+  PhoneVerification: { match_id: string; other_name: string; other_user_id: string };  // 채팅 전 본인인증
   QuestionnaireEdit: undefined;                                   // 크레딧으로 가치관 수정
   FriendProfile: { user_id: string; match_id: string; other_name: string }; // 매칭 후 상대 프로필
 };
