@@ -94,19 +94,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // ── 크레딧 ───────────────────────────────────────────────
   loadCredits: async () => {
-    const raw = await AsyncStorage.getItem(CREDITS_KEY);
-    const credits = raw !== null ? parseInt(raw, 10) : DEFAULT_CREDITS;
-    if (raw === null) await AsyncStorage.setItem(CREDITS_KEY, String(DEFAULT_CREDITS));
-    set({ credits });
+    try {
+      const { getMyProfile } = await import('../api/client');
+      const profile = await getMyProfile();
+      set({ credits: profile.credits ?? DEFAULT_CREDITS });
+    } catch {
+      // 서버 실패 시 로컬 폴백
+      const raw = await AsyncStorage.getItem(CREDITS_KEY);
+      set({ credits: raw !== null ? parseInt(raw, 10) : DEFAULT_CREDITS });
+    }
   },
 
   deductCredit: async (amount = 1) => {
-    const { credits } = get();
-    if (credits < amount) return false;
-    const next = credits - amount;
-    await AsyncStorage.setItem(CREDITS_KEY, String(next));
-    set({ credits: next });
-    return true;
+    try {
+      const { deductCredits } = await import('../api/client');
+      const result = await deductCredits(amount);
+      set({ credits: result.credits });
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   // ── 본인인증 ─────────────────────────────────────────────

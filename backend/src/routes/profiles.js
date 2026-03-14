@@ -108,4 +108,104 @@ router.post('/interest', async (req, res) => {
   res.json({ matched: true, score });
 });
 
+// POST /api/profiles/credits/deduct — 크레딧 차감
+router.post('/credits/deduct', async (req, res) => {
+  const userId = req.user.id;
+  const amount = req.body.amount ?? 1;
+
+  const { data: profile, error: fetchErr } = await supabase
+    .from('profiles')
+    .select('credits')
+    .eq('id', userId)
+    .single();
+
+  if (fetchErr || !profile) return res.status(400).json({ error: '프로필을 찾을 수 없습니다.' });
+  if (profile.credits < amount) return res.status(400).json({ error: '크레딧이 부족합니다.', credits: profile.credits });
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ credits: profile.credits - amount })
+    .eq('id', userId)
+    .select('credits')
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ credits: data.credits });
+});
+
+// POST /api/profiles/report — 신고
+router.post('/report', async (req, res) => {
+  const { reported_id, reason, detail } = req.body;
+  const userId = req.user.id;
+
+  if (!reported_id || !reason) {
+    return res.status(400).json({ error: '필수 정보가 없습니다.' });
+  }
+  if (reported_id === userId) {
+    return res.status(400).json({ error: '자신을 신고할 수 없습니다.' });
+  }
+
+  const { error } = await supabase
+    .from('reports')
+    .insert({ reporter_id: userId, reported_id, reason, detail: detail || null });
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// POST /api/profiles/block — 차단
+router.post('/block', async (req, res) => {
+  const { blocked_id } = req.body;
+  const userId = req.user.id;
+
+  if (!blocked_id) return res.status(400).json({ error: '필수 정보가 없습니다.' });
+  if (blocked_id === userId) return res.status(400).json({ error: '자신을 차단할 수 없습니다.' });
+
+  const { error } = await supabase
+    .from('blocks')
+    .upsert({ blocker_id: userId, blocked_id }, { onConflict: 'blocker_id,blocked_id' });
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  // 매칭이 있으면 삭제
+  const [u1, u2] = [userId, blocked_id].sort();
+  await supabase.from('matches').delete().eq('user1_id', u1).eq('user2_id', u2);
+
+  res.json({ success: true });
+});
+
+// DELETE /api/profiles/block/:blocked_id — 차단 해제
+router.delete('/block/:blocked_id', async (req, res) => {
+  const userId = req.user.id;
+  const { blocked_id } = req.params;
+
+  const { error } = await supabase
+    .from('blocks')
+    .delete()
+    .eq('blocker_id', userId)
+    .eq('blocked_id', blocked_id);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// DELETE /api/profiles/me — 계정 삭제
+router.delete('/me', async (req, res) => {
+  const userId = req.user.id;
+
+  // 매칭, 메시지, 관심표현, 신고, 차단은 CASCADE로 자동 삭제
+  const { error: profileErr } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', userId);
+
+  if (profileErr) return res.status(400).json({ error: profileErr.message });
+
+  // Supabase Auth 유저 삭제
+  const { error: authErr } = await supabase.auth.admin.deleteUser(userId);
+  if (authErr) console.error('Auth user delete failed:', authErr.message);
+
+  res.json({ success: true });
+});
+
 module.exports = router;

@@ -254,6 +254,10 @@ alter table public.profiles
   add column if not exists conflict_style text
     check (conflict_style in ('space', 'direct', 'accommodate'));
 
+-- 크레딧 컬럼 추가
+alter table public.profiles
+  add column if not exists credits integer default 3 not null;
+
 -- 일상 & 생활 신규 필드
 alter table public.profiles
   add column if not exists chronotype text
@@ -262,6 +266,45 @@ alter table public.profiles
     check (rest_style in ('home', 'light_out', 'active')),
   add column if not exists meal_style text
     check (meal_style in ('regular', 'flexible', 'cook', 'dine_out'));
+
+-- ============================================================
+-- REPORTS (신고)
+-- ============================================================
+create table public.reports (
+  id            uuid default uuid_generate_v4() primary key,
+  created_at    timestamp with time zone default now(),
+  reporter_id   uuid references public.profiles(id) on delete cascade not null,
+  reported_id   uuid references public.profiles(id) on delete cascade not null,
+  reason        text not null check (reason in ('inappropriate_photo', 'fake_profile', 'offensive_chat', 'other')),
+  detail        text
+);
+
+alter table public.reports enable row level security;
+
+create policy "Users can insert own reports"
+  on public.reports for insert
+  with check (auth.uid() = reporter_id);
+
+create policy "Users can view own reports"
+  on public.reports for select
+  using (auth.uid() = reporter_id);
+
+-- ============================================================
+-- BLOCKS (차단)
+-- ============================================================
+create table public.blocks (
+  id            uuid default uuid_generate_v4() primary key,
+  created_at    timestamp with time zone default now(),
+  blocker_id    uuid references public.profiles(id) on delete cascade not null,
+  blocked_id    uuid references public.profiles(id) on delete cascade not null,
+  unique (blocker_id, blocked_id)
+);
+
+alter table public.blocks enable row level security;
+
+create policy "Users can manage own blocks"
+  on public.blocks for all
+  using (auth.uid() = blocker_id);
 
 -- ============================================================
 -- INDEXES

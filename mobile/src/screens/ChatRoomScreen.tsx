@@ -5,7 +5,7 @@ import {
   Alert, Image,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { getMessages, sendMessage, markRead } from '../api/client';
+import { getMessages, sendMessage, markRead, reportUser } from '../api/client';
 import { useAuthStore, supabase } from '../store/authStore';
 import { Message, RootStackParamList } from '../types';
 
@@ -114,7 +114,7 @@ function DateSeparator({ label }: { label: string }) {
 export default function ChatRoomScreen() {
   const route = useRoute<Route>();
   const nav = useNavigation();
-  const { match_id, other_name } = route.params;
+  const { match_id, other_name, other_user_id } = route.params;
   const { user } = useAuthStore();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -142,8 +142,38 @@ export default function ChatRoomScreen() {
     }
   }, [match_id]);
 
+  const handleReport = () => {
+    const reasons = [
+      { text: '부적절한 사진', value: 'inappropriate_photo' },
+      { text: '허위 프로필', value: 'fake_profile' },
+      { text: '불쾌한 대화', value: 'offensive_chat' },
+      { text: '기타', value: 'other' },
+    ];
+    Alert.alert('신고 사유 선택', '어떤 이유로 신고하시겠어요?', [
+      ...reasons.map(r => ({
+        text: r.text,
+        onPress: async () => {
+          try {
+            await reportUser(other_user_id, r.value);
+            Alert.alert('신고 완료', '신고가 접수되었습니다.');
+          } catch {
+            Alert.alert('오류', '신고 처리 중 문제가 발생했습니다.');
+          }
+        },
+      })),
+      { text: '취소', style: 'cancel' },
+    ]);
+  };
+
   useEffect(() => {
-    nav.setOptions({ title: other_name });
+    nav.setOptions({
+      title: other_name,
+      headerRight: () => (
+        <TouchableOpacity onPress={handleReport} style={{ paddingHorizontal: 8 }}>
+          <Text style={{ fontSize: 14, color: '#999' }}>신고</Text>
+        </TouchableOpacity>
+      ),
+    });
     load();
 
     // Supabase Broadcast 채널 구독 (postgres_changes 대비 Dashboard 설정 불필요)

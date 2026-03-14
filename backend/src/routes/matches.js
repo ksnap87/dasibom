@@ -31,7 +31,22 @@ router.get('/suggestions', async (req, res) => {
     .select('to_user_id')
     .eq('from_user_id', userId);
 
-  const excludeIds = [userId, ...(seen?.map(r => r.to_user_id) ?? [])];
+  // 차단한/차단당한 유저 제외
+  const { data: blockedByMe } = await supabase
+    .from('blocks')
+    .select('blocked_id')
+    .eq('blocker_id', userId);
+  const { data: blockedMe } = await supabase
+    .from('blocks')
+    .select('blocker_id')
+    .eq('blocked_id', userId);
+
+  const excludeIds = [
+    userId,
+    ...(seen?.map(r => r.to_user_id) ?? []),
+    ...(blockedByMe?.map(r => r.blocked_id) ?? []),
+    ...(blockedMe?.map(r => r.blocker_id) ?? []),
+  ];
 
   let query = supabase
     .from('profiles')
@@ -111,12 +126,23 @@ router.get('/', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
 
-  const matches = data.map(m => ({
-    match_id: m.id,
-    created_at: m.created_at,
-    compatibility_score: m.compatibility_score,
-    other_user: m.user1?.id === userId ? m.user2 : m.user1,
-  }));
+  // 차단한/차단당한 유저 제외
+  const { data: myBlocks } = await supabase
+    .from('blocks')
+    .select('blocked_id, blocker_id')
+    .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+  const blockIds = new Set([
+    ...(myBlocks?.map(b => b.blocker_id === userId ? b.blocked_id : b.blocker_id) ?? []),
+  ]);
+
+  const matches = data
+    .map(m => ({
+      match_id: m.id,
+      created_at: m.created_at,
+      compatibility_score: m.compatibility_score,
+      other_user: m.user1?.id === userId ? m.user2 : m.user1,
+    }))
+    .filter(m => !blockIds.has(m.other_user?.id));
 
   res.json(matches);
 });

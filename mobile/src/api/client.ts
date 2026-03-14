@@ -74,6 +74,20 @@ export const uploadPhoto = async (uri: string): Promise<string> => {
   return data.photo_url;
 };
 
+// ── Credits ───────────────────────────────────────────────
+export const deductCredits = (amount = 1) =>
+  api.post('/api/profiles/credits/deduct', { amount }).then(r => r.data);
+
+// ── Report / Block / Delete ───────────────────────────────
+export const reportUser = (reported_id: string, reason: string, detail?: string) =>
+  api.post('/api/profiles/report', { reported_id, reason, detail }).then(r => r.data);
+export const blockUser = (blocked_id: string) =>
+  api.post('/api/profiles/block', { blocked_id }).then(r => r.data);
+export const unblockUser = (blocked_id: string) =>
+  api.delete(`/api/profiles/block/${blocked_id}`).then(r => r.data);
+export const deleteMyAccount = () =>
+  api.delete('/api/profiles/me').then(r => r.data);
+
 // ── Matches ───────────────────────────────────────────────
 export const getSuggestions = () => api.get('/api/matches/suggestions').then(r => r.data);
 export const getMutualMatches = () => api.get('/api/matches').then(r => r.data);
