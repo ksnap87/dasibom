@@ -16,6 +16,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import ChatRoomScreen from '../screens/ChatRoomScreen';
 import PhoneVerificationScreen from '../screens/PhoneVerificationScreen';
 import FriendProfileScreen from '../screens/FriendProfileScreen';
+import CreditStoreScreen from '../screens/CreditStoreScreen';
 import { RootStackParamList, MainTabParamList } from '../types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -141,6 +142,16 @@ export default function AppNavigator() {
               component={QuestionnaireScreen}
               options={{
                 title: '가치관 수정',
+                headerStyle: { backgroundColor: '#FFF8F5' },
+                headerTintColor: '#E8556D',
+                headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+              }}
+            />
+            <Stack.Screen
+              name="CreditStore"
+              component={CreditStoreScreen}
+              options={{
+                title: '크레딧 충전',
                 headerStyle: { backgroundColor: '#FFF8F5' },
                 headerTintColor: '#E8556D',
                 headerTitleStyle: { fontWeight: '700', fontSize: 18 },

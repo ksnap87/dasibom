@@ -1,0 +1,313 @@
+import React, { useEffect, useState } from 'react';
+import {
+  View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
+  ScrollView, Alert, ActivityIndicator,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import {
+  initConnection, endConnection, fetchProducts, requestPurchase,
+  finishTransaction, purchaseUpdatedListener, purchaseErrorListener,
+  ErrorCode,
+  type Purchase, type PurchaseError, type Product,
+} from 'react-native-iap';
+import { useAuthStore } from '../store/authStore';
+
+const C = {
+  primary: '#E8556D',
+  primaryLight: '#FCEEF1',
+  bg: '#FFF8F5',
+  card: '#FFFFFF',
+  text: '#2D2D2D',
+  sub: '#777777',
+  border: '#E0D5D0',
+  gold: '#F9A825',
+};
+
+// Google Play Console에서 생성할 인앱 상품 ID
+const PRODUCT_IDS = [
+  'credit_3',   // 크레딧 3개
+  'credit_10',  // 크레딧 10개
+  'credit_30',  // 크레딧 30개
+];
+
+// 상품 ID → 크레딧 수량 매핑
+const CREDIT_MAP: Record<string, number> = {
+  credit_3: 3,
+  credit_10: 10,
+  credit_30: 30,
+};
+
+// 상품 정보 (Google Play 연동 전 폴백)
+const FALLBACK_PRODUCTS = [
+  { id: 'credit_3',  credits: 3,  price: '₩1,100',  label: '맛보기',   popular: false, bonus: '' },
+  { id: 'credit_10', credits: 10, price: '₩3,300',  label: '인기',     popular: true,  bonus: '+1 보너스' },
+  { id: 'credit_30', credits: 30, price: '₩8,800',  label: '알뜰팩',   popular: false, bonus: '+5 보너스' },
+];
+
+export default function CreditStoreScreen() {
+  const nav = useNavigation();
+  const { credits, loadCredits } = useAuthStore();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    let purchaseListener: any;
+    let errorListener: any;
+
+    const init = async () => {
+      try {
+        await initConnection();
+        setConnected(true);
+
+        const items = await fetchProducts({ skus: PRODUCT_IDS });
+        if (items && items.length > 0) {
+          setProducts(items as Product[]);
+        }
+      } catch (err) {
+        console.warn('[IAP] 연결 실패:', err);
+        // Play Store 연결 실패해도 화면은 보여줌 (개발 중)
+      }
+
+      // 구매 완료 리스너
+      purchaseListener = purchaseUpdatedListener(async (purchase: Purchase) => {
+        try {
+          // 서버에서 구매 검증 + 크레딧 지급
+          const { default: api } = await import('../api/client');
+          await api.post('/api/credits/verify-purchase', {
+            productId: purchase.productId,
+            purchaseToken: purchase.purchaseToken,
+            packageName: 'com.tulipapp',
+          });
+
+          // 트랜잭션 완료 처리 (Google Play에 소비 확인)
+          await finishTransaction({ purchase, isConsumable: true });
+
+          // 크레딧 새로고침
+          await loadCredits();
+
+          const amount = CREDIT_MAP[purchase.productId] ?? 0;
+          Alert.alert('충전 완료!', `크레딧 ${amount}개가 충전되었습니다.`);
+        } catch (err) {
+          console.error('[IAP] 검증 실패:', err);
+          Alert.alert('오류', '구매 처리 중 문제가 발생했습니다.\n고객센터에 문의해주세요.');
+        } finally {
+          setPurchasing(null);
+        }
+      });
+
+      // 구매 에러 리스너
+      errorListener = purchaseErrorListener((error: PurchaseError) => {
+        if (error.code !== ErrorCode.UserCancelled) {
+          Alert.alert('구매 실패', error.message ?? '결제 처리 중 오류가 발생했습니다.');
+        }
+        setPurchasing(null);
+      });
+    };
+
+    init();
+
+    return () => {
+      purchaseListener?.remove();
+      errorListener?.remove();
+      endConnection();
+    };
+  }, [loadCredits]);
+
+  const handlePurchase = async (productId: string) => {
+    if (!connected) {
+      // Play Store 미연결 시 (개발/테스트 환경)
+      Alert.alert(
+        '테스트 모드',
+        'Google Play Store와 연결되지 않았습니다.\n테스트로 크레딧을 충전할까요?',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '테스트 충전',
+            onPress: async () => {
+              try {
+                const { default: api } = await import('../api/client');
+                const amount = CREDIT_MAP[productId] ?? 3;
+                await api.post('/api/credits/add', { amount });
+                await loadCredits();
+                Alert.alert('충전 완료!', `크레딧 ${amount}개가 충전되었습니다.`);
+              } catch {
+                Alert.alert('오류', '충전 실패');
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    setPurchasing(productId);
+    try {
+      await requestPurchase({
+        request: { google: { skus: [productId] } },
+        type: 'in-app',
+      });
+    } catch (err: any) {
+      if (err.code !== ErrorCode.UserCancelled) {
+        Alert.alert('구매 오류', err.message ?? '결제를 시작할 수 없습니다.');
+      }
+      setPurchasing(null);
+    }
+  };
+
+  // 상품 표시 (Google Play 상품이 있으면 사용, 없으면 폴백)
+  const displayProducts = FALLBACK_PRODUCTS.map(fb => {
+    const gp = products.find(p => p.id === fb.id);
+    return {
+      ...fb,
+      price: gp?.displayPrice ?? fb.price,
+    };
+  });
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+
+        {/* 현재 보유 크레딧 */}
+        <View style={styles.balanceCard}>
+          <Text style={styles.balanceLabel}>보유 크레딧</Text>
+          <View style={styles.balanceRow}>
+            <Text style={styles.balanceIcon}>💎</Text>
+            <Text style={styles.balanceValue}>{credits}</Text>
+            <Text style={styles.balanceUnit}>개</Text>
+          </View>
+        </View>
+
+        {/* 크레딧 사용처 안내 */}
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>크레딧으로 할 수 있는 것</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>🔄</Text>
+            <Text style={styles.infoText}>가치관 수정 (1개)</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>👀</Text>
+            <Text style={styles.infoText}>하루 추천 5명 추가 열람 (1개)</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>🚫</Text>
+            <Text style={styles.infoText}>필수 조건 슬롯 추가 (1개)</Text>
+          </View>
+        </View>
+
+        {/* 상품 목록 */}
+        <Text style={styles.sectionTitle}>크레딧 충전</Text>
+
+        {displayProducts.map(item => (
+          <TouchableOpacity
+            key={item.id}
+            style={[styles.productCard, item.popular && styles.productPopular]}
+            onPress={() => handlePurchase(item.id)}
+            disabled={purchasing !== null}
+            activeOpacity={0.7}
+          >
+            {item.popular && (
+              <View style={styles.popularBadge}>
+                <Text style={styles.popularText}>BEST</Text>
+              </View>
+            )}
+            <View style={styles.productLeft}>
+              <Text style={styles.productEmoji}>💎</Text>
+              <View>
+                <Text style={styles.productCredits}>
+                  {item.credits}개 {item.bonus ? <Text style={styles.bonusText}>{item.bonus}</Text> : null}
+                </Text>
+                <Text style={styles.productLabel}>{item.label}</Text>
+              </View>
+            </View>
+            <View style={styles.productRight}>
+              {purchasing === item.id ? (
+                <ActivityIndicator color={C.primary} />
+              ) : (
+                <View style={[styles.priceBtn, item.popular && styles.priceBtnPopular]}>
+                  <Text style={[styles.priceText, item.popular && styles.priceTextPopular]}>
+                    {item.price}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        ))}
+
+        {/* 안내 */}
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>
+            * 결제는 Google Play를 통해 처리됩니다{'\n'}
+            * 크레딧은 환불이 불가합니다{'\n'}
+            * 문의: support@dasibom.app
+          </Text>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  content: { padding: 16, paddingBottom: 40 },
+
+  // 잔액 카드
+  balanceCard: {
+    backgroundColor: '#FFF9E6', borderRadius: 16, padding: 24,
+    alignItems: 'center', marginBottom: 16,
+    borderWidth: 1, borderColor: '#F9E09A',
+  },
+  balanceLabel: { fontSize: 14, color: '#7D5A00', marginBottom: 8 },
+  balanceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  balanceIcon: { fontSize: 32 },
+  balanceValue: { fontSize: 48, fontWeight: '800', color: '#7D5A00' },
+  balanceUnit: { fontSize: 20, color: '#7D5A00', fontWeight: '600' },
+
+  // 사용처 안내
+  infoCard: {
+    backgroundColor: C.card, borderRadius: 14, padding: 16, marginBottom: 20,
+    elevation: 1,
+  },
+  infoTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  infoIcon: { fontSize: 18 },
+  infoText: { fontSize: 14, color: C.sub },
+
+  // 섹션
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 12 },
+
+  // 상품 카드
+  productCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: C.card, borderRadius: 14, padding: 18, marginBottom: 10,
+    borderWidth: 1.5, borderColor: C.border, elevation: 1,
+  },
+  productPopular: {
+    borderColor: C.gold, borderWidth: 2, backgroundColor: '#FFFDF5',
+  },
+  popularBadge: {
+    position: 'absolute', top: -10, right: 16,
+    backgroundColor: C.gold, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3,
+  },
+  popularText: { fontSize: 11, fontWeight: '800', color: '#FFF' },
+  productLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  productEmoji: { fontSize: 28 },
+  productCredits: { fontSize: 18, fontWeight: '700', color: C.text },
+  bonusText: { fontSize: 13, color: C.gold, fontWeight: '700' },
+  productLabel: { fontSize: 13, color: C.sub, marginTop: 2 },
+  productRight: { alignItems: 'flex-end' },
+  priceBtn: {
+    borderWidth: 1.5, borderColor: C.primary, borderRadius: 20,
+    paddingHorizontal: 18, paddingVertical: 8,
+  },
+  priceBtnPopular: {
+    backgroundColor: C.primary, borderColor: C.primary,
+  },
+  priceText: { fontSize: 15, fontWeight: '700', color: C.primary },
+  priceTextPopular: { color: '#FFF' },
+
+  // 안내
+  notice: { marginTop: 20, padding: 16 },
+  noticeText: { fontSize: 12, color: C.sub, lineHeight: 18 },
+});
