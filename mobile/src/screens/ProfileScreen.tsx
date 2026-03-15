@@ -168,7 +168,8 @@ export default function ProfileScreen() {
   const [showRequiredPicker, setShowRequiredPicker] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
 
-  const { signOut, setProfile: setStoreProfile, credits, loadCredits, phoneVerified, loadPhoneVerified } = useAuthStore();
+  const [maxConditions, setMaxConditions] = useState(3);
+  const { signOut, setProfile: setStoreProfile, credits, deductCredit, loadCredits, phoneVerified, loadPhoneVerified } = useAuthStore();
 
   const loadSettings = useCallback(async () => {
     try {
@@ -229,8 +230,33 @@ export default function ProfileScreen() {
     if (requiredConditions.includes(key)) {
       saveRequiredConditions(requiredConditions.filter(k => k !== key));
     } else {
-      if (requiredConditions.length >= 3) {
-        Alert.alert('💎 크레딧 기능', '조건은 기본 3개까지 설정할 수 있어요.\n더 많은 조건은 추후 크레딧으로 추가 가능합니다.');
+      if (requiredConditions.length >= maxConditions) {
+        // 크레딧으로 슬롯 확장
+        if (credits <= 0) {
+          Alert.alert('크레딧 부족', `조건은 현재 ${maxConditions}개까지 설정 가능합니다.\n추가 슬롯을 열려면 크레딧이 필요해요.`);
+          return;
+        }
+        Alert.alert(
+          '조건 슬롯 추가',
+          `크레딧 1개를 사용하면 조건을 1개 더 설정할 수 있어요.\n\n현재 보유: ${credits}개`,
+          [
+            { text: '취소', style: 'cancel' },
+            {
+              text: '사용하기',
+              onPress: async () => {
+                const ok = await deductCredit(1);
+                if (!ok) {
+                  Alert.alert('오류', '크레딧 차감에 실패했습니다.');
+                  return;
+                }
+                const newMax = maxConditions + 1;
+                setMaxConditions(newMax);
+                saveRequiredConditions([...requiredConditions, key]);
+                await loadCredits();
+              },
+            },
+          ],
+        );
         return;
       }
       saveRequiredConditions([...requiredConditions, key]);
@@ -499,12 +525,14 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>🚫 절대 안 되는 조건</Text>
-            <Text style={styles.sectionBadge}>{requiredConditions.length}/3</Text>
+            <Text style={styles.sectionBadge}>{requiredConditions.length}/{maxConditions}</Text>
           </View>
-          <Text style={styles.settingDesc}>이 조건에 맞지 않는 상대는 추천에서 제외돼요 (최대 3개 무료)</Text>
+          <Text style={styles.settingDesc}>
+            이 조건에 맞지 않는 상대는 추천에서 제외돼요 (기본 3개, 💎 크레딧으로 추가)
+          </Text>
           {REQUIRED_CONDITION_OPTIONS.map((opt, idx) => {
             const selected = requiredConditions.includes(opt.key);
-            const locked = !selected && requiredConditions.length >= 3;
+            const locked = !selected && requiredConditions.length >= maxConditions;
             return (
               <TouchableOpacity
                 key={opt.key}
@@ -513,9 +541,9 @@ export default function ProfileScreen() {
               >
                 <View style={[styles.checkbox, selected && styles.checkboxActive, locked && styles.checkboxLocked]}>
                   {selected && <Text style={styles.checkmark}>✓</Text>}
-                  {locked && <Text style={styles.checkmark}>🔒</Text>}
+                  {locked && <Text style={styles.checkmark}>💎</Text>}
                 </View>
-                <Text style={[styles.checkLabel, locked && { color: C.sub }]}>{opt.label}</Text>
+                <Text style={[styles.checkLabel, locked && { color: C.sub }]}>{opt.label}{locked ? ' (크레딧 필요)' : ''}</Text>
               </TouchableOpacity>
             );
           })}

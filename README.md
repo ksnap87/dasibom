@@ -267,10 +267,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 - [x] 아이스브레이커 메시지 제안
 - [x] 앱 아이콘 & 스플래시 스크린
 - [x] 푸시 알림 (Firebase FCM) — 매칭/메시지 알림
+- [x] 프로필 사진 업로드 (Supabase Storage) — 추천/매칭/프로필 표시
+- [x] 크레딧으로 하루 추천 추가 열람 (5명 기본 → 크레딧 1개당 +5명)
+- [x] 크레딧으로 필수 조건 추가 (3개 기본 → 크레딧 1개당 +1개)
 
 **예정:**
 - [ ] 카카오 / PASS 본인인증 실인증 연동
-- [ ] 사진 업로드 (Supabase Storage)
-- [ ] 크레딧으로 하루 추천 추가 열람
-- [ ] 크레딧으로 필수 조건 3개 초과 설정
 - [ ] Play Store 출시

@@ -6,6 +6,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSuggestions, expressInterest } from '../api/client';
 import { SuggestionProfile } from '../types';
+import { useAuthStore } from '../store/authStore';
 import SkeletonLoader from '../components/SkeletonLoader';
 import ToastContainer, { showToast } from '../components/Toast';
 
@@ -87,6 +88,7 @@ const STORAGE_KEYS = {
 
 const DEFAULT_PREVIEW_QUESTIONS = ['relationship_goal', 'religion', 'smoking', 'drinking', 'family_importance'];
 const DAILY_LIMIT = 5;
+const EXTRA_PER_CREDIT = 5; // 크레딧 1개당 추가 5명
 
 // ── 필수 조건 필터 ────────────────────────────────────────
 function passesRequired(item: SuggestionProfile, conditions: string[], myProfile: any): boolean {
@@ -223,8 +225,10 @@ export default function SuggestionsScreen() {
   const [previewQuestions, setPreviewQuestions] = useState<string[]>(DEFAULT_PREVIEW_QUESTIONS);
   const [requiredConditions, setRequiredConditions] = useState<string[]>([]);
   const [dailyCount, setDailyCount] = useState(0);
+  const [dailyLimit, setDailyLimit] = useState(DAILY_LIMIT);
   const [dailyDone, setDailyDone] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
+  const { credits, deductCredit, loadCredits } = useAuthStore();
 
   const loadLocalSettings = useCallback(async () => {
     try {
@@ -240,11 +244,14 @@ export default function SuggestionsScreen() {
       if (ds) {
         const parsed = JSON.parse(ds);
         if (parsed.date === today) {
+          const limit = parsed.limit ?? DAILY_LIMIT;
           setDailyCount(parsed.count);
-          if (parsed.count >= DAILY_LIMIT) setDailyDone(true);
+          setDailyLimit(limit);
+          if (parsed.count >= limit) setDailyDone(true);
         } else {
           // 날짜 바뀌면 리셋
-          await AsyncStorage.setItem(STORAGE_KEYS.dailySeen, JSON.stringify({ date: today, count: 0 }));
+          await AsyncStorage.setItem(STORAGE_KEYS.dailySeen, JSON.stringify({ date: today, count: 0, limit: DAILY_LIMIT }));
+          setDailyLimit(DAILY_LIMIT);
         }
       }
     } catch {}
@@ -292,8 +299,40 @@ export default function SuggestionsScreen() {
     const today = new Date().toISOString().slice(0, 10);
     const newCount = dailyCount + 1;
     setDailyCount(newCount);
-    await AsyncStorage.setItem(STORAGE_KEYS.dailySeen, JSON.stringify({ date: today, count: newCount }));
-    if (newCount >= DAILY_LIMIT) setDailyDone(true);
+    await AsyncStorage.setItem(STORAGE_KEYS.dailySeen, JSON.stringify({ date: today, count: newCount, limit: dailyLimit }));
+    if (newCount >= dailyLimit) setDailyDone(true);
+  };
+
+  const handleUnlockMore = () => {
+    if (credits <= 0) {
+      Alert.alert('크레딧 부족', '추가 추천을 보려면 크레딧이 필요합니다.\n프로필 탭에서 크레딧을 충전해주세요.');
+      return;
+    }
+    Alert.alert(
+      '추가 추천 열기',
+      `크레딧 1개를 사용하여 오늘 ${EXTRA_PER_CREDIT}명을 더 볼 수 있어요.\n\n현재 보유: ${credits}개`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '사용하기',
+          onPress: async () => {
+            const ok = await deductCredit(1);
+            if (!ok) {
+              Alert.alert('오류', '크레딧 차감에 실패했습니다.');
+              return;
+            }
+            const newLimit = dailyLimit + EXTRA_PER_CREDIT;
+            setDailyLimit(newLimit);
+            setDailyDone(false);
+            const today = new Date().toISOString().slice(0, 10);
+            await AsyncStorage.setItem(STORAGE_KEYS.dailySeen, JSON.stringify({ date: today, count: dailyCount, limit: newLimit }));
+            await loadCredits();
+            showToast(`추천 ${EXTRA_PER_CREDIT}명 추가 열람!`);
+            load();
+          },
+        },
+      ],
+    );
   };
 
   const handleInterest = async (id: string, liked: boolean) => {
@@ -336,13 +375,14 @@ export default function SuggestionsScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>🌙</Text>
           <Text style={styles.emptyTitle}>오늘 추천을 모두 확인했어요</Text>
-          <Text style={styles.emptySub}>내일 새로운 추천 상대가 찾아올 거예요</Text>
-          <TouchableOpacity
-            style={styles.creditBtn}
-            onPress={() => Alert.alert('💎 크레딧 기능', '크레딧으로 추가 추천을 보는 기능은\n추후 지원 예정입니다.')}
-          >
-            <Text style={styles.creditBtnText}>💎 크레딧으로 더 보기</Text>
+          <Text style={styles.emptySub}>
+            오늘 {dailyCount}명을 확인했어요.{'\n'}
+            내일 새로운 추천 상대가 찾아올 거예요
+          </Text>
+          <TouchableOpacity style={styles.creditBtn} onPress={handleUnlockMore}>
+            <Text style={styles.creditBtnText}>💎 크레딧으로 {EXTRA_PER_CREDIT}명 더 보기</Text>
           </TouchableOpacity>
+          <Text style={styles.creditHint}>보유 크레딧: {credits}개</Text>
         </View>
         <ToastContainer />
       </SafeAreaView>
@@ -354,7 +394,7 @@ export default function SuggestionsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🌸 추천 상대</Text>
         <View style={styles.headerRight}>
-          <Text style={styles.dailyBadge}>오늘 {dailyCount}/{DAILY_LIMIT}</Text>
+          <Text style={styles.dailyBadge}>오늘 {dailyCount}/{dailyLimit}</Text>
           <Text style={styles.headerSub}>{suggestions.length}명</Text>
         </View>
       </View>
@@ -457,6 +497,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, borderWidth: 1.5, borderColor: C.border,
   },
   filterHintText: { fontSize: 14, color: C.sub, fontWeight: '600' },
-  creditBtn: { borderWidth: 1.5, borderColor: C.gold, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
+  creditBtn: { borderWidth: 1.5, borderColor: C.gold, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8, backgroundColor: '#FFFBF0' },
   creditBtnText: { color: C.gold, fontSize: 15, fontWeight: '700' },
+  creditHint: { fontSize: 12, color: C.sub, marginTop: 8 },
 });
