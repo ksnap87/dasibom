@@ -1,7 +1,7 @@
 {
   "name": "dasibom-backend",
   "version": "1.0.0",
-  "description": "Tulip Dating App — Express API",
+  "description": "Dasibom Dating App — Express API",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, Alert, SafeAreaView, Animated, Image,
+  ActivityIndicator, RefreshControl, Alert, SafeAreaView, Animated,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSuggestions, expressInterest } from '../api/client';
 import { SuggestionProfile } from '../types';
@@ -23,7 +24,11 @@ const C = {
 
 // ── 값 → 한국어 레이블 ────────────────────────────────────
 
-const FIELD_LABELS: Record<string, { label: string; icon: string; values?: Record<string, string>; type?: string }> = {
+// ── 카테고리별 가치관 필드 정의 ──────────────────────────────
+type FieldMeta = { label: string; icon: string; values?: Record<string, string>; type?: string };
+
+const FIELD_LABELS: Record<string, FieldMeta> = {
+  // 관계 & 가치관
   relationship_goal: {
     label: '관계 목표', icon: '💝',
     values: { marriage: '결혼', companionship: '동반자 관계', friendship: '우정', open: '열린 마음' },
@@ -31,6 +36,47 @@ const FIELD_LABELS: Record<string, { label: string; icon: string; values?: Recor
   religion: {
     label: '종교', icon: '⛪',
     values: { none: '무교', buddhism: '불교', christianity: '기독교', catholicism: '천주교', other: '기타' },
+  },
+  family_importance: { label: '가족 중요도', icon: '👨‍👩‍👧', type: 'scale' },
+
+  // 감성 & 성격
+  personality_type: {
+    label: '성격 유형', icon: '🧠',
+    values: { introvert: '내향형', extrovert: '외향형', ambivert: '양향형' },
+  },
+  emotional_expression: {
+    label: '감정 표현', icon: '💬',
+    values: { suppress: '속으로 삭임', delayed_share: '나중에 표현', expressive: '바로 표현' },
+  },
+  communication_style: {
+    label: '대화 스타일', icon: '🗣️',
+    values: { listener: '듣는 편', balanced: '균형형', talker: '말하는 편' },
+  },
+  conflict_style: {
+    label: '갈등 해결', icon: '🤝',
+    values: { space: '시간 두고', direct: '바로 솔직하게', accommodate: '상대에게 맞춤' },
+  },
+  social_frequency: {
+    label: '사교 빈도', icon: '👥',
+    values: { rarely: '거의 안 함', sometimes: '가끔', often: '자주', very_often: '매우 자주' },
+  },
+
+  // 일상 & 생활
+  chronotype: {
+    label: '생활 패턴', icon: '🌅',
+    values: { morning: '아침형', evening: '저녁형', flexible: '유연형' },
+  },
+  rest_style: {
+    label: '쉬는 날', icon: '🛋️',
+    values: { home: '집에서', light_out: '가벼운 외출', active: '활동적으로' },
+  },
+  exercise_frequency: {
+    label: '운동 빈도', icon: '🏃',
+    values: { never: '안 함', rarely: '가끔', sometimes: '주 1–2회', regularly: '주 3회 이상' },
+  },
+  meal_style: {
+    label: '식습관', icon: '🍽️',
+    values: { regular: '규칙적', flexible: '유연하게', cook: '직접 요리', dine_out: '외식 위주' },
   },
   smoking: {
     label: '흡연', icon: '🚭',
@@ -40,13 +86,18 @@ const FIELD_LABELS: Record<string, { label: string; icon: string; values?: Recor
     label: '음주', icon: '🍺',
     values: { never: '안 마심', rarely: '거의 안 마심', socially: '사교적으로', regularly: '자주' },
   },
-  family_importance: { label: '가족 중요도', icon: '👨‍👩‍👧', type: 'scale' },
-  exercise_frequency: {
-    label: '운동 빈도', icon: '🏃',
-    values: { never: '안 함', rarely: '가끔', sometimes: '주 1–2회', regularly: '주 3회 이상' },
-  },
+
+  // 가족 & 반려동물
   has_children: { label: '자녀 유무', icon: '👶', type: 'bool' },
   willing_to_relocate: { label: '이사 의향', icon: '🏠', type: 'bool' },
+  has_pet: { label: '반려동물', icon: '🐾', type: 'bool' },
+  pet_type: {
+    label: '반려동물 종류', icon: '🐶',
+    values: { dog: '강아지', cat: '고양이', both: '강아지+고양이', other: '기타', none: '없음' },
+  },
+  pet_friendly: { label: '반려동물 수용', icon: '🤗', type: 'bool' },
+
+  // 현실 조건
   financial_stability: {
     label: '재정 상황', icon: '💰',
     values: { stable: '안정적', comfortable: '여유로움', wealthy: '풍요로움' },
@@ -55,19 +106,16 @@ const FIELD_LABELS: Record<string, { label: string; icon: string; values?: Recor
     label: '건강 상태', icon: '💪',
     values: { excellent: '매우 좋음', good: '좋음', fair: '보통', managing: '관리 중' },
   },
-  chronotype: {
-    label: '생활 패턴', icon: '🌅',
-    values: { morning: '아침형', evening: '저녁형', flexible: '유연형' },
-  },
-  personality_type: {
-    label: '성격 유형', icon: '🧠',
-    values: { introvert: '내향형', extrovert: '외향형', ambivert: '양향형' },
-  },
-  conflict_style: {
-    label: '갈등 해결', icon: '🤝',
-    values: { space: '시간 두고', direct: '바로 솔직하게', accommodate: '상대에게 맞춤' },
-  },
 };
+
+// 카테고리별 표시 순서
+const CATEGORY_SECTIONS: { title: string; fields: string[] }[] = [
+  { title: '관계 & 가치관', fields: ['relationship_goal', 'religion', 'family_importance'] },
+  { title: '감성 & 성격', fields: ['personality_type', 'emotional_expression', 'communication_style', 'conflict_style', 'social_frequency'] },
+  { title: '일상 & 생활', fields: ['chronotype', 'rest_style', 'exercise_frequency', 'meal_style', 'smoking', 'drinking'] },
+  { title: '가족 & 반려동물', fields: ['has_children', 'willing_to_relocate', 'has_pet', 'pet_type', 'pet_friendly'] },
+  { title: '현실 조건', fields: ['financial_stability', 'health_status'] },
+];
 
 function getDisplayValue(field: string, value: any): string {
   const meta = FIELD_LABELS[field];
@@ -86,31 +134,68 @@ const STORAGE_KEYS = {
   dailySeen: '@dasibom_daily_seen',
 };
 
+// previewQuestions는 더 이상 사용하지 않지만 설정 호환성 유지
 const DEFAULT_PREVIEW_QUESTIONS = ['relationship_goal', 'religion', 'smoking', 'drinking', 'family_importance'];
+
+const QUOTES = [
+  '좋은 인연은 서두르지 않아도 찾아옵니다.',
+  '진심은 언제나 통하는 법이에요.',
+  '함께 걸을 수 있는 사람이 가장 좋은 사람입니다.',
+  '사랑은 찾는 것이 아니라, 만들어가는 것입니다.',
+  '좋은 만남은 좋은 나로부터 시작됩니다.',
+  '인연은 바람처럼 오지만, 사랑은 뿌리처럼 자랍니다.',
+  '마음이 열리면 세상이 달라 보여요.',
+  '오래된 친구처럼 편안한 사람, 그런 사람이 좋은 인연이에요.',
+  '천천히, 그러나 확실하게 다가가세요.',
+  '진짜 인연은 노력 없이도 자연스럽습니다.',
+  '좋은 사람은 당신을 더 좋은 사람으로 만들어줍니다.',
+  '설렘보다 편안함이 오래갑니다.',
+  '마음을 열면 인연은 생각보다 가까이 있어요.',
+  '사랑에 늦은 때란 없습니다.',
+  '함께여서 더 행복한 하루가 되길 바랍니다.',
+];
+
+function getDailyQuote(): string {
+  const today = new Date();
+  const index = (today.getFullYear() * 366 + today.getMonth() * 31 + today.getDate()) % QUOTES.length;
+  return QUOTES[index];
+}
+
 const DAILY_LIMIT = 5;
 const EXTRA_PER_CREDIT = 5; // 크레딧 1개당 추가 5명
 
 // ── 필수 조건 필터 ────────────────────────────────────────
 function passesRequired(item: SuggestionProfile, conditions: string[], myProfile: any): boolean {
   for (const cond of conditions) {
+    // 생활습관
     if (cond === 'no_smoking' && (item.smoking === 'occasionally' || item.smoking === 'regularly')) return false;
     if (cond === 'no_heavy_drinking' && item.drinking === 'regularly') return false;
+    if (cond === 'no_drinking' && item.drinking !== 'never') return false;
+    // 가치관·관계
     if (cond === 'same_religion' && myProfile?.religion && item.religion !== myProfile.religion) return false;
     if (cond === 'same_relationship_goal' && myProfile?.relationship_goal && item.relationship_goal !== myProfile.relationship_goal) return false;
+    // 가족
+    if (cond === 'no_children' && item.has_children === true) return false;
+    if (cond === 'has_children_ok' && item.has_children !== true) return false;
+    if (cond === 'willing_to_relocate' && item.willing_to_relocate !== true) return false;
+    // 성격·생활
+    if (cond === 'same_chronotype' && myProfile?.chronotype && item.chronotype !== myProfile.chronotype) return false;
+    if (cond === 'exercises_regularly' && item.exercise_frequency !== 'regularly' && item.exercise_frequency !== 'sometimes') return false;
+    // 건강·재정
+    if (cond === 'good_health' && item.health_status !== 'excellent' && item.health_status !== 'good') return false;
+    if (cond === 'financially_stable' && item.financial_stability !== 'stable' && item.financial_stability !== 'comfortable' && item.financial_stability !== 'wealthy') return false;
   }
   return true;
 }
 
-// ── 카드 컴포넌트 (애니메이션 포함) ─────────────────────────
+// ── 카드 컴포넌트 (가치관 중심, 사진 없음) ─────────────────────
 function ProfileCard({
   item,
-  previewQuestions,
   onLike,
   onPass,
   acting,
 }: {
   item: SuggestionProfile;
-  previewQuestions: string[];
   onLike: () => void;
   onPass: () => void;
   acting: boolean;
@@ -136,13 +221,11 @@ function ProfileCard({
     });
   };
 
-  const handleLike = () => {
-    animateOut('right', onLike);
-  };
+  const handleLike = () => animateOut('right', onLike);
+  const handlePass = () => animateOut('left', onPass);
 
-  const handlePass = () => {
-    animateOut('left', onPass);
-  };
+  // 호환성 점수를 퍼센트로 표시
+  const scorePercent = Math.round(item.compatibility_score * 100);
 
   return (
     <Animated.View
@@ -154,46 +237,65 @@ function ProfileCard({
         },
       ]}
     >
-      {/* Header */}
+      {/* Header: 이니셜 + 기본정보 + 호환성 점수 */}
       <View style={styles.cardHeader}>
-        {item.photo_url ? (
-          <Image source={{ uri: item.photo_url }} style={styles.avatarPhoto} />
-        ) : (
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
-          </View>
-        )}
+        <View style={styles.avatarCircle}>
+          <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+        </View>
         <View style={styles.cardInfo}>
           <Text style={styles.nameText}>{item.name}, {age}세</Text>
           <Text style={styles.cityText}>📍 {item.city}</Text>
         </View>
-        {/* 매칭 전 전체 프로필 잠금 표시 */}
-        <TouchableOpacity
-          style={styles.lockBtn}
-          onPress={() => Alert.alert('💎 크레딧 기능', '매칭 전 전체 프로필 보기는\n추후 크레딧으로 이용 가능합니다.')}
-        >
-          <Text style={styles.lockBtnText}>전체 보기 🔒</Text>
-        </TouchableOpacity>
+        <View style={styles.scoreBadge}>
+          <Text style={styles.scoreText}>{scorePercent}%</Text>
+          <Text style={styles.scoreLabel}>호환</Text>
+        </View>
       </View>
 
-      {/* 미리 보기 Q&A */}
-      <View style={styles.qaSection}>
-        {previewQuestions.map(field => {
-          const meta = FIELD_LABELS[field];
-          if (!meta) return null;
-          const displayVal = getDisplayValue(field, (item as any)[field]);
-          if (!displayVal) return null;
-          return (
-            <View key={field} style={styles.qaRow}>
-              <Text style={styles.qaLabel}>{meta.icon} {meta.label}</Text>
-              <Text style={styles.qaValue}>{displayVal}</Text>
+      {/* 취미 태그 (있으면) */}
+      {item.hobbies && item.hobbies.length > 0 && (
+        <View style={styles.hobbyRow}>
+          {item.hobbies.slice(0, 5).map((h, i) => (
+            <View key={i} style={styles.hobbyTag}>
+              <Text style={styles.hobbyText}>{h}</Text>
             </View>
-          );
-        })}
-        {previewQuestions.length === 0 && (
-          <Text style={styles.qaEmpty}>내 프로필에서 먼저 확인할 항목을 설정해보세요</Text>
-        )}
-      </View>
+          ))}
+        </View>
+      )}
+
+      {/* 카테고리별 가치관 답변 */}
+      {CATEGORY_SECTIONS.map(section => {
+        const rows = section.fields
+          .map(field => {
+            const meta = FIELD_LABELS[field];
+            if (!meta) return null;
+            const val = getDisplayValue(field, (item as any)[field]);
+            if (!val) return null;
+            return { field, meta, val };
+          })
+          .filter(Boolean) as { field: string; meta: FieldMeta; val: string }[];
+
+        if (rows.length === 0) return null;
+
+        return (
+          <View key={section.title} style={styles.qaCategory}>
+            <Text style={styles.qaCategoryTitle}>{section.title}</Text>
+            {rows.map(({ field, meta, val }) => (
+              <View key={field} style={styles.qaRow}>
+                <Text style={styles.qaLabel}>{meta.icon} {meta.label}</Text>
+                <Text style={styles.qaValue}>{val}</Text>
+              </View>
+            ))}
+          </View>
+        );
+      })}
+
+      {/* 자기소개 (있으면) */}
+      {item.bio ? (
+        <View style={styles.bioSection}>
+          <Text style={styles.bioText}>"{item.bio}"</Text>
+        </View>
+      ) : null}
 
       {/* Actions */}
       <View style={styles.actionRow}>
@@ -218,6 +320,7 @@ function ProfileCard({
 
 // ── 메인 화면 ─────────────────────────────────────────────
 export default function SuggestionsScreen() {
+  const nav = useNavigation<any>();
   const [suggestions, setSuggestions] = useState<SuggestionProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -399,13 +502,17 @@ export default function SuggestionsScreen() {
         </View>
       </View>
 
+      <View style={styles.quoteBanner}>
+        <Text style={styles.quoteText}>"{getDailyQuote()}"</Text>
+      </View>
+
       {suggestions.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>🌸</Text>
           <Text style={styles.emptyTitle}>모든 추천 상대를 확인했어요</Text>
           <Text style={styles.emptySub}>
             잠시 후 새로운 추천 상대가 나타날 거예요{'\n'}
-            프로필 탭에서 필터를 조정하면{'\n'}
+            프로필 탭에서 추천 조건을 조정하면{'\n'}
             더 많은 추천을 받을 수 있어요
           </Text>
           <TouchableOpacity style={styles.refreshBtn} onPress={() => { setRefreshing(true); load(); }}>
@@ -413,9 +520,9 @@ export default function SuggestionsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.filterHintBtn}
-            onPress={() => Alert.alert('필터 조정', '내 프로필 탭에서 추천 조건과 지역 설정을\n조정해보세요.')}
+            onPress={() => nav.navigate('Profile', { scrollTo: 'recommendations' })}
           >
-            <Text style={styles.filterHintText}>필터 설정 바로가기</Text>
+            <Text style={styles.filterHintText}>추천 조건 바로가기</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -425,7 +532,6 @@ export default function SuggestionsScreen() {
           renderItem={({ item }) => (
             <ProfileCard
               item={item}
-              previewQuestions={previewQuestions}
               onLike={() => handleInterest(item.id, true)}
               onPass={() => handleInterest(item.id, false)}
               acting={acting === item.id}
@@ -451,30 +557,47 @@ const styles = StyleSheet.create({
   headerRight: { alignItems: 'flex-end' },
   headerSub: { fontSize: 13, color: C.sub },
   dailyBadge: { fontSize: 12, color: C.primary, fontWeight: '700', backgroundColor: C.primaryLight, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  quoteBanner: {
+    marginHorizontal: 16, marginBottom: 8, paddingVertical: 10, paddingHorizontal: 16,
+    backgroundColor: C.primaryLight, borderRadius: 12,
+  },
+  quoteText: { fontSize: 13, color: C.primary, fontStyle: 'italic', textAlign: 'center', lineHeight: 20 },
   list: { padding: 16, gap: 16 },
 
   card: { backgroundColor: C.card, borderRadius: 16, padding: 18, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  avatarPhoto: {
-    width: 52, height: 52, borderRadius: 26, marginRight: 12,
-    borderWidth: 2, borderColor: C.primaryLight,
-  },
   avatarCircle: {
-    width: 52, height: 52, borderRadius: 26, backgroundColor: C.primaryLight,
+    width: 48, height: 48, borderRadius: 24, backgroundColor: C.primaryLight,
     alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
-  avatarText: { fontSize: 22, color: C.primary, fontWeight: '700' },
+  avatarText: { fontSize: 20, color: C.primary, fontWeight: '700' },
   cardInfo: { flex: 1 },
   nameText: { fontSize: 18, fontWeight: '700', color: C.text },
   cityText: { fontSize: 13, color: C.sub, marginTop: 2 },
-  lockBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: C.border },
-  lockBtnText: { fontSize: 11, color: C.sub },
+  scoreBadge: {
+    alignItems: 'center', backgroundColor: C.primaryLight, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  scoreText: { fontSize: 18, fontWeight: '800', color: C.primary },
+  scoreLabel: { fontSize: 10, color: C.primary, marginTop: -2 },
 
-  qaSection: { marginBottom: 14, gap: 8 },
+  hobbyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
+  hobbyTag: {
+    backgroundColor: '#FFF0F3', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+  },
+  hobbyText: { fontSize: 12, color: C.primary },
+
+  qaCategory: { marginBottom: 12 },
+  qaCategoryTitle: { fontSize: 12, fontWeight: '700', color: C.primary, marginBottom: 6, letterSpacing: 0.5 },
   qaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#F5F0EE' },
   qaLabel: { fontSize: 14, color: C.sub },
   qaValue: { fontSize: 14, color: C.text, fontWeight: '600' },
-  qaEmpty: { fontSize: 14, color: C.sub, textAlign: 'center', paddingVertical: 12 },
+
+  bioSection: {
+    backgroundColor: '#FFF8F5', borderRadius: 10, padding: 12, marginBottom: 14,
+    borderLeftWidth: 3, borderLeftColor: C.primary,
+  },
+  bioText: { fontSize: 14, color: C.text, fontStyle: 'italic', lineHeight: 20 },
 
   actionRow: { flexDirection: 'row', gap: 10 },
   passBtn: {

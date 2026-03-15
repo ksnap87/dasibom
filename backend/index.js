@@ -8,6 +8,7 @@ const matchesRouter = require('./src/routes/matches');
 const messagesRouter = require('./src/routes/messages');
 const photosRouter = require('./src/routes/photos');
 const creditsRouter = require('./src/routes/credits');
+const authRouter = require('./src/routes/auth');
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -39,6 +40,7 @@ app.use(express.json());
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: '다시봄 API' }));
 
+app.use('/api/auth', authRouter);  // 인증 불필요
 app.use('/api/profiles', verifyToken, profilesRouter);
 app.use('/api/matches', verifyToken, matchesRouter);
 app.use('/api/messages', verifyToken, messagesRouter);

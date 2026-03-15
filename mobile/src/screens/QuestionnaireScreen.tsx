@@ -156,6 +156,10 @@ const EMPTY_FORM: FormData = {
   children_living_together: null as boolean | null,
   wants_more_children: null as boolean | null,
   willing_to_relocate: null as boolean | null,
+  // 반려동물
+  has_pet: null as boolean | null,
+  pet_type: '',
+  pet_friendly: null as boolean | null,
   // 관계 & 가치관
   relationship_goal: '',
   family_importance: 3,
@@ -206,6 +210,9 @@ export default function QuestionnaireScreen() {
         children_living_together: profile.children_living_together ?? null,
         wants_more_children: profile.wants_more_children ?? null,
         willing_to_relocate: profile.willing_to_relocate ?? null,
+        has_pet: profile.has_pet ?? null,
+        pet_type: profile.pet_type ?? '',
+        pet_friendly: profile.pet_friendly ?? null,
         relationship_goal: profile.relationship_goal ?? '',
         family_importance: profile.family_importance ?? 3,
         religion: profile.religion ?? '',
@@ -274,6 +281,9 @@ export default function QuestionnaireScreen() {
         if (form.has_children === true && form.children_living_together === null) return warn('\'자녀와의 생활은...\' 질문에 답해주세요.');
         if (form.wants_more_children === null) return warn('\'앞으로 자녀를 더 원하시나요?\' 질문에 답해주세요.');
         if (form.willing_to_relocate === null) return warn('\'상대방이 다른 지역에 산다면...\' 질문에 답해주세요.');
+        if (form.has_pet === null) return warn('\'반려동물은...\' 질문에 답해주세요.');
+        if (form.has_pet === true && !form.pet_type) return warn('\'어떤 반려동물을...\' 질문에 답해주세요.');
+        if (form.pet_friendly === null) return warn('\'상대방의 반려동물은...\' 질문에 답해주세요.');
         return true;
 
       // ── 5: 관계 & 가치관 (모두 필수) ──
@@ -719,6 +729,69 @@ export default function QuestionnaireScreen() {
                   onPress={() => set('willing_to_relocate', o.val)}
                 >
                   <Text style={[styles.sentenceText, form.willing_to_relocate === o.val && styles.sentenceTextSelected]}>
+                    {o.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Q5. 반려동물 여부 */}
+            <Text style={styles.qLabel}>반려동물은...</Text>
+            <View style={styles.sentenceRow}>
+              {[
+                { val: true,  label: '반려동물과 함께 살고 있어요' },
+                { val: false, label: '반려동물이 없어요' },
+              ].map(o => (
+                <TouchableOpacity
+                  key={String(o.val)}
+                  style={[styles.sentenceOption, form.has_pet === o.val && styles.sentenceOptionSelected]}
+                  onPress={() => set('has_pet', o.val)}
+                >
+                  <Text style={[styles.sentenceText, form.has_pet === o.val && styles.sentenceTextSelected]}>
+                    {o.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Q6. 반려동물 종류 (조건부) */}
+            {form.has_pet === true && (
+              <>
+                <Text style={styles.qLabel}>어떤 반려동물을 키우시나요?</Text>
+                <View style={styles.sentenceRow}>
+                  {[
+                    { value: 'dog',   label: '강아지' },
+                    { value: 'cat',   label: '고양이' },
+                    { value: 'both',  label: '강아지 + 고양이' },
+                    { value: 'other', label: '기타 동물' },
+                  ].map(o => (
+                    <TouchableOpacity
+                      key={o.value}
+                      style={[styles.sentenceOption, form.pet_type === o.value && styles.sentenceOptionSelected]}
+                      onPress={() => set('pet_type', o.value)}
+                    >
+                      <Text style={[styles.sentenceText, form.pet_type === o.value && styles.sentenceTextSelected]}>
+                        {o.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {/* Q7. 상대방 반려동물 수용 여부 */}
+            <Text style={styles.qLabel}>상대방의 반려동물은...</Text>
+            <View style={styles.sentenceRow}>
+              {[
+                { val: true,  label: '반려동물이 있어도 괜찮아요' },
+                { val: false, label: '반려동물이 없는 분이 좋겠어요' },
+              ].map(o => (
+                <TouchableOpacity
+                  key={String(o.val)}
+                  style={[styles.sentenceOption, form.pet_friendly === o.val && styles.sentenceOptionSelected]}
+                  onPress={() => set('pet_friendly', o.val)}
+                >
+                  <Text style={[styles.sentenceText, form.pet_friendly === o.val && styles.sentenceTextSelected]}>
                     {o.label}
                   </Text>
                 </TouchableOpacity>

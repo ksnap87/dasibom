@@ -4,13 +4,11 @@ import {
   ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import {
-  initConnection, endConnection, fetchProducts, requestPurchase,
-  finishTransaction, purchaseUpdatedListener, purchaseErrorListener,
-  ErrorCode,
-  type Purchase, type PurchaseError, type Product,
-} from 'react-native-iap';
 import { useAuthStore } from '../store/authStore';
+
+// react-native-iap는 Google Play 출시 시 설치 후 활성화
+// import { initConnection, endConnection, ... } from 'react-native-iap';
+const IAP_ENABLED = false;
 
 const C = {
   primary: '#E8556D',
@@ -47,84 +45,20 @@ const FALLBACK_PRODUCTS = [
 export default function CreditStoreScreen() {
   const nav = useNavigation();
   const { credits, loadCredits } = useAuthStore();
-  const [products, setProducts] = useState<Product[]>([]);
   const [purchasing, setPurchasing] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
-
-  useEffect(() => {
-    let purchaseListener: any;
-    let errorListener: any;
-
-    const init = async () => {
-      try {
-        await initConnection();
-        setConnected(true);
-
-        const items = await fetchProducts({ skus: PRODUCT_IDS });
-        if (items && items.length > 0) {
-          setProducts(items as Product[]);
-        }
-      } catch (err) {
-        console.warn('[IAP] 연결 실패:', err);
-        // Play Store 연결 실패해도 화면은 보여줌 (개발 중)
-      }
-
-      // 구매 완료 리스너
-      purchaseListener = purchaseUpdatedListener(async (purchase: Purchase) => {
-        try {
-          // 서버에서 구매 검증 + 크레딧 지급
-          const { default: api } = await import('../api/client');
-          await api.post('/api/credits/verify-purchase', {
-            productId: purchase.productId,
-            purchaseToken: purchase.purchaseToken,
-            packageName: 'com.tulipapp',
-          });
-
-          // 트랜잭션 완료 처리 (Google Play에 소비 확인)
-          await finishTransaction({ purchase, isConsumable: true });
-
-          // 크레딧 새로고침
-          await loadCredits();
-
-          const amount = CREDIT_MAP[purchase.productId] ?? 0;
-          Alert.alert('충전 완료!', `크레딧 ${amount}개가 충전되었습니다.`);
-        } catch (err) {
-          console.error('[IAP] 검증 실패:', err);
-          Alert.alert('오류', '구매 처리 중 문제가 발생했습니다.\n고객센터에 문의해주세요.');
-        } finally {
-          setPurchasing(null);
-        }
-      });
-
-      // 구매 에러 리스너
-      errorListener = purchaseErrorListener((error: PurchaseError) => {
-        if (error.code !== ErrorCode.UserCancelled) {
-          Alert.alert('구매 실패', error.message ?? '결제 처리 중 오류가 발생했습니다.');
-        }
-        setPurchasing(null);
-      });
-    };
-
-    init();
-
-    return () => {
-      purchaseListener?.remove();
-      errorListener?.remove();
-      endConnection();
-    };
-  }, [loadCredits]);
 
   const handlePurchase = async (productId: string) => {
-    if (!connected) {
-      // Play Store 미연결 시 (개발/테스트 환경)
+    // Google Play 출시 전: 테스트 모드
+    if (!IAP_ENABLED) {
       Alert.alert(
         '테스트 모드',
-        'Google Play Store와 연결되지 않았습니다.\n테스트로 크레딧을 충전할까요?',
+        'Google Play Store 출시 전입니다.\n테스트로 크레딧을 충전할까요?',
         [
           { text: '취소', style: 'cancel' },
           {
             text: '테스트 충전',
             onPress: async () => {
+              setPurchasing(productId);
               try {
                 const { default: api } = await import('../api/client');
                 const amount = CREDIT_MAP[productId] ?? 3;
@@ -133,6 +67,8 @@ export default function CreditStoreScreen() {
                 Alert.alert('충전 완료!', `크레딧 ${amount}개가 충전되었습니다.`);
               } catch {
                 Alert.alert('오류', '충전 실패');
+              } finally {
+                setPurchasing(null);
               }
             },
           },
@@ -141,28 +77,12 @@ export default function CreditStoreScreen() {
       return;
     }
 
-    setPurchasing(productId);
-    try {
-      await requestPurchase({
-        request: { google: { skus: [productId] } },
-        type: 'in-app',
-      });
-    } catch (err: any) {
-      if (err.code !== ErrorCode.UserCancelled) {
-        Alert.alert('구매 오류', err.message ?? '결제를 시작할 수 없습니다.');
-      }
-      setPurchasing(null);
-    }
+    // TODO: IAP_ENABLED=true 후 react-native-iap 연동 코드 활성화
+    // setPurchasing(productId);
+    // await requestPurchase({ request: { google: { skus: [productId] } }, type: 'in-app' });
   };
 
-  // 상품 표시 (Google Play 상품이 있으면 사용, 없으면 폴백)
-  const displayProducts = FALLBACK_PRODUCTS.map(fb => {
-    const gp = products.find(p => p.id === fb.id);
-    return {
-      ...fb,
-      price: gp?.displayPrice ?? fb.price,
-    };
-  });
+  const displayProducts = FALLBACK_PRODUCTS;
 
   return (
     <SafeAreaView style={styles.container}>

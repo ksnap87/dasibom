@@ -1,5 +1,5 @@
 /**
- * Tulip — Senior Dating App
+ * 다시봄 — Senior Dating App
  * Root component: loads session then renders AppNavigator.
  */
 import React, { useEffect } from 'react';
@@ -21,6 +21,11 @@ export default function App() {
       getMyProfile()
         .then(setProfile)
         .catch(() => setProfile(null)); // no profile yet → questionnaire
+    });
+
+    // 연락처 동기화 (지인 추천 제외용) — 백그라운드 실행
+    import('./src/utils/contactSync').then(({ syncContacts }) => {
+      syncContacts().catch(() => {});
     });
   }, [isAuthenticated, setProfile]);
 
