@@ -6,19 +6,27 @@
 
 ```
 dasibom/
-├── supabase/schema.sql      # DB 스키마 (SQL Editor에 붙여넣기)
-├── backend/                 # Node.js + Express API
+├── supabase/
+│   ├── schema.sql                  # DB 스키마
+│   └── migrations/                 # Supabase CLI 마이그레이션
+├── backend/                        # Node.js + Express API
 │   ├── index.js
 │   ├── src/
 │   │   ├── middleware/auth.js
-│   │   ├── routes/{profiles,matches,messages}.js
-│   │   └── utils/scoring.js  ← 호환성 점수 알고리즘
+│   │   ├── routes/{profiles,matches,messages,photos}.js
+│   │   └── utils/
+│   │       ├── scoring.js          # 호환성 점수 알고리즘
+│   │       └── push.js             # FCM 푸시 알림 유틸
 │   └── .env.example
-└── mobile/                  # React Native (Android)
+└── mobile/                         # React Native (Android)
     ├── App.tsx
     ├── src/
     │   ├── navigation/AppNavigator.tsx
-    │   ├── screens/{Auth,Questionnaire,Suggestions,Matches,Profile,ChatRoom}Screen.tsx
+    │   ├── screens/                # Auth, Questionnaire, Suggestions, Matches,
+    │   │                           # Profile, ChatRoom, Splash, PhoneVerification,
+    │   │                           # FriendProfile
+    │   ├── components/             # SkeletonLoader, Toast
+    │   ├── services/fcm.ts         # FCM 푸시 알림 서비스
     │   ├── api/client.ts
     │   ├── store/authStore.ts
     │   └── types/index.ts
@@ -184,14 +192,20 @@ npx react-native run-android
 |--------|----------|------|
 | GET | `/health` | 헬스 체크 |
 | GET | `/api/profiles/me` | 내 프로필 조회 |
-| PUT | `/api/profiles/me` | 프로필 저장/업데이트 |
+| PUT | `/api/profiles/me` | 프로필 저장/업데이트 (FCM 토큰 포함) |
+| DELETE | `/api/profiles/me` | 계정 삭제 |
 | GET | `/api/profiles/:id` | 타인 프로필 조회 |
-| POST | `/api/profiles/interest` | 관심 표현 (like/pass) |
+| POST | `/api/profiles/interest` | 관심 표현 (like/pass) + 매칭 시 푸시 |
+| POST | `/api/profiles/credits/deduct` | 크레딧 차감 |
+| POST | `/api/profiles/report` | 신고 |
+| POST | `/api/profiles/block` | 차단 |
+| DELETE | `/api/profiles/block/:id` | 차단 해제 |
 | GET | `/api/matches/suggestions` | 추천 후보 목록 (점수순) |
 | GET | `/api/matches` | 매칭된 상대 목록 |
 | GET | `/api/messages/:matchId` | 대화 메시지 조회 |
-| POST | `/api/messages` | 메시지 전송 |
+| POST | `/api/messages` | 메시지 전송 + 푸시 알림 |
 | PATCH | `/api/messages/read/:matchId` | 읽음 처리 |
+| POST | `/api/photos/upload` | 프로필 사진 업로드 |
 
 ---
 
@@ -245,11 +259,18 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 - [x] 본인인증 후 채팅 시작
 - [x] 크레딧 기반 가치관 수정
 - [x] GitHub Actions 자동 APK 빌드 배포
+- [x] 신고/차단/계정삭제 기능
+- [x] 크레딧 서버 저장 (Supabase)
+- [x] 프로필 Q&A 형식 가치관 전체 노출
+- [x] Sprint 6 UX 개선 (스플래시, 스켈레톤 로더, 토스트, 카드 애니메이션)
+- [x] 신고 UI Modal 통일 (Alert → Modal)
+- [x] 아이스브레이커 메시지 제안
+- [x] 앱 아이콘 & 스플래시 스크린
+- [x] 푸시 알림 (Firebase FCM) — 매칭/메시지 알림
 
 **예정:**
 - [ ] 카카오 / PASS 본인인증 실인증 연동
 - [ ] 사진 업로드 (Supabase Storage)
-- [ ] 푸시 알림 (Firebase FCM)
 - [ ] 크레딧으로 하루 추천 추가 열람
 - [ ] 크레딧으로 필수 조건 3개 초과 설정
 - [ ] Play Store 출시
