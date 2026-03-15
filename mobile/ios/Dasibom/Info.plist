@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>TulipApp</string>
+	<string>다시봄</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -55,5 +55,26 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kakao762991782c58c359e70b779b809851dd</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaokompassauth</string>
+		<string>kakaolink</string>
+		<string>kakaoplus</string>
+	</array>
+	<key>KAKAO_APP_KEY</key>
+	<string>762991782c58c359e70b779b809851dd</string>
+	<key>NSContactsUsageDescription</key>
+	<string>지인이 추천에 나타나지 않도록 연락처를 확인합니다. 전화번호는 암호화되어 저장됩니다.</string>
 </dict>
 </plist>

@@ -21,17 +21,33 @@ router.get('/me', async (req, res) => {
   res.json(data);
 });
 
-// PUT /api/profiles/me — partial update (기존 값 유지)
+// PUT /api/profiles/me — upsert (없으면 생성, 있으면 업데이트)
 router.put('/me', async (req, res) => {
-  // id 필드는 업데이트 조건으로만 사용, body에서 제거
   const { id: _id, ...updates } = req.body;
 
-  const { data, error } = await supabase
+  // 먼저 업데이트 시도
+  const { data: existing } = await supabase
     .from('profiles')
-    .update(updates)
+    .select('id')
     .eq('id', req.user.id)
-    .select()
-    .single();
+    .maybeSingle();
+
+  let data, error;
+  if (existing) {
+    ({ data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', req.user.id)
+      .select()
+      .single());
+  } else {
+    // 프로필이 없으면 생성
+    ({ data, error } = await supabase
+      .from('profiles')
+      .insert({ id: req.user.id, ...updates })
+      .select()
+      .single());
+  }
 
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
@@ -212,6 +228,55 @@ router.delete('/me', async (req, res) => {
   const { error: authErr } = await supabase.auth.admin.deleteUser(userId);
   if (authErr) console.error('Auth user delete failed:', authErr.message);
 
+  res.json({ success: true });
+});
+
+// POST /api/profiles/sync-contacts — 연락처 해시 동기화
+// 기기 연락처의 전화번호 해시를 서버에 저장하여 추천에서 제외
+router.post('/sync-contacts', async (req, res) => {
+  const userId = req.user.id;
+  const { hashes } = req.body; // string[]
+
+  if (!Array.isArray(hashes) || hashes.length === 0) {
+    return res.json({ synced: 0 });
+  }
+
+  // 기존 해시 모두 삭제 후 새로 삽입 (전체 교체)
+  await supabase
+    .from('contact_hashes')
+    .delete()
+    .eq('user_id', userId);
+
+  const rows = hashes.map(h => ({ user_id: userId, phone_hash: h }));
+
+  // 500개씩 배치 삽입
+  let synced = 0;
+  for (let i = 0; i < rows.length; i += 500) {
+    const batch = rows.slice(i, i + 500);
+    const { error } = await supabase
+      .from('contact_hashes')
+      .upsert(batch, { onConflict: 'user_id,phone_hash', ignoreDuplicates: true });
+    if (!error) synced += batch.length;
+  }
+
+  res.json({ synced });
+});
+
+// POST /api/profiles/phone-hash — 본인인증 시 전화번호 해시 저장
+router.post('/phone-hash', async (req, res) => {
+  const userId = req.user.id;
+  const { phone_hash } = req.body;
+
+  if (!phone_hash) {
+    return res.status(400).json({ error: 'phone_hash 필요' });
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ phone_hash })
+    .eq('id', userId);
+
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
 

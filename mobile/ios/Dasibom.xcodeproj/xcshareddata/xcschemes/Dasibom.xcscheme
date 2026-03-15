@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "TulipApp.app"
-               BlueprintName = "TulipApp"
-               ReferencedContainer = "container:TulipApp.xcodeproj">
+               BuildableName = "Dasibom.app"
+               BlueprintName = "Dasibom"
+               ReferencedContainer = "container:Dasibom.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "TulipAppTests.xctest"
-               BlueprintName = "TulipAppTests"
-               ReferencedContainer = "container:TulipApp.xcodeproj">
+               BuildableName = "DasibomTests.xctest"
+               BlueprintName = "DasibomTests"
+               ReferencedContainer = "container:Dasibom.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "TulipApp.app"
-            BlueprintName = "TulipApp"
-            ReferencedContainer = "container:TulipApp.xcodeproj">
+            BuildableName = "Dasibom.app"
+            BlueprintName = "Dasibom"
+            ReferencedContainer = "container:Dasibom.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "TulipApp.app"
-            BlueprintName = "TulipApp"
-            ReferencedContainer = "container:TulipApp.xcodeproj">
+            BuildableName = "Dasibom.app"
+            BlueprintName = "Dasibom"
+            ReferencedContainer = "container:Dasibom.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

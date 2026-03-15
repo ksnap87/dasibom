@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { login as kakaoSdkLogin, logout as kakaoSdkLogout } from '@react-native-seoul/kakao-login';
+import axios from 'axios';
 import { Profile } from '../types';
 import Config from '../config';
 
@@ -29,8 +31,7 @@ interface AuthState {
   phoneVerified: boolean;
 
   setProfile: (p: Profile | null) => void;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  kakaoLogin: () => Promise<void>;
   signOut: () => Promise<void>;
   loadSession: () => Promise<void>;
 
@@ -53,23 +54,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setProfile: (profile) => set({ profile }),
 
-  signIn: async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
-    await AsyncStorage.setItem('access_token', data.session?.access_token ?? '');
-    set({ user: data.user, isAuthenticated: true });
-  },
+  kakaoLogin: async () => {
+    // 1. 카카오 네이티브 SDK 로그인
+    const kakaoResult = await kakaoSdkLogin();
 
-  signUp: async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw new Error(error.message);
-    if (data.session) {
-      await AsyncStorage.setItem('access_token', data.session.access_token);
-    }
-    set({ user: data.user, isAuthenticated: true });
+    // 2. 백엔드로 카카오 토큰 전송 → Supabase 세션 교환
+    const response = await axios.post(`${Config.API_URL}/api/auth/kakao`, {
+      kakaoAccessToken: kakaoResult.accessToken,
+    });
+
+    const { access_token, refresh_token, user } = response.data;
+
+    // 3. 토큰 저장
+    await AsyncStorage.setItem('access_token', access_token);
+
+    // 4. Supabase 클라이언트에 세션 설정 (토큰 자동 갱신 유지)
+    await supabase.auth.setSession({ access_token, refresh_token });
+
+    set({ user, isAuthenticated: true });
   },
 
   signOut: async () => {
+    try { await kakaoSdkLogout(); } catch (_) { /* 카카오 로그아웃 실패 무시 */ }
     await supabase.auth.signOut();
     await AsyncStorage.removeItem('access_token');
     set({ user: null, profile: null, isAuthenticated: false, credits: DEFAULT_CREDITS, phoneVerified: false });

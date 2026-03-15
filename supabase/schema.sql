@@ -1,5 +1,5 @@
 -- ============================================================
--- Tulip Dating App — Supabase Schema
+-- Dasibom Dating App — Supabase Schema
 -- Run this in: Supabase Dashboard > SQL Editor
 -- ============================================================
 
@@ -262,6 +262,10 @@ alter table public.profiles
 alter table public.profiles
   add column if not exists fcm_token text;
 
+-- 배경 사진
+alter table public.profiles
+  add column if not exists background_url text;
+
 -- 일상 & 생활 신규 필드
 alter table public.profiles
   add column if not exists chronotype text
@@ -309,6 +313,43 @@ alter table public.blocks enable row level security;
 create policy "Users can manage own blocks"
   on public.blocks for all
   using (auth.uid() = blocker_id);
+
+-- ============================================================
+-- MIGRATION: 반려동물 필드 추가
+-- ============================================================
+alter table public.profiles
+  add column if not exists has_pet boolean,
+  add column if not exists pet_type text
+    check (pet_type in ('dog', 'cat', 'both', 'other', 'none')),
+  add column if not exists pet_friendly boolean;
+
+-- ============================================================
+-- MIGRATION: 전화번호 해시 (연락처 기반 추천 제외용)
+-- ============================================================
+alter table public.profiles
+  add column if not exists phone_hash text;
+
+create index if not exists idx_profiles_phone_hash on public.profiles (phone_hash);
+
+-- ============================================================
+-- CONTACT_HASHES (연락처 기반 추천 제외)
+-- 사용자의 기기 연락처 전화번호를 해시하여 저장
+-- ============================================================
+create table if not exists public.contact_hashes (
+  id            uuid default uuid_generate_v4() primary key,
+  user_id       uuid references public.profiles(id) on delete cascade not null,
+  phone_hash    text not null,
+  unique (user_id, phone_hash)
+);
+
+alter table public.contact_hashes enable row level security;
+
+create policy "Users can manage own contact hashes"
+  on public.contact_hashes for all
+  using (auth.uid() = user_id);
+
+create index if not exists idx_contact_hashes_user on public.contact_hashes (user_id);
+create index if not exists idx_contact_hashes_phone on public.contact_hashes (phone_hash);
 
 -- ============================================================
 -- INDEXES

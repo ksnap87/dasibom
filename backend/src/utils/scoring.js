@@ -1,5 +1,5 @@
 /**
- * Tulip Compatibility Scoring Algorithm
+ * Dasibom Compatibility Scoring Algorithm
  *
  * Dimensions and weights:
  *  1. Relationship goal   25 pts  — must align
