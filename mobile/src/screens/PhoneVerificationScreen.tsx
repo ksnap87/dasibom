@@ -1,10 +1,8 @@
 /**
  * PhoneVerificationScreen
  * 채팅 시작 전 본인인증 화면.
+ * Firebase Phone Auth를 사용하여 실제 SMS 인증번호 발송.
  * 인증 완료 후 원래 가려던 ChatRoom으로 이동.
- *
- * 현재: SMS OTP 모의(mock) — 어떤 번호 + "000000" 입력하면 통과
- * 추후: NICE 본인인증 SDK 연동
  */
 import React, { useState, useRef } from 'react';
 import {
@@ -13,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { useAuthStore } from '../store/authStore';
 import { RootStackParamList } from '../types';
 
@@ -41,8 +40,26 @@ export default function PhoneVerificationScreen() {
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
+  const [confirmation, setConfirmation] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
   const otpRef = useRef<TextInput>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 쿨다운 타이머 시작 (재발송 방지)
+  const startCooldown = () => {
+    setCooldown(60);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setCooldown(prev => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const formatPhone = (text: string) => {
     const digits = text.replace(/\D/g, '').slice(0, 11);
@@ -51,19 +68,50 @@ export default function PhoneVerificationScreen() {
     return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
   };
 
+  // 전화번호를 국제 형식으로 변환 (010-1234-5678 → +821012345678)
+  const toE164 = (phoneNumber: string): string => {
+    const digits = phoneNumber.replace(/\D/g, '');
+    if (digits.startsWith('0')) {
+      return `+82${digits.slice(1)}`;
+    }
+    return `+82${digits}`;
+  };
+
   const handleSendOTP = async () => {
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 10) {
       Alert.alert('알림', '올바른 휴대폰 번호를 입력해주세요.');
       return;
     }
+
     setLoading(true);
-    // 모의: 1초 딜레이 후 OTP 발송 완료
-    await new Promise<void>(r => setTimeout(r, 1000));
-    setLoading(false);
-    setStep('otp');
-    setTimeout(() => otpRef.current?.focus(), 200);
-    Alert.alert('인증번호 발송', `${phone}으로 인증번호를 발송했습니다.\n\n(테스트: 000000 입력)`);
+    try {
+      const e164Phone = toE164(phone);
+      const confirm = await auth().signInWithPhoneNumber(e164Phone);
+      setConfirmation(confirm);
+      setStep('otp');
+      startCooldown();
+      setTimeout(() => otpRef.current?.focus(), 200);
+      Alert.alert('인증번호 발송', `${phone}으로 인증번호를 발송했습니다.\n잠시 후 문자를 확인해주세요.`);
+    } catch (error: any) {
+      console.error('SMS 발송 실패:', error);
+      if (error.code === 'auth/too-many-requests') {
+        Alert.alert('알림', '너무 많은 요청이 있었습니다.\n잠시 후 다시 시도해주세요.');
+      } else if (error.code === 'auth/invalid-phone-number') {
+        Alert.alert('알림', '올바른 휴대폰 번호를 입력해주세요.');
+      } else {
+        Alert.alert('오류', '인증번호 발송에 실패했습니다.\n다시 시도해주세요.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0) return;
+    setOtp('');
+    setStep('phone');
+    // 사용자가 다시 발송 버튼 누르도록
   };
 
   const handleVerify = async () => {
@@ -71,17 +119,37 @@ export default function PhoneVerificationScreen() {
       Alert.alert('알림', '6자리 인증번호를 입력해주세요.');
       return;
     }
-    if (otp !== '000000') {
-      Alert.alert('오류', '인증번호가 일치하지 않습니다.\n다시 확인해주세요.');
+    if (!confirmation) {
+      Alert.alert('오류', '인증번호를 먼저 발송해주세요.');
       return;
     }
-    setLoading(true);
-    await new Promise<void>(r => setTimeout(r, 800));
-    await setPhoneVerified(true);
-    setLoading(false);
 
-    // 인증 완료 → 채팅방으로 이동 (뒤로가기 스택에서 이 화면 제거)
-    nav.replace('ChatRoom', { match_id, other_name, other_user_id });
+    setLoading(true);
+    try {
+      await confirmation.confirm(otp);
+      // Firebase 인증 성공 → 앱 인증 상태 업데이트
+      await setPhoneVerified(true);
+
+      // Firebase 전화 인증 계정은 로그아웃 (Supabase 인증과 별개)
+      try { await auth().signOut(); } catch {}
+
+      setLoading(false);
+      // 인증 완료 → 채팅방으로 이동 (뒤로가기 스택에서 이 화면 제거)
+      nav.replace('ChatRoom', { match_id, other_name, other_user_id });
+    } catch (error: any) {
+      setLoading(false);
+      console.error('인증 실패:', error);
+      if (error.code === 'auth/invalid-verification-code') {
+        Alert.alert('오류', '인증번호가 일치하지 않습니다.\n다시 확인해주세요.');
+      } else if (error.code === 'auth/session-expired') {
+        Alert.alert('오류', '인증번호가 만료되었습니다.\n다시 발송해주세요.');
+        setStep('phone');
+        setOtp('');
+        setConfirmation(null);
+      } else {
+        Alert.alert('오류', '인증에 실패했습니다.\n다시 시도해주세요.');
+      }
+    }
   };
 
   return (
@@ -136,10 +204,13 @@ export default function PhoneVerificationScreen() {
               )}
               {step === 'otp' && (
                 <TouchableOpacity
-                  style={styles.resendBtn}
-                  onPress={() => { setStep('phone'); setOtp(''); }}
+                  style={[styles.resendBtn, cooldown > 0 && styles.btnDisabled]}
+                  onPress={handleResend}
+                  disabled={cooldown > 0}
                 >
-                  <Text style={styles.resendText}>재발송</Text>
+                  <Text style={styles.resendText}>
+                    {cooldown > 0 ? `재발송 (${cooldown}s)` : '재발송'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -153,7 +224,7 @@ export default function PhoneVerificationScreen() {
                   style={styles.otpInput}
                   value={otp}
                   onChangeText={t => setOtp(t.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000000"
+                  placeholder="인증번호 입력"
                   keyboardType="number-pad"
                   maxLength={6}
                   placeholderTextColor={C.sub}
