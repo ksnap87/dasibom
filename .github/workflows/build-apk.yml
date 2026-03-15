@@ -44,13 +44,22 @@ jobs:
         working-directory: mobile/android/app
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > google-services.json
 
+      - name: Decode release keystore
+        working-directory: mobile/android/app
+        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > dasibom-release.keystore
+
       - name: Grant execute permission for gradlew
         working-directory: mobile/android
         run: chmod +x gradlew
 
-      - name: Build Debug APK
+      - name: Build Release APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          ./gradlew assembleRelease --no-daemon \
+            -PRELEASE_STORE_FILE=dasibom-release.keystore \
+            -PRELEASE_STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }} \
+            -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
+            -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
 
       - name: Get version name
         id: version
@@ -72,8 +81,8 @@ jobs:
             **메시지**: ${{ github.event.head_commit.message }}
 
             ### 설치 방법
-            1. `dasibom-release.apk` 다운로드
+            1. `app-release.apk` 다운로드
             2. 안드로이드 설정 → 알 수 없는 앱 설치 허용
             3. APK 파일 실행하여 설치
-          files: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          files: mobile/android/app/build/outputs/apk/release/app-release.apk
           token: ${{ secrets.GITHUB_TOKEN }}
