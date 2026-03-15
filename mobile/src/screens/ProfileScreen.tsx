@@ -344,7 +344,7 @@ export default function ProfileScreen() {
               <Text style={styles.creditValue}>{credits}개</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.creditBuyBtn}>
+          <TouchableOpacity style={styles.creditBuyBtn} onPress={() => nav.navigate('CreditStore')}>
             <Text style={styles.creditBuyText}>충전하기</Text>
           </TouchableOpacity>
         </View>

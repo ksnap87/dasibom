@@ -7,6 +7,7 @@ const profilesRouter = require('./src/routes/profiles');
 const matchesRouter = require('./src/routes/matches');
 const messagesRouter = require('./src/routes/messages');
 const photosRouter = require('./src/routes/photos');
+const creditsRouter = require('./src/routes/credits');
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -42,6 +43,7 @@ app.use('/api/profiles', verifyToken, profilesRouter);
 app.use('/api/matches', verifyToken, matchesRouter);
 app.use('/api/messages', verifyToken, messagesRouter);
 app.use('/api/photos', verifyToken, photosRouter);
+app.use('/api/credits', verifyToken, creditsRouter);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
