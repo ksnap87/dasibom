@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, Alert, SafeAreaView, Animated,
+  ActivityIndicator, RefreshControl, Alert, SafeAreaView, Animated, Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSuggestions, expressInterest } from '../api/client';
@@ -154,9 +154,13 @@ function ProfileCard({
     >
       {/* Header */}
       <View style={styles.cardHeader}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
-        </View>
+        {item.photo_url ? (
+          <Image source={{ uri: item.photo_url }} style={styles.avatarPhoto} />
+        ) : (
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+          </View>
+        )}
         <View style={styles.cardInfo}>
           <Text style={styles.nameText}>{item.name}, {age}세</Text>
           <Text style={styles.cityText}>📍 {item.city}</Text>
@@ -411,6 +415,10 @@ const styles = StyleSheet.create({
 
   card: { backgroundColor: C.card, borderRadius: 16, padding: 18, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  avatarPhoto: {
+    width: 52, height: 52, borderRadius: 26, marginRight: 12,
+    borderWidth: 2, borderColor: C.primaryLight,
+  },
   avatarCircle: {
     width: 52, height: 52, borderRadius: 26, backgroundColor: C.primaryLight,
     alignItems: 'center', justifyContent: 'center', marginRight: 12,

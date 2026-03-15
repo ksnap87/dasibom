@@ -199,6 +199,11 @@ export default function FriendProfileScreen() {
           <Text style={styles.heroName}>{profile.name}</Text>
           <Text style={styles.heroSub}>{age}세 · {profile.city}</Text>
           {profile.bio ? <Text style={styles.heroBio}>{profile.bio}</Text> : null}
+          {!profile.photo_url && (
+            <View style={styles.noPhotoHint}>
+              <Text style={styles.noPhotoHintText}>아직 사진을 등록하지 않은 분이에요</Text>
+            </View>
+          )}
         </View>
 
         {/* 성격 & 감성 - Q&A 형식 */}
@@ -299,12 +304,17 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 20 },
 
   hero: { alignItems: 'center', paddingVertical: 24, marginBottom: 8 },
-  bigPhoto: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: C.primary, marginBottom: 12 },
+  bigPhoto: { width: 140, height: 140, borderRadius: 70, borderWidth: 3, borderColor: C.primary, marginBottom: 12 },
   bigAvatar: {
-    width: 100, height: 100, borderRadius: 50, backgroundColor: C.primaryLight,
+    width: 140, height: 140, borderRadius: 70, backgroundColor: C.primaryLight,
     alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
-  bigAvatarText: { fontSize: 42, color: C.primary, fontWeight: '700' },
+  bigAvatarText: { fontSize: 56, color: C.primary, fontWeight: '700' },
+  noPhotoHint: {
+    marginTop: 8, paddingHorizontal: 14, paddingVertical: 6,
+    backgroundColor: '#F5F0EE', borderRadius: 12,
+  },
+  noPhotoHintText: { fontSize: 13, color: C.sub },
   heroName: { fontSize: 28, fontWeight: '700', color: C.text },
   heroSub: { fontSize: 16, color: C.sub, marginTop: 4 },
   heroBio: { fontSize: 15, color: '#555', marginTop: 10, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16 },
