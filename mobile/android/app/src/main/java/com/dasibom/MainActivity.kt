@@ -1,4 +1,4 @@
-package com.tulipapp
+package com.dasibom
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

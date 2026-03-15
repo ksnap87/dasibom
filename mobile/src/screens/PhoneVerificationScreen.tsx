@@ -13,6 +13,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { useAuthStore } from '../store/authStore';
+import { savePhoneHash } from '../api/client';
 import { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -130,6 +131,16 @@ export default function PhoneVerificationScreen() {
       // Firebase 인증 성공 → 앱 인증 상태 업데이트
       await setPhoneVerified(true);
 
+      // 전화번호 해시를 서버에 저장 (연락처 기반 추천 제외용)
+      try {
+        const digits = phone.replace(/\D/g, '');
+        const normalized = digits.startsWith('0') ? `+82${digits.slice(1)}` : `+82${digits}`;
+        // SHA-256 해시 생성 (간단한 해시)
+        const { createHash } = await import('../utils/hash');
+        const hash = await createHash(normalized);
+        await savePhoneHash(hash);
+      } catch (_) { /* 해시 저장 실패해도 인증은 완료 */ }
+
       // Firebase 전화 인증 계정은 로그아웃 (Supabase 인증과 별개)
       try { await auth().signOut(); } catch {}
 
@@ -172,7 +183,7 @@ export default function PhoneVerificationScreen() {
           <View style={styles.reasonCard}>
             <Text style={styles.reasonTitle}>왜 인증이 필요한가요?</Text>
             <Text style={styles.reasonText}>
-              다시봄은 50대 이상을 위한 진지한 만남을 제공합니다.{'\n'}
+              다시봄은 50대 이상을 위한 신뢰할 수 있는 만남의 공간입니다.{'\n'}
               본인인증을 통해 신뢰할 수 있는 만남을 보장합니다. 인증 정보는 매칭에 활용되지 않습니다.
             </Text>
           </View>

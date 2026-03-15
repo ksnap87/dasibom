@@ -6,6 +6,7 @@ export interface Profile {
   looking_for: 'male' | 'female' | 'any';
   city: string;
   photo_url?: string;
+  background_url?: string;
   bio?: string;
   questionnaire_completed: boolean;
   phone_verified?: boolean;   // 본인인증 여부 (채팅 전 필수)
@@ -43,6 +44,11 @@ export interface Profile {
   religion?: 'none' | 'buddhism' | 'christianity' | 'catholicism' | 'other';
   religion_importance?: number;
 
+  // 반려동물
+  has_pet?: boolean;
+  pet_type?: 'dog' | 'cat' | 'both' | 'other' | 'none';
+  pet_friendly?: boolean;
+
   // 현실 조건
   health_status?: 'excellent' | 'good' | 'fair' | 'managing';
   financial_stability?: 'stable' | 'comfortable' | 'wealthy';
@@ -66,7 +72,6 @@ export interface SuggestionProfile {
   living_situation?: string;
   exercise_frequency?: string;
   personality_type?: string;
-  // 미리 보기 질문용 추가 필드
   smoking?: string;
   drinking?: string;
   chronotype?: string;
@@ -77,6 +82,13 @@ export interface SuggestionProfile {
   financial_stability?: string;
   communication_style?: string;
   conflict_style?: string;
+  emotional_expression?: string;
+  social_frequency?: string;
+  rest_style?: string;
+  meal_style?: string;
+  has_pet?: boolean;
+  pet_type?: string;
+  pet_friendly?: boolean;
   compatibility_score: number;
 }
 
@@ -92,6 +104,12 @@ export interface MutualMatch {
     photo_url?: string;
     bio?: string;
   };
+  last_message?: {
+    content: string;
+    created_at: string;
+    sender_id: string;
+  } | null;
+  unread_count?: number;
 }
 
 export interface Message {
@@ -119,5 +137,5 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   Suggestions: undefined;
   Matches: undefined;
-  Profile: undefined;
+  Profile: { scrollTo?: string } | undefined;
 };

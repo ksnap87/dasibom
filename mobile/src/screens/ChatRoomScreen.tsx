@@ -13,12 +13,12 @@ type Route = RouteProp<RootStackParamList, 'ChatRoom'>;
 
 const C = {
   primary: '#E8556D',
-  bg: '#B2C7D9',       // 카카오톡 특유의 연한 청회색 배경
-  myBubble: '#FEE500', // 카카오톡 내 말풍선 (노란색)
+  bg: '#FFF5F3',           // 다시봄 따뜻한 크림 배경
+  myBubble: '#F2728A',     // 내 말풍선: 부드러운 코랄 핑크
   otherBubble: '#FFFFFF',
   text: '#2D2D2D',
-  sub: '#777777',
-  border: '#E0D5D0',
+  sub: '#999999',
+  border: '#F0ECEA',
   inputBg: '#FFFFFF',
 };
 
@@ -362,40 +362,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     marginVertical: 14, paddingHorizontal: 8,
   },
-  dateSepLine: { flex: 1, height: 1, backgroundColor: '#A0B0BF' },
+  dateSepLine: { flex: 1, height: 1, backgroundColor: '#E0D5D0' },
   dateSepText: {
-    fontSize: 12, color: '#555', marginHorizontal: 10,
-    backgroundColor: C.bg, paddingHorizontal: 4,
+    fontSize: 12, color: '#AA8888', marginHorizontal: 10,
+    backgroundColor: '#FCEEF1', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 10, overflow: 'hidden',
   },
 
   bubbleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginVertical: 3 },
   bubbleRowMe: { flexDirection: 'row-reverse' },
   bubbleOuter: { flex: 1 },
-  senderName: { fontSize: 12, color: '#333', fontWeight: '600', marginBottom: 3, marginLeft: 2 },
+  senderName: { fontSize: 12, color: '#886666', fontWeight: '600', marginBottom: 3, marginLeft: 2 },
 
   bubbleWrap: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
   bubbleWrapMe: { flexDirection: 'row-reverse' },
 
   metaLeft: { alignItems: 'flex-end', justifyContent: 'flex-end', gap: 2, paddingBottom: 2 },
   unreadMark: { fontSize: 11, color: C.primary, fontWeight: '700' },
-  timeText: { fontSize: 11, color: '#555', paddingBottom: 2 },
+  timeText: { fontSize: 11, color: '#AA9999', paddingBottom: 2 },
   timeTextOther: { paddingBottom: 2 },
 
-  bubble: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9, maxWidth: 240, elevation: 1 },
-  bubbleMe: { backgroundColor: C.myBubble, borderTopRightRadius: 4 },
-  bubbleOther: { backgroundColor: C.otherBubble, borderTopLeftRadius: 4 },
+  bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, maxWidth: 260, elevation: 1 },
+  bubbleMe: { backgroundColor: C.myBubble, borderBottomRightRadius: 4 },
+  bubbleOther: { backgroundColor: C.otherBubble, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#F0ECEA' },
   bubbleText: { fontSize: 15, color: C.text, lineHeight: 21 },
-  bubbleTextMe: { color: '#2D2D2D' },
+  bubbleTextMe: { color: '#FFFFFF' },
 
   inputRow: {
     flexDirection: 'row', padding: 10, gap: 8,
-    backgroundColor: '#F4F4F4', borderTopWidth: 1, borderTopColor: '#C8C4C0',
+    backgroundColor: '#FFF8F5', borderTopWidth: 1, borderTopColor: '#F0ECEA',
     alignItems: 'flex-end',
   },
   input: {
     flex: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10,
     fontSize: 15, color: C.text, maxHeight: 100,
-    backgroundColor: C.inputBg, borderWidth: 1, borderColor: '#DDD',
+    backgroundColor: C.inputBg, borderWidth: 1, borderColor: '#E8D8D5',
   },
   sendBtn: { backgroundColor: C.primary, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 11 },
   sendBtnDisabled: { opacity: 0.4 },
@@ -403,7 +404,7 @@ const styles = StyleSheet.create({
 
   emptyChat: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyChatEmoji: { fontSize: 64, marginBottom: 16 },
-  emptyChatText: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 6 },
+  emptyChatText: { fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 6 },
   emptyChatSub: { fontSize: 15, color: C.sub, textAlign: 'center' },
 
   // 대화 시작 제안 칩

@@ -1,14 +1,18 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, ActivityIndicator, Alert, Image, Switch, Linking,
 } from 'react-native';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getMyProfile, uploadPhoto, deleteMyAccount } from '../api/client';
+import { TextInput } from 'react-native';
+import {
+  getMyProfile, uploadPhoto, deleteMyAccount, getMyPhotos,
+  deletePhoto, setProfilePhoto, setBackgroundPhoto, updateMyProfile,
+} from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { Profile, RootStackParamList } from '../types';
 import {
@@ -38,10 +42,23 @@ const PREVIEW_QUESTION_OPTIONS: { field: string; label: string; icon: string }[]
 const DEFAULT_PREVIEW_QUESTIONS = ['relationship_goal', 'religion', 'smoking', 'drinking', 'family_importance'];
 
 const REQUIRED_CONDITION_OPTIONS: { key: string; label: string }[] = [
+  // 생활습관
   { key: 'no_smoking', label: '흡연자는 안 돼요' },
   { key: 'no_heavy_drinking', label: '술을 자주 마시는 분은 안 돼요' },
+  { key: 'no_drinking', label: '술을 아예 안 마시는 분이면 좋겠어요' },
+  // 가치관·관계
   { key: 'same_religion', label: '같은 종교여야 해요' },
   { key: 'same_relationship_goal', label: '관계 목표가 같아야 해요' },
+  // 가족
+  { key: 'no_children', label: '자녀가 없는 분이면 좋겠어요' },
+  { key: 'has_children_ok', label: '자녀가 있는 분이어야 해요' },
+  { key: 'willing_to_relocate', label: '이사 가능한 분이어야 해요' },
+  // 성격·생활
+  { key: 'same_chronotype', label: '생활 패턴(아침형/저녁형)이 같아야 해요' },
+  { key: 'exercises_regularly', label: '운동을 꾸준히 하는 분이면 좋겠어요' },
+  // 건강·재정
+  { key: 'good_health', label: '건강 상태가 좋은 분이면 좋겠어요' },
+  { key: 'financially_stable', label: '경제적으로 안정된 분이면 좋겠어요' },
 ];
 
 const REGION_OPTIONS: { value: string; label: string }[] = [
@@ -49,8 +66,6 @@ const REGION_OPTIONS: { value: string; label: string }[] = [
   { value: 'metro', label: '수도권 (서울·경기·인천)' },
   { value: 'same_city', label: '같은 시/도만' },
 ];
-
-const CITY_OPTIONS = ['서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', '세종', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
 
 const STORAGE_KEYS = {
   previewQuestions: '@dasibom_preview_questions',
@@ -155,9 +170,20 @@ function Section({ title, children, onEdit }: {
 
 export default function ProfileScreen() {
   const nav = useNavigation<Nav>();
+  const route = useRoute<any>();
+  const scrollRef = useRef<ScrollView>(null);
+  const recommendationsY = useRef(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+
+  // 사진 갤러리
+  const [photos, setPhotos] = useState<{ id: string; url: string; sort_order: number }[]>([]);
+  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+
+  // 자기소개 편집
+  const [editingBio, setEditingBio] = useState(false);
+  const [bioText, setBioText] = useState('');
 
   // ── 설정 상태 ──
   const [previewQuestions, setPreviewQuestions] = useState<string[]>(DEFAULT_PREVIEW_QUESTIONS);
@@ -166,8 +192,16 @@ export default function ProfileScreen() {
   const [goalMatch, setGoalMatch] = useState<boolean>(false);
   const [showPreviewPicker, setShowPreviewPicker] = useState(false);
   const [showRequiredPicker, setShowRequiredPicker] = useState(false);
-  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [showRegionSection, setShowRegionSection] = useState(false);
+  const [showRequiredSection, setShowRequiredSection] = useState(false);
 
+  // 임시 편집 상태 (저장/취소 버튼용)
+  const [draftPreviewQuestions, setDraftPreviewQuestions] = useState<string[]>(DEFAULT_PREVIEW_QUESTIONS);
+  const [previewDirty, setPreviewDirty] = useState(false);
+  const [draftRequiredConditions, setDraftRequiredConditions] = useState<string[]>([]);
+  const [requiredDirty, setRequiredDirty] = useState(false);
+
+  const [maxPreviewQuestions, setMaxPreviewQuestions] = useState(5);
   const [maxConditions, setMaxConditions] = useState(3);
   const { signOut, setProfile: setStoreProfile, credits, deductCredit, loadCredits, phoneVerified, loadPhoneVerified } = useAuthStore();
 
@@ -178,8 +212,8 @@ export default function ProfileScreen() {
         AsyncStorage.getItem(STORAGE_KEYS.requiredConditions),
         AsyncStorage.getItem(STORAGE_KEYS.discoveryFilters),
       ]);
-      if (pq) setPreviewQuestions(JSON.parse(pq));
-      if (rc) setRequiredConditions(JSON.parse(rc));
+      if (pq) { const parsed = JSON.parse(pq); setPreviewQuestions(parsed); setDraftPreviewQuestions(parsed); }
+      if (rc) { const parsed = JSON.parse(rc); setRequiredConditions(parsed); setDraftRequiredConditions(parsed); }
       if (df) {
         const parsed = JSON.parse(df);
         if (parsed.region_filter) setRegionFilter(parsed.region_filter);
@@ -190,13 +224,25 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     getMyProfile()
-      .then(data => { setProfile(data); setStoreProfile(data); })
+      .then(data => { setProfile(data); setStoreProfile(data); setBioText(data.bio || ''); })
       .catch(() => Alert.alert('오류', '프로필을 불러오지 못했습니다.'))
       .finally(() => setLoading(false));
+    getMyPhotos()
+      .then(data => setPhotos(data || []))
+      .catch(() => {});
     loadCredits();
     loadPhoneVerified();
     loadSettings();
   }, [setStoreProfile, loadCredits, loadPhoneVerified, loadSettings]);
+
+  // 추천조건 바로가기로 이동 시 자동 스크롤
+  useEffect(() => {
+    if (route.params?.scrollTo === 'recommendations' && !loading) {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: recommendationsY.current, animated: true });
+      }, 300);
+    }
+  }, [route.params?.scrollTo, loading]);
 
   const savePreviewQuestions = async (qs: string[]) => {
     setPreviewQuestions(qs);
@@ -215,75 +261,226 @@ export default function ProfileScreen() {
   };
 
   const togglePreviewQuestion = (field: string) => {
-    if (previewQuestions.includes(field)) {
-      savePreviewQuestions(previewQuestions.filter(q => q !== field));
+    if (draftPreviewQuestions.includes(field)) {
+      setDraftPreviewQuestions(draftPreviewQuestions.filter(q => q !== field));
+      setPreviewDirty(true);
     } else {
-      if (previewQuestions.length >= 5) {
-        Alert.alert('최대 5개', '확인할 항목은 최대 5개까지 선택할 수 있어요.');
+      if (draftPreviewQuestions.length >= maxPreviewQuestions) {
+        if (credits <= 0) {
+          Alert.alert(
+            '추가 항목 선택',
+            `기본 ${maxPreviewQuestions}개 항목을 모두 사용했어요.\n추가 항목을 선택하려면 크레딧이 필요합니다.`,
+            [
+              { text: '취소', style: 'cancel' },
+              { text: '크레딧 충전', onPress: () => nav.navigate('CreditStore') },
+            ],
+          );
+        } else {
+          Alert.alert(
+            '추가 항목 선택',
+            `기본 ${maxPreviewQuestions}개 항목을 모두 사용했어요.\n크레딧 1개를 사용하면 항목을 1개 더 추가할 수 있어요.\n\n보유 크레딧: ${credits}개`,
+            [
+              { text: '취소', style: 'cancel' },
+              {
+                text: '크레딧 사용',
+                onPress: async () => {
+                  const ok = await deductCredit(1);
+                  if (!ok) {
+                    Alert.alert('오류', '크레딧 차감에 실패했습니다.');
+                    return;
+                  }
+                  const newMax = maxPreviewQuestions + 1;
+                  setMaxPreviewQuestions(newMax);
+                  setDraftPreviewQuestions([...draftPreviewQuestions, field]);
+                  setPreviewDirty(true);
+                  await loadCredits();
+                },
+              },
+            ],
+          );
+        }
         return;
       }
-      savePreviewQuestions([...previewQuestions, field]);
+      setDraftPreviewQuestions([...draftPreviewQuestions, field]);
+      setPreviewDirty(true);
     }
+  };
+
+  const handleSavePreviewQuestions = () => {
+    savePreviewQuestions(draftPreviewQuestions);
+    setPreviewDirty(false);
+  };
+
+  const handleCancelPreviewQuestions = () => {
+    setDraftPreviewQuestions([...previewQuestions]);
+    setPreviewDirty(false);
   };
 
   const toggleRequiredCondition = (key: string) => {
-    if (requiredConditions.includes(key)) {
-      saveRequiredConditions(requiredConditions.filter(k => k !== key));
+    if (draftRequiredConditions.includes(key)) {
+      setDraftRequiredConditions(draftRequiredConditions.filter(k => k !== key));
+      setRequiredDirty(true);
     } else {
-      if (requiredConditions.length >= maxConditions) {
-        // 크레딧으로 슬롯 확장
+      if (draftRequiredConditions.length >= maxConditions) {
         if (credits <= 0) {
-          Alert.alert('크레딧 부족', `조건은 현재 ${maxConditions}개까지 설정 가능합니다.\n추가 슬롯을 열려면 크레딧이 필요해요.`);
-          return;
-        }
-        Alert.alert(
-          '조건 슬롯 추가',
-          `크레딧 1개를 사용하면 조건을 1개 더 설정할 수 있어요.\n\n현재 보유: ${credits}개`,
-          [
-            { text: '취소', style: 'cancel' },
-            {
-              text: '사용하기',
-              onPress: async () => {
-                const ok = await deductCredit(1);
-                if (!ok) {
-                  Alert.alert('오류', '크레딧 차감에 실패했습니다.');
-                  return;
-                }
-                const newMax = maxConditions + 1;
-                setMaxConditions(newMax);
-                saveRequiredConditions([...requiredConditions, key]);
-                await loadCredits();
+          Alert.alert(
+            '추가 조건 설정',
+            `기본 ${maxConditions}개 조건을 모두 사용했어요.\n추가 조건을 설정하려면 크레딧이 필요합니다.`,
+            [
+              { text: '취소', style: 'cancel' },
+              { text: '크레딧 충전', onPress: () => nav.navigate('CreditStore') },
+            ],
+          );
+        } else {
+          Alert.alert(
+            '추가 조건 설정',
+            `기본 ${maxConditions}개 조건을 모두 사용했어요.\n크레딧 1개를 사용하면 조건을 1개 더 추가할 수 있어요.\n\n보유 크레딧: ${credits}개`,
+            [
+              { text: '취소', style: 'cancel' },
+              {
+                text: '크레딧 사용',
+                onPress: async () => {
+                  const ok = await deductCredit(1);
+                  if (!ok) {
+                    Alert.alert('오류', '크레딧 차감에 실패했습니다.');
+                    return;
+                  }
+                  const newMax = maxConditions + 1;
+                  setMaxConditions(newMax);
+                  setDraftRequiredConditions([...draftRequiredConditions, key]);
+                  setRequiredDirty(true);
+                  await loadCredits();
+                },
               },
-            },
-          ],
-        );
+            ],
+          );
+        }
         return;
       }
-      saveRequiredConditions([...requiredConditions, key]);
+      setDraftRequiredConditions([...draftRequiredConditions, key]);
+      setRequiredDirty(true);
     }
   };
 
-  const handlePickPhoto = async () => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      quality: 0.8,
-      maxWidth: 1200,
-      maxHeight: 1200,
-    });
+  const handleSaveRequiredConditions = () => {
+    saveRequiredConditions(draftRequiredConditions);
+    setRequiredDirty(false);
+  };
 
-    if (result.didCancel || !result.assets?.[0]?.uri) return;
+  const handleCancelRequiredConditions = () => {
+    setDraftRequiredConditions([...requiredConditions]);
+    setRequiredDirty(false);
+  };
+
+  const handleAddPhoto = async () => {
+    if (photos.length >= 5) {
+      Alert.alert('알림', '사진은 최대 5장까지 업로드 가능합니다.');
+      return;
+    }
+
+    let result;
+    try {
+      result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        selectionLimit: 1,
+        presentationStyle: 'pageSheet',
+      });
+    } catch {
+      return; // 피커 오류 시 조용히 복귀
+    }
+
+    if (result.didCancel || result.errorCode || !result.assets?.[0]?.uri) return;
 
     const uri = result.assets[0].uri!;
     setUploading(true);
     try {
-      const photoUrl = await uploadPhoto(uri);
-      setProfile(prev => prev ? { ...prev, photo_url: photoUrl } : prev);
-      setStoreProfile(profile ? { ...profile, photo_url: photoUrl } : null);
-      Alert.alert('완료', '프로필 사진이 업데이트되었습니다.');
+      const photo = await uploadPhoto(uri);
+      setPhotos(prev => [...prev, photo]);
+      // 첫 사진이면 프로필 사진으로 자동 설정
+      if (photos.length === 0) {
+        setProfile(prev => prev ? { ...prev, photo_url: photo.url } : prev);
+        setStoreProfile(profile ? { ...profile, photo_url: photo.url } : null);
+      }
     } catch (err: any) {
       Alert.alert('오류', err.message ?? '사진 업로드 실패');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeletePhoto = (photoId: string, photoUrl: string) => {
+    Alert.alert('사진 삭제', '이 사진을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제', style: 'destructive',
+        onPress: async () => {
+          try {
+            await deletePhoto(photoId);
+            setPhotos(prev => prev.filter(p => p.id !== photoId));
+            if (profile?.photo_url === photoUrl) {
+              const remaining = photos.filter(p => p.id !== photoId);
+              const newUrl = remaining[0]?.url || null;
+              setProfile(prev => prev ? { ...prev, photo_url: newUrl ?? undefined } : prev);
+            }
+            if (profile?.background_url === photoUrl) {
+              setProfile(prev => prev ? { ...prev, background_url: undefined } : prev);
+            }
+          } catch (err: any) {
+            Alert.alert('오류', err.message ?? '삭제 실패');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleSetAsProfile = async (photoUrl: string) => {
+    try {
+      await setProfilePhoto(photoUrl);
+      setProfile(prev => prev ? { ...prev, photo_url: photoUrl } : prev);
+      setStoreProfile(profile ? { ...profile, photo_url: photoUrl } : null);
+      Alert.alert('완료', '대표 사진이 변경되었습니다.');
+    } catch (err: any) {
+      Alert.alert('오류', err.message ?? '설정 실패');
+    }
+  };
+
+  const handleSetAsBackground = async (photoUrl: string) => {
+    try {
+      await setBackgroundPhoto(photoUrl);
+      setProfile(prev => prev ? { ...prev, background_url: photoUrl } : prev);
+      Alert.alert('완료', '배경 사진이 변경되었습니다.');
+    } catch (err: any) {
+      Alert.alert('오류', err.message ?? '설정 실패');
+    }
+  };
+
+  const handlePhotoLongPress = (photo: { id: string; url: string }) => {
+    const isProfile = profile?.photo_url === photo.url;
+    const isBackground = profile?.background_url === photo.url;
+
+    const options: any[] = [];
+    if (!isProfile) options.push({ text: '대표 사진으로 설정', onPress: () => handleSetAsProfile(photo.url) });
+    if (!isBackground) options.push({ text: '배경 사진으로 설정', onPress: () => handleSetAsBackground(photo.url) });
+    options.push({ text: '삭제', style: 'destructive', onPress: () => handleDeletePhoto(photo.id, photo.url) });
+    options.push({ text: '취소', style: 'cancel' });
+
+    Alert.alert(
+      '사진 옵션',
+      isProfile ? '현재 대표 사진' : isBackground ? '현재 배경 사진' : '이 사진을 어떻게 할까요?',
+      options,
+    );
+  };
+
+  const handleSaveBio = async () => {
+    try {
+      await updateMyProfile({ bio: bioText.trim() });
+      setProfile(prev => prev ? { ...prev, bio: bioText.trim() } : prev);
+      setEditingBio(false);
+    } catch (err: any) {
+      Alert.alert('오류', err.message ?? '저장 실패');
     }
   };
 
@@ -333,7 +530,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
 
         {/* 크레딧 배너 */}
         <View style={styles.creditBanner}>
@@ -372,116 +569,172 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Hero */}
+        {/* Hero - 배경 + 프로필 */}
         <View style={styles.hero}>
-          <TouchableOpacity onPress={handlePickPhoto} disabled={uploading} style={styles.avatarWrapper}>
-            {profile.photo_url ? (
-              <Image source={{ uri: profile.photo_url }} style={styles.bigPhoto} />
-            ) : (
-              <View style={styles.bigAvatar}>
-                <Text style={styles.bigAvatarText}>{profile.name.charAt(0)}</Text>
+          {/* 배경 사진 */}
+          {profile.background_url ? (
+            <Image source={{ uri: profile.background_url }} style={styles.backgroundImage} />
+          ) : (
+            <View style={styles.backgroundPlaceholder} />
+          )}
+
+          {/* 프로필 사진 (배경 위에 겹침) */}
+          <View style={styles.avatarOverlay}>
+            <TouchableOpacity onPress={() => setShowPhotoGallery(v => !v)} style={styles.avatarWrapper}>
+              {profile.photo_url ? (
+                <Image source={{ uri: profile.photo_url }} style={styles.bigPhoto} />
+              ) : (
+                <View style={styles.bigAvatar}>
+                  <Text style={styles.bigAvatarText}>{profile.name.charAt(0)}</Text>
+                </View>
+              )}
+              <View style={styles.cameraBtn}>
+                {uploading
+                  ? <ActivityIndicator size="small" color="#FFF" />
+                  : <Text style={styles.cameraBtnText}>📷</Text>
+                }
               </View>
-            )}
-            <View style={styles.cameraBtn}>
-              {uploading
-                ? <ActivityIndicator size="small" color="#FFF" />
-                : <Text style={styles.cameraBtnText}>📷</Text>
-              }
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.heroName}>{profile.name}</Text>
           <Text style={styles.heroSub}>{age}세 · {profile.city}</Text>
-          {profile.bio ? <Text style={styles.heroBio}>{profile.bio}</Text> : null}
-          <TouchableOpacity onPress={handlePickPhoto} disabled={uploading} style={styles.changePhotoBtn}>
-            <Text style={styles.changePhotoText}>
-              {profile.photo_url ? '📷 사진 변경' : '📷 프로필 사진 추가'}
-            </Text>
-          </TouchableOpacity>
-          {!profile.photo_url && (
+
+          {/* 자기소개 (100자) */}
+          {editingBio ? (
+            <View style={styles.bioEditBox}>
+              <TextInput
+                style={styles.bioInput}
+                value={bioText}
+                onChangeText={t => setBioText(t.slice(0, 100))}
+                maxLength={100}
+                multiline
+                placeholder="자기소개를 입력해주세요"
+                placeholderTextColor="#BBB"
+              />
+              <Text style={styles.bioCount}>{bioText.length}/100</Text>
+              <View style={styles.bioActions}>
+                <TouchableOpacity onPress={() => { setEditingBio(false); setBioText(profile.bio || ''); }}>
+                  <Text style={styles.bioCancelText}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveBio}>
+                  <Text style={styles.bioSaveText}>저장</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setEditingBio(true)} style={styles.bioTouchable}>
+              <Text style={styles.heroBio}>
+                {profile.bio || '자기소개를 작성해보세요 ✏️'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* 사진 갤러리 (최대 5장) */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📸 내 사진</Text>
+            <Text style={styles.sectionBadge}>{photos.length}/5</Text>
+          </View>
+          <View style={styles.photoGrid}>
+            {photos.map(photo => {
+              const isProfile = profile?.photo_url === photo.url;
+              const isBg = profile?.background_url === photo.url;
+              return (
+                <TouchableOpacity
+                  key={photo.id}
+                  style={styles.photoItem}
+                  onPress={() => handlePhotoLongPress(photo)}
+                  activeOpacity={0.7}
+                >
+                  <Image source={{ uri: photo.url }} style={styles.photoThumb} />
+                  {isProfile && (
+                    <View style={styles.photoBadge}>
+                      <Text style={styles.photoBadgeText}>대표</Text>
+                    </View>
+                  )}
+                  {isBg && (
+                    <View style={[styles.photoBadge, { backgroundColor: '#6C7B95' }]}>
+                      <Text style={styles.photoBadgeText}>배경</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            {photos.length < 5 && (
+              <TouchableOpacity style={styles.photoAddBtn} onPress={handleAddPhoto} disabled={uploading}>
+                {uploading ? (
+                  <ActivityIndicator size="small" color={C.primary} />
+                ) : (
+                  <Text style={styles.photoAddText}>+</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+          {photos.length === 0 && (
             <Text style={styles.photoHint}>사진을 등록하면 매칭 확률이 높아져요!</Text>
           )}
         </View>
 
-        {/* 가치관 수정 버튼 */}
-        <TouchableOpacity style={styles.editValueBtn} onPress={handleEditQuestionnaire}>
-          <Text style={styles.editValueIcon}>✏️</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.editValueTitle}>가치관 수정하기</Text>
-            <Text style={styles.editValueSub}>답변을 변경하면 매칭 결과가 달라질 수 있어요</Text>
-          </View>
-          <View style={styles.editValueCost}>
-            <Text style={styles.editValueCostIcon}>💎</Text>
-            <Text style={styles.editValueCostText}>1개</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* ─── 추천 상대 조건 (발견 필터) ─── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>📍 추천 상대 지역 설정</Text>
-          </View>
-          {/* 내 거주지역 수정 */}
-          <Text style={styles.settingLabel}>내 거주지역</Text>
-          <TouchableOpacity
-            style={styles.settingSelect}
-            onPress={() => setShowCityPicker(v => !v)}
-          >
-            <Text style={styles.settingSelectText}>{profile.city || '선택'}</Text>
-            <Text style={styles.settingSelectArrow}>{showCityPicker ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {showCityPicker && (
-            <View style={styles.pickerList}>
-              {CITY_OPTIONS.map(city => (
-                <TouchableOpacity
-                  key={city}
-                  style={[styles.pickerItem, profile.city === city && styles.pickerItemActive]}
-                  onPress={async () => {
-                    setShowCityPicker(false);
-                    setProfile(prev => prev ? { ...prev, city } : prev);
-                    try {
-                      const { updateMyProfile } = await import('../api/client');
-                      await updateMyProfile({ city });
-                    } catch {
-                      Alert.alert('오류', '지역 저장 실패');
-                    }
-                  }}
-                >
-                  <Text style={[styles.pickerItemText, profile.city === city && styles.pickerItemTextActive]}>{city}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          {/* 상대 지역 범위 */}
-          <Text style={[styles.settingLabel, { marginTop: 12 }]}>상대 지역 범위</Text>
-          {REGION_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt.value}
-              style={styles.radioRow}
-              onPress={() => saveDiscoveryFilters(opt.value, goalMatch)}
-            >
-              <View style={[styles.radioCircle, regionFilter === opt.value && styles.radioCircleActive]} />
-              <Text style={styles.radioLabel}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-          {/* 관계 목표 동일 여부 */}
-          <View style={[styles.row, { marginTop: 12 }]}>
-            <Text style={styles.rowLabel}>나와 같은 관계 목표만</Text>
-            <Switch
-              value={goalMatch}
-              onValueChange={(v) => saveDiscoveryFilters(regionFilter, v)}
-              trackColor={{ false: '#DDD', true: C.primary }}
-              thumbColor="#FFF"
-            />
-          </View>
+        {/* ─── 추천 조건 그룹 헤더 ─── */}
+        <View
+          style={styles.groupHeader}
+          onLayout={(e) => { recommendationsY.current = e.nativeEvent.layout.y; }}
+        >
+          <Text style={styles.groupHeaderText}>추천 조건</Text>
+          <Text style={styles.groupHeaderSub}>어떤 상대를 만나고 싶은지 설정해보세요</Text>
         </View>
 
-        {/* ─── 상대에게 먼저 확인할 항목 (미리 보기 5개) ─── */}
+        {/* ─── 지역 설정 (드롭다운) ─── */}
+        <TouchableOpacity
+          style={styles.section}
+          activeOpacity={0.8}
+          onPress={() => setShowRegionSection(v => !v)}
+        >
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📍 지역 설정</Text>
+            <Text style={styles.dropdownArrow}>{showRegionSection ? '▲' : '▼'}</Text>
+          </View>
+          {!showRegionSection && (
+            <Text style={styles.dropdownSummary}>
+              {profile.city || '미설정'} · {REGION_OPTIONS.find(o => o.value === regionFilter)?.label || '전국'}
+            </Text>
+          )}
+        </TouchableOpacity>
+        {showRegionSection && (
+          <View style={[styles.section, { marginTop: -12, borderTopLeftRadius: 0, borderTopRightRadius: 0 }]}>
+            <Text style={styles.settingDesc}>내 거주지역: {profile.city || '미설정'}</Text>
+            <Text style={styles.settingLabel}>상대 지역 범위</Text>
+            {REGION_OPTIONS.map(opt => (
+              <TouchableOpacity
+                key={opt.value}
+                style={styles.radioRow}
+                onPress={() => saveDiscoveryFilters(opt.value, goalMatch)}
+              >
+                <View style={[styles.radioCircle, regionFilter === opt.value && styles.radioCircleActive]} />
+                <Text style={styles.radioLabel}>{opt.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <View style={[styles.row, { marginTop: 12 }]}>
+              <Text style={styles.rowLabel}>나와 같은 관계 목표만</Text>
+              <Switch
+                value={goalMatch}
+                onValueChange={(v) => saveDiscoveryFilters(regionFilter, v)}
+                trackColor={{ false: '#DDD', true: C.primary }}
+                thumbColor="#FFF"
+              />
+            </View>
+          </View>
+        )}
+
+        {/* ─── 먼저 확인할 항목 ─── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>👀 추천 카드에서 먼저 볼 항목</Text>
-            <Text style={styles.sectionBadge}>{previewQuestions.length}/5</Text>
+            <Text style={styles.sectionTitle}>👀 먼저 확인할 항목</Text>
+            <Text style={styles.sectionBadge}>{draftPreviewQuestions.length}/{maxPreviewQuestions}</Text>
           </View>
-          <Text style={styles.settingDesc}>추천 상대 카드에서 이 항목의 답변을 미리 확인할 수 있어요</Text>
+          <Text style={styles.settingDesc}>상대 카드에서 이 항목의 답변을 미리 확인할 수 있어요</Text>
           <TouchableOpacity
             style={styles.expandBtn}
             onPress={() => setShowPreviewPicker(v => !v)}
@@ -491,7 +744,7 @@ export default function ProfileScreen() {
           {showPreviewPicker && (
             <View style={styles.checkList}>
               {PREVIEW_QUESTION_OPTIONS.map(opt => {
-                const selected = previewQuestions.includes(opt.field);
+                const selected = draftPreviewQuestions.includes(opt.field);
                 return (
                   <TouchableOpacity
                     key={opt.field}
@@ -509,7 +762,7 @@ export default function ProfileScreen() {
           )}
           {/* 현재 선택된 항목 표시 */}
           <View style={styles.chipRow}>
-            {previewQuestions.map(field => {
+            {draftPreviewQuestions.map(field => {
               const opt = PREVIEW_QUESTION_OPTIONS.find(o => o.field === field);
               if (!opt) return null;
               return (
@@ -519,40 +772,93 @@ export default function ProfileScreen() {
               );
             })}
           </View>
+          {/* 저장 / 취소 버튼 */}
+          {previewDirty && (
+            <View style={styles.saveRow}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelPreviewQuestions}>
+                <Text style={styles.cancelBtnText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleSavePreviewQuestions}>
+                <Text style={styles.saveBtnText}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        {/* ─── 절대 안 되는 조건 ─── */}
-        <View style={styles.section}>
+        {/* ─── 절대 안 되는 조건 (드롭다운) ─── */}
+        <TouchableOpacity
+          style={styles.section}
+          activeOpacity={0.8}
+          onPress={() => setShowRequiredSection(v => !v)}
+        >
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>🚫 절대 안 되는 조건</Text>
-            <Text style={styles.sectionBadge}>{requiredConditions.length}/{maxConditions}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.sectionBadge}>{draftRequiredConditions.length}/{maxConditions}</Text>
+              <Text style={styles.dropdownArrow}>{showRequiredSection ? '▲' : '▼'}</Text>
+            </View>
           </View>
-          <Text style={styles.settingDesc}>
-            이 조건에 맞지 않는 상대는 추천에서 제외돼요 (기본 3개, 💎 크레딧으로 추가)
-          </Text>
-          {REQUIRED_CONDITION_OPTIONS.map((opt, idx) => {
-            const selected = requiredConditions.includes(opt.key);
-            const locked = !selected && requiredConditions.length >= maxConditions;
-            return (
-              <TouchableOpacity
-                key={opt.key}
-                style={styles.checkRow}
-                onPress={() => toggleRequiredCondition(opt.key)}
-              >
-                <View style={[styles.checkbox, selected && styles.checkboxActive, locked && styles.checkboxLocked]}>
-                  {selected && <Text style={styles.checkmark}>✓</Text>}
-                  {locked && <Text style={styles.checkmark}>💎</Text>}
-                </View>
-                <Text style={[styles.checkLabel, locked && { color: C.sub }]}>{opt.label}{locked ? ' (크레딧 필요)' : ''}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          {!showRequiredSection && draftRequiredConditions.length > 0 && (
+            <View style={styles.chipRow}>
+              {draftRequiredConditions.map(key => {
+                const opt = REQUIRED_CONDITION_OPTIONS.find(o => o.key === key);
+                if (!opt) return null;
+                return (
+                  <View key={key} style={styles.chip}>
+                    <Text style={styles.chipText}>{opt.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+          {!showRequiredSection && draftRequiredConditions.length === 0 && (
+            <Text style={styles.dropdownSummary}>설정된 조건이 없어요</Text>
+          )}
+        </TouchableOpacity>
+        {showRequiredSection && (
+          <View style={[styles.section, { marginTop: -12, borderTopLeftRadius: 0, borderTopRightRadius: 0 }]}>
+            <Text style={styles.settingDesc}>
+              이 조건에 맞지 않는 상대는 추천에서 제외돼요 (기본 3개, 💎 크레딧으로 추가)
+            </Text>
+            {REQUIRED_CONDITION_OPTIONS.map((opt) => {
+              const selected = draftRequiredConditions.includes(opt.key);
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={styles.checkRow}
+                  onPress={() => toggleRequiredCondition(opt.key)}
+                >
+                  <View style={[styles.checkbox, selected && styles.checkboxActive]}>
+                    {selected && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkLabel}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            {requiredDirty && (
+              <View style={styles.saveRow}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelRequiredConditions}>
+                  <Text style={styles.cancelBtnText}>취소</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleSaveRequiredConditions}>
+                  <Text style={styles.saveBtnText}>저장</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ─── 내 가치관 그룹 헤더 ─── */}
+        <View style={styles.groupHeader}>
+          <Text style={styles.groupHeaderText}>내 가치관</Text>
+          <Text style={styles.groupHeaderSub}>상대에게 보여지는 나의 답변이에요</Text>
         </View>
 
         {/* 기본 정보 */}
         <Section title="기본 정보">
           <Row label="성별" value={l('gender', profile.gender)} />
-          <Row label="찾는 상대" value={l('looking_for', profile.looking_for)} />
+          <Row label="나이" value={`${age}세 (${profile.birth_year}년생)`} />
+          <Row label="거주지역" value={profile.city} />
           <Row label="희망 나이" value={profile.age_min && profile.age_max
             ? `${profile.age_min}–${profile.age_max}세` : null} />
         </Section>
@@ -591,6 +897,19 @@ export default function ProfileScreen() {
 
         {/* 현실 조건 - Q&A 형식 */}
         <QASection title="현실 조건" icon="🏠" qaList={REALITY_QA} profile={profile} />
+
+        {/* 가치관 수정 버튼 */}
+        <TouchableOpacity style={styles.editValueBtn} onPress={handleEditQuestionnaire}>
+          <Text style={styles.editValueIcon}>✏️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.editValueTitle}>가치관 수정하기</Text>
+            <Text style={styles.editValueSub}>답변을 변경하면 매칭 결과가 달라질 수 있어요</Text>
+          </View>
+          <View style={styles.editValueCost}>
+            <Text style={styles.editValueCostIcon}>💎</Text>
+            <Text style={styles.editValueCostText}>1개</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* 로그아웃 */}
         <TouchableOpacity style={styles.signOutBtn} onPress={() => {
@@ -684,30 +1003,69 @@ const styles = StyleSheet.create({
   verifyBadgeText: { fontSize: 11, color: '#FFF', fontWeight: '700' },
 
   // Hero
-  hero: { alignItems: 'center', paddingVertical: 24, marginBottom: 8 },
-  avatarWrapper: { position: 'relative', marginBottom: 12 },
-  bigPhoto: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: C.primary },
-  bigAvatar: {
-    width: 120, height: 120, borderRadius: 60, backgroundColor: C.primaryLight,
-    alignItems: 'center', justifyContent: 'center',
+  hero: { alignItems: 'center', marginBottom: 8 },
+  backgroundImage: {
+    width: '100%', height: 160, borderRadius: 16,
   },
-  bigAvatarText: { fontSize: 48, color: C.primary, fontWeight: '700' },
-  photoHint: { fontSize: 13, color: C.sub, marginTop: 6 },
+  backgroundPlaceholder: {
+    width: '100%', height: 120, borderRadius: 16,
+    backgroundColor: C.primaryLight,
+  },
+  avatarOverlay: {
+    marginTop: -50, alignItems: 'center', marginBottom: 8,
+  },
+  avatarWrapper: { position: 'relative' },
+  bigPhoto: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: '#FFF' },
+  bigAvatar: {
+    width: 100, height: 100, borderRadius: 50, backgroundColor: C.primaryLight,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFF',
+  },
+  bigAvatarText: { fontSize: 40, color: C.primary, fontWeight: '700' },
+  photoHint: { fontSize: 13, color: C.sub, marginTop: 8, textAlign: 'center' },
   cameraBtn: {
     position: 'absolute', bottom: 0, right: 0,
-    width: 32, height: 32, borderRadius: 16,
+    width: 30, height: 30, borderRadius: 15,
     backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#FFF',
   },
-  cameraBtnText: { fontSize: 16 },
-  changePhotoBtn: {
-    marginTop: 8, paddingHorizontal: 18, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1.5, borderColor: C.primary,
+  cameraBtnText: { fontSize: 14 },
+  heroName: { fontSize: 26, fontWeight: '700', color: C.text, marginTop: 4 },
+  heroSub: { fontSize: 15, color: C.sub, marginTop: 3 },
+  heroBio: { fontSize: 14, color: '#555', marginTop: 8, textAlign: 'center', lineHeight: 20 },
+  bioTouchable: { paddingHorizontal: 20, paddingVertical: 4 },
+  bioEditBox: {
+    width: '100%', marginTop: 8, paddingHorizontal: 16,
   },
-  changePhotoText: { fontSize: 14, color: C.primary, fontWeight: '600' },
-  heroName: { fontSize: 28, fontWeight: '700', color: C.text, marginTop: 8 },
-  heroSub: { fontSize: 16, color: C.sub, marginTop: 4 },
-  heroBio: { fontSize: 15, color: '#555', marginTop: 10, textAlign: 'center', lineHeight: 22 },
+  bioInput: {
+    borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12,
+    fontSize: 14, color: C.text, minHeight: 60, textAlignVertical: 'top',
+  },
+  bioCount: { fontSize: 12, color: C.sub, textAlign: 'right', marginTop: 4 },
+  bioActions: {
+    flexDirection: 'row', justifyContent: 'flex-end', gap: 16, marginTop: 8,
+  },
+  bioCancelText: { fontSize: 14, color: C.sub, fontWeight: '600' },
+  bioSaveText: { fontSize: 14, color: C.primary, fontWeight: '700' },
+
+  // 사진 갤러리
+  photoGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+  },
+  photoItem: { position: 'relative' },
+  photoThumb: {
+    width: 90, height: 90, borderRadius: 12, borderWidth: 1, borderColor: '#EEE',
+  },
+  photoBadge: {
+    position: 'absolute', top: 4, left: 4, backgroundColor: C.primary,
+    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  photoBadgeText: { fontSize: 10, color: '#FFF', fontWeight: '700' },
+  photoAddBtn: {
+    width: 90, height: 90, borderRadius: 12,
+    borderWidth: 2, borderColor: C.border, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  photoAddText: { fontSize: 28, color: C.sub },
 
   // 가치관 수정 버튼
   editValueBtn: {
@@ -721,6 +1079,13 @@ const styles = StyleSheet.create({
   editValueCost: { alignItems: 'center' },
   editValueCostIcon: { fontSize: 16 },
   editValueCostText: { fontSize: 11, color: C.sub, fontWeight: '600' },
+
+  // 그룹 헤더
+  groupHeader: {
+    paddingHorizontal: 4, paddingTop: 20, paddingBottom: 8,
+  },
+  groupHeaderText: { fontSize: 20, fontWeight: '800', color: C.text },
+  groupHeaderSub: { fontSize: 13, color: C.sub, marginTop: 4 },
 
   // Section
   section: {
@@ -743,6 +1108,8 @@ const styles = StyleSheet.create({
 
   // 설정 공통 스타일
   sectionBadge: { fontSize: 13, color: C.sub, fontWeight: '600' },
+  dropdownArrow: { fontSize: 13, color: C.sub },
+  dropdownSummary: { fontSize: 14, color: C.text, fontWeight: '500' },
   settingLabel: { fontSize: 14, color: C.sub, marginBottom: 6, fontWeight: '600' },
   settingDesc: { fontSize: 13, color: C.sub, marginBottom: 10, lineHeight: 18 },
   settingSelect: {
@@ -775,6 +1142,19 @@ const styles = StyleSheet.create({
   checkboxLocked: { backgroundColor: '#F5F5F5', borderColor: '#DDD' },
   checkmark: { fontSize: 12, color: '#FFF', fontWeight: '700' },
   checkLabel: { fontSize: 15, color: C.text },
+
+  // 저장 / 취소 버튼
+  saveRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  cancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1.5, borderColor: C.border, alignItems: 'center',
+  },
+  cancelBtnText: { fontSize: 15, color: C.sub, fontWeight: '600' },
+  saveBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    backgroundColor: C.primary, alignItems: 'center',
+  },
+  saveBtnText: { fontSize: 15, color: '#FFF', fontWeight: '700' },
 
   // Q&A 스타일
   qaRow: {

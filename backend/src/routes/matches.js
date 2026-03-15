@@ -41,11 +41,30 @@ router.get('/suggestions', async (req, res) => {
     .select('blocker_id')
     .eq('blocked_id', userId);
 
+  // 연락처 기반 제외: 내 연락처에 있는 전화번호 해시와 일치하는 유저 제외
+  const { data: myContacts } = await supabase
+    .from('contact_hashes')
+    .select('phone_hash')
+    .eq('user_id', userId);
+  const contactHashes = new Set(myContacts?.map(c => c.phone_hash) ?? []);
+
+  // phone_hash가 내 연락처에 있는 유저 조회
+  let contactExcludeIds = [];
+  if (contactHashes.size > 0) {
+    const { data: contactUsers } = await supabase
+      .from('profiles')
+      .select('id, phone_hash')
+      .not('phone_hash', 'is', null)
+      .in('phone_hash', [...contactHashes]);
+    contactExcludeIds = contactUsers?.map(u => u.id) ?? [];
+  }
+
   const excludeIds = [
     userId,
     ...(seen?.map(r => r.to_user_id) ?? []),
     ...(blockedByMe?.map(r => r.blocked_id) ?? []),
     ...(blockedMe?.map(r => r.blocker_id) ?? []),
+    ...contactExcludeIds,
   ];
 
   let query = supabase
@@ -71,37 +90,60 @@ router.get('/suggestions', async (req, res) => {
   const { data: candidates, error } = await query.limit(60);
   if (error) return res.status(500).json({ error: error.message });
 
+  // 자녀 상황 유사도 보너스 점수 계산
+  function familySimilarityBonus(me, c) {
+    let bonus = 0;
+    // 자녀 유무 일치
+    if (me.has_children != null && c.has_children != null && me.has_children === c.has_children) bonus += 0.03;
+    // 자녀 동거 상황 일치
+    if (me.children_living_together != null && c.children_living_together != null && me.children_living_together === c.children_living_together) bonus += 0.02;
+    // 반려동물 수용 여부: 상대가 반려동물 있는데 내가 pet_friendly=false면 페널티
+    if (c.has_pet === true && me.pet_friendly === false) bonus -= 0.05;
+    if (me.has_pet === true && c.pet_friendly === false) bonus -= 0.05;
+    return bonus;
+  }
+
   const results = candidates
     .filter(c => c.looking_for === 'any' || c.looking_for === me.gender)
     .filter(c => relationship_goal_match === 'true' ? c.relationship_goal === me.relationship_goal : true)
-    .map(c => ({
-      id: c.id,
-      name: c.name,
-      birth_year: c.birth_year,
-      gender: c.gender,
-      city: c.city,
-      photo_url: c.photo_url,
-      bio: c.bio,
-      hobbies: c.hobbies,
-      religion: c.religion,
-      relationship_goal: c.relationship_goal,
-      health_status: c.health_status,
-      living_situation: c.living_situation,
-      exercise_frequency: c.exercise_frequency,
-      personality_type: c.personality_type,
-      // 미리 보기 질문용 추가 필드
-      smoking: c.smoking,
-      drinking: c.drinking,
-      chronotype: c.chronotype,
-      family_importance: c.family_importance,
-      religion_importance: c.religion_importance,
-      has_children: c.has_children,
-      willing_to_relocate: c.willing_to_relocate,
-      financial_stability: c.financial_stability,
-      communication_style: c.communication_style,
-      conflict_style: c.conflict_style,
-      compatibility_score: calculateCompatibilityScore(me, c),
-    }))
+    .map(c => {
+      const baseScore = calculateCompatibilityScore(me, c);
+      const familyBonus = familySimilarityBonus(me, c);
+      return {
+        id: c.id,
+        name: c.name,
+        birth_year: c.birth_year,
+        gender: c.gender,
+        city: c.city,
+        photo_url: c.photo_url,
+        bio: c.bio,
+        hobbies: c.hobbies,
+        religion: c.religion,
+        relationship_goal: c.relationship_goal,
+        health_status: c.health_status,
+        living_situation: c.living_situation,
+        exercise_frequency: c.exercise_frequency,
+        personality_type: c.personality_type,
+        smoking: c.smoking,
+        drinking: c.drinking,
+        chronotype: c.chronotype,
+        family_importance: c.family_importance,
+        religion_importance: c.religion_importance,
+        has_children: c.has_children,
+        willing_to_relocate: c.willing_to_relocate,
+        financial_stability: c.financial_stability,
+        communication_style: c.communication_style,
+        conflict_style: c.conflict_style,
+        emotional_expression: c.emotional_expression,
+        social_frequency: c.social_frequency,
+        rest_style: c.rest_style,
+        meal_style: c.meal_style,
+        has_pet: c.has_pet,
+        pet_type: c.pet_type,
+        pet_friendly: c.pet_friendly,
+        compatibility_score: Math.min(1, Math.max(0, baseScore + familyBonus)),
+      };
+    })
     .sort((a, b) => b.compatibility_score - a.compatibility_score)
     .slice(0, 5); // 하루 기본 5명
 
@@ -143,6 +185,49 @@ router.get('/', async (req, res) => {
       other_user: m.user1?.id === userId ? m.user2 : m.user1,
     }))
     .filter(m => !blockIds.has(m.other_user?.id));
+
+  // 각 매칭의 마지막 메시지 + 안 읽은 메시지 수 조회
+  const matchIds = matches.map(m => m.match_id);
+  if (matchIds.length > 0) {
+    // 마지막 메시지 조회 (match_id별 최신 1건)
+    const { data: lastMessages } = await supabase
+      .from('messages')
+      .select('match_id, content, created_at, sender_id')
+      .in('match_id', matchIds)
+      .order('created_at', { ascending: false });
+
+    // match_id별 마지막 메시지 맵
+    const lastMsgMap = {};
+    for (const msg of (lastMessages || [])) {
+      if (!lastMsgMap[msg.match_id]) lastMsgMap[msg.match_id] = msg;
+    }
+
+    // 안 읽은 메시지 수 조회
+    const { data: unreadMessages } = await supabase
+      .from('messages')
+      .select('match_id')
+      .in('match_id', matchIds)
+      .neq('sender_id', userId)
+      .is('read_at', null);
+
+    const unreadMap = {};
+    for (const msg of (unreadMessages || [])) {
+      unreadMap[msg.match_id] = (unreadMap[msg.match_id] || 0) + 1;
+    }
+
+    for (const m of matches) {
+      const last = lastMsgMap[m.match_id];
+      m.last_message = last ? { content: last.content, created_at: last.created_at, sender_id: last.sender_id } : null;
+      m.unread_count = unreadMap[m.match_id] || 0;
+    }
+
+    // 마지막 메시지가 있는 매칭을 최신순으로 정렬
+    matches.sort((a, b) => {
+      const aTime = a.last_message?.created_at || a.created_at;
+      const bTime = b.last_message?.created_at || b.created_at;
+      return new Date(bTime).getTime() - new Date(aTime).getTime();
+    });
+  }
 
   res.json(matches);
 });

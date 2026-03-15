@@ -2,9 +2,20 @@ const admin = require('firebase-admin');
 
 // Firebase Admin 초기화 (환경변수에서 서비스 계정 키 로드)
 if (!admin.apps.length) {
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
-    : null;
+  let serviceAccount = null;
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try {
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    } catch {
+      // private_key 내 실제 줄바꿈을 \\n으로 치환 후 재시도
+      try {
+        const fixed = process.env.FIREBASE_SERVICE_ACCOUNT_JSON.replace(/\n/g, '\\n');
+        serviceAccount = JSON.parse(fixed);
+      } catch (e2) {
+        console.warn('[Push] FIREBASE_SERVICE_ACCOUNT_JSON 파싱 실패:', e2.message);
+      }
+    }
+  }
 
   if (serviceAccount) {
     admin.initializeApp({

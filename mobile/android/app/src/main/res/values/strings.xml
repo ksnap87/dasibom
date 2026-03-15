@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">다시봄</string>
+    <string name="kakao_app_key">762991782c58c359e70b779b809851dd</string>
 </resources>

@@ -1,4 +1,4 @@
-package com.tulipapp
+package com.dasibom
 
 import android.app.Application
 import com.facebook.react.PackageList
