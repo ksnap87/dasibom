@@ -2,6 +2,7 @@
 backend/.env
 mobile/.env
 mobile/src/config.ts
+mobile/android/app/google-services.json
 
 # Node.js 의존성
 node_modules/
