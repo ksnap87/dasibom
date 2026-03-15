@@ -105,6 +105,7 @@ export interface Message {
 }
 
 export type RootStackParamList = {
+  Splash: undefined;
   Auth: undefined;
   Questionnaire: undefined;
   Main: undefined;

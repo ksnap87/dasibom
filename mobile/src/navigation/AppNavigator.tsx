@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 
 import { useAuthStore } from '../store/authStore';
+import SplashScreen from '../screens/SplashScreen';
 import AuthScreen from '../screens/AuthScreen';
 import QuestionnaireScreen from '../screens/QuestionnaireScreen';
 import SuggestionsScreen from '../screens/SuggestionsScreen';
@@ -66,8 +67,10 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const { isAuthenticated, isLoading, profile } = useAuthStore();
+  const [splashDone, setSplashDone] = React.useState(false);
 
-  if (isLoading) {
+  // Show splash screen while loading session or for minimum 2 seconds
+  if (isLoading && !splashDone) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF8F5' }}>
         <Text style={{ fontSize: 48, marginBottom: 20 }}>🌸</Text>
@@ -79,7 +82,11 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerBackTitle: '뒤로' }}>
-        {!isAuthenticated ? (
+        {!splashDone ? (
+          <Stack.Screen name="Splash" options={{ headerShown: false }}>
+            {() => <SplashScreen onFinish={() => setSplashDone(true)} />}
+          </Stack.Screen>
+        ) : !isAuthenticated ? (
           <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
         ) : !profile?.questionnaire_completed ? (
           <Stack.Screen

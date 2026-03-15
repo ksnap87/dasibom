@@ -59,7 +59,7 @@ export default function PhoneVerificationScreen() {
     }
     setLoading(true);
     // 모의: 1초 딜레이 후 OTP 발송 완료
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise<void>(r => setTimeout(r, 1000));
     setLoading(false);
     setStep('otp');
     setTimeout(() => otpRef.current?.focus(), 200);
@@ -76,7 +76,7 @@ export default function PhoneVerificationScreen() {
       return;
     }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise<void>(r => setTimeout(r, 800));
     await setPhoneVerified(true);
     setLoading(false);
 

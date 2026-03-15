@@ -1,11 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, Alert, SafeAreaView,
+  ActivityIndicator, RefreshControl, Alert, SafeAreaView, Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSuggestions, expressInterest } from '../api/client';
 import { SuggestionProfile } from '../types';
+import SkeletonLoader from '../components/SkeletonLoader';
+import ToastContainer, { showToast } from '../components/Toast';
 
 const C = {
   primary: '#E8556D',
@@ -97,7 +99,7 @@ function passesRequired(item: SuggestionProfile, conditions: string[], myProfile
   return true;
 }
 
-// ── 카드 컴포넌트 ─────────────────────────────────────────
+// ── 카드 컴포넌트 (애니메이션 포함) ─────────────────────────
 function ProfileCard({
   item,
   previewQuestions,
@@ -112,9 +114,44 @@ function ProfileCard({
   acting: boolean;
 }) {
   const age = new Date().getFullYear() - item.birth_year;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const cardOpacity = useRef(new Animated.Value(1)).current;
+
+  const animateOut = (direction: 'left' | 'right', callback: () => void) => {
+    Animated.parallel([
+      Animated.timing(translateX, {
+        toValue: direction === 'right' ? 300 : -300,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      callback();
+    });
+  };
+
+  const handleLike = () => {
+    animateOut('right', onLike);
+  };
+
+  const handlePass = () => {
+    animateOut('left', onPass);
+  };
 
   return (
-    <View style={styles.card}>
+    <Animated.View
+      style={[
+        styles.card,
+        {
+          transform: [{ translateX }],
+          opacity: cardOpacity,
+        },
+      ]}
+    >
       {/* Header */}
       <View style={styles.cardHeader}>
         <View style={styles.avatarCircle}>
@@ -156,20 +193,20 @@ function ProfileCard({
       <View style={styles.actionRow}>
         <TouchableOpacity
           style={[styles.passBtn, acting && styles.disabledBtn]}
-          onPress={onPass}
+          onPress={handlePass}
           disabled={acting}
         >
           <Text style={styles.passBtnText}>다음에</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.likeBtn, acting && styles.disabledBtn]}
-          onPress={onLike}
+          onPress={handleLike}
           disabled={acting}
         >
           <Text style={styles.likeBtnText}>💌 관심 있어요</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -263,6 +300,8 @@ export default function SuggestionsScreen() {
       await incrementDailyCount();
       if (result.matched) {
         Alert.alert('🎉 매칭 성공!', `서로 관심이 있습니다!\n채팅 탭에서 대화를 시작해보세요.`);
+      } else if (liked) {
+        showToast('관심을 표현했어요 💌');
       }
     } catch (err: any) {
       Alert.alert('오류', err.message ?? '처리 실패');
@@ -272,7 +311,15 @@ export default function SuggestionsScreen() {
   };
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>;
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>🌸 추천 상대</Text>
+        </View>
+        <SkeletonLoader variant="card" count={2} />
+        <ToastContainer />
+      </SafeAreaView>
+    );
   }
 
   // 하루 제한 도달
@@ -293,6 +340,7 @@ export default function SuggestionsScreen() {
             <Text style={styles.creditBtnText}>💎 크레딧으로 더 보기</Text>
           </TouchableOpacity>
         </View>
+        <ToastContainer />
       </SafeAreaView>
     );
   }
@@ -311,9 +359,19 @@ export default function SuggestionsScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyEmoji}>🌸</Text>
           <Text style={styles.emptyTitle}>모든 추천 상대를 확인했어요</Text>
-          <Text style={styles.emptySub}>잠시 후 새로운 추천 상대가 나타날 거예요</Text>
+          <Text style={styles.emptySub}>
+            잠시 후 새로운 추천 상대가 나타날 거예요{'\n'}
+            프로필 탭에서 필터를 조정하면{'\n'}
+            더 많은 추천을 받을 수 있어요
+          </Text>
           <TouchableOpacity style={styles.refreshBtn} onPress={() => { setRefreshing(true); load(); }}>
             <Text style={styles.refreshBtnText}>새로고침</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.filterHintBtn}
+            onPress={() => Alert.alert('필터 조정', '내 프로필 탭에서 추천 조건과 지역 설정을\n조정해보세요.')}
+          >
+            <Text style={styles.filterHintText}>필터 설정 바로가기</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -336,6 +394,7 @@ export default function SuggestionsScreen() {
           }
         />
       )}
+      <ToastContainer />
     </SafeAreaView>
   );
 }
@@ -382,9 +441,14 @@ const styles = StyleSheet.create({
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyEmoji: { fontSize: 64, marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8, textAlign: 'center' },
-  emptySub: { fontSize: 15, color: C.sub, textAlign: 'center', marginBottom: 24 },
+  emptySub: { fontSize: 15, color: C.sub, textAlign: 'center', marginBottom: 24, lineHeight: 22 },
   refreshBtn: { backgroundColor: C.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12 },
   refreshBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  filterHintBtn: {
+    marginTop: 12, paddingHorizontal: 20, paddingVertical: 10,
+    borderRadius: 12, borderWidth: 1.5, borderColor: C.border,
+  },
+  filterHintText: { fontSize: 14, color: C.sub, fontWeight: '600' },
   creditBtn: { borderWidth: 1.5, borderColor: C.gold, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
   creditBtnText: { color: C.gold, fontSize: 15, fontWeight: '700' },
 });

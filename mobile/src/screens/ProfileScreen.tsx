@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, ActivityIndicator, Alert, Image, Switch, Linking,
 } from 'react-native';
+import SkeletonLoader from '../components/SkeletonLoader';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -283,7 +284,13 @@ export default function ProfileScreen() {
   };
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>;
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <SkeletonLoader variant="profile" />
+        </ScrollView>
+      </SafeAreaView>
+    );
   }
 
   if (!profile) {

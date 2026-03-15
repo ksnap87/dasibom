@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, SafeAreaView, Alert, Image,
+  RefreshControl, SafeAreaView, Alert, Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getMutualMatches } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { MutualMatch, RootStackParamList } from '../types';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -74,7 +75,14 @@ export default function MatchesScreen() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>;
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>💌 나의 매칭</Text>
+        </View>
+        <SkeletonLoader variant="match-row" count={4} />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -92,6 +100,15 @@ export default function MatchesScreen() {
             추천 탭에서 마음에 드는 분께 관심을 표현해보세요.{'\n'}
             상대방도 관심을 표현하면 매칭이 됩니다!
           </Text>
+          <TouchableOpacity
+            style={styles.goSuggestionsBtn}
+            onPress={() => {
+              // Navigate to the Suggestions tab within the bottom tab navigator
+              (nav as any).navigate('Suggestions');
+            }}
+          >
+            <Text style={styles.goSuggestionsBtnText}>🌸 추천 보러가기</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -151,5 +168,16 @@ const styles = StyleSheet.create({
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyEmoji: { fontSize: 64, marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 10, textAlign: 'center' },
-  emptySub: { fontSize: 15, color: C.sub, textAlign: 'center', lineHeight: 22 },
+  emptySub: { fontSize: 15, color: C.sub, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  goSuggestionsBtn: {
+    backgroundColor: C.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  goSuggestionsBtnText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });
