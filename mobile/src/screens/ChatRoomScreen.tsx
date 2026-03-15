@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator,
-  Alert, Image,
+  Alert, Image, Modal,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { getMessages, sendMessage, markRead, reportUser } from '../api/client';
@@ -121,11 +121,19 @@ export default function ChatRoomScreen() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const listRef = useRef<FlatList>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // 캐시: userId → sender 정보 (Realtime 이벤트 수신 시 사용)
   const senderMapRef = useRef<Record<string, Message['sender']>>({});
+
+  const REPORT_REASONS = [
+    { label: '부적절한 사진', value: 'inappropriate_photo' },
+    { label: '허위 프로필', value: 'fake_profile' },
+    { label: '불쾌한 대화', value: 'offensive_chat' },
+    { label: '기타', value: 'other' },
+  ];
 
   const load = useCallback(async () => {
     try {
@@ -143,26 +151,17 @@ export default function ChatRoomScreen() {
   }, [match_id]);
 
   const handleReport = () => {
-    const reasons = [
-      { text: '부적절한 사진', value: 'inappropriate_photo' },
-      { text: '허위 프로필', value: 'fake_profile' },
-      { text: '불쾌한 대화', value: 'offensive_chat' },
-      { text: '기타', value: 'other' },
-    ];
-    Alert.alert('신고 사유 선택', '어떤 이유로 신고하시겠어요?', [
-      ...reasons.map(r => ({
-        text: r.text,
-        onPress: async () => {
-          try {
-            await reportUser(other_user_id, r.value);
-            Alert.alert('신고 완료', '신고가 접수되었습니다.');
-          } catch {
-            Alert.alert('오류', '신고 처리 중 문제가 발생했습니다.');
-          }
-        },
-      })),
-      { text: '취소', style: 'cancel' },
-    ]);
+    setShowReportModal(true);
+  };
+
+  const submitReport = async (reason: string) => {
+    setShowReportModal(false);
+    try {
+      await reportUser(other_user_id, reason);
+      Alert.alert('신고 완료', '신고가 접수되었습니다.');
+    } catch {
+      Alert.alert('오류', '신고 처리 중 문제가 발생했습니다.');
+    }
   };
 
   useEffect(() => {
@@ -257,6 +256,22 @@ export default function ChatRoomScreen() {
             <Text style={styles.emptyChatEmoji}>💌</Text>
             <Text style={styles.emptyChatText}>첫 메시지를 보내보세요!</Text>
             <Text style={styles.emptyChatSub}>{other_name}님과의 대화를 시작해보세요.</Text>
+            <View style={styles.icebreakers}>
+              {[
+                '주말에 주로 뭐 하세요?',
+                '요즘 관심 있는 게 있으세요?',
+                '여행 다녀온 곳 중 추천할 만한 곳이 있나요?',
+              ].map((suggestion, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.icebreakerChip}
+                  onPress={() => setText(suggestion)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.icebreakerText}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         ) : (
           <FlatList
@@ -299,6 +314,40 @@ export default function ChatRoomScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* 신고 사유 선택 Modal */}
+      <Modal
+        visible={showReportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReportModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowReportModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>신고 사유 선택</Text>
+            <Text style={styles.modalSub}>어떤 이유로 신고하시겠어요?</Text>
+            {REPORT_REASONS.map(r => (
+              <TouchableOpacity
+                key={r.value}
+                style={styles.modalOption}
+                onPress={() => submitReport(r.value)}
+              >
+                <Text style={styles.modalOptionText}>{r.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              onPress={() => setShowReportModal(false)}
+            >
+              <Text style={styles.modalCancelText}>취소</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -356,4 +405,48 @@ const styles = StyleSheet.create({
   emptyChatEmoji: { fontSize: 64, marginBottom: 16 },
   emptyChatText: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 6 },
   emptyChatSub: { fontSize: 15, color: C.sub, textAlign: 'center' },
+
+  // 대화 시작 제안 칩
+  icebreakers: {
+    marginTop: 24,
+    gap: 10,
+    alignItems: 'center',
+    width: '100%',
+  },
+  icebreakerChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: C.primary,
+    elevation: 1,
+  },
+  icebreakerText: {
+    fontSize: 14,
+    color: C.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  // 신고 Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center', padding: 32,
+  },
+  modalContent: {
+    backgroundColor: '#FFF', borderRadius: 16, padding: 24,
+    width: '100%', maxWidth: 340,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 4 },
+  modalSub: { fontSize: 14, color: C.sub, marginBottom: 16 },
+  modalOption: {
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0ECEA',
+  },
+  modalOptionText: { fontSize: 16, color: C.text },
+  modalCancelBtn: {
+    marginTop: 12, paddingVertical: 14, alignItems: 'center',
+    backgroundColor: '#F5F5F5', borderRadius: 10,
+  },
+  modalCancelText: { fontSize: 16, color: C.sub, fontWeight: '600' },
 });

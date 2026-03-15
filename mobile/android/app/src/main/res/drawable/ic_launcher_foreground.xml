@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Cherry blossom flower icon (5-petal design) centered in safe zone -->
+    <!-- Safe zone is 66x66 centered (21,21 to 87,87) -->
+
+    <!-- Petal 1 - top -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 C58,30 62,34 62,40 C62,46 58,48 54,48 C50,48 46,46 46,40 C46,34 50,30 54,30z" />
+
+    <!-- Petal 2 - top right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M65,37 C68,34 73,34 76,38 C79,42 78,47 74,49 C70,51 66,50 63,46 C60,42 62,40 65,37z" />
+
+    <!-- Petal 3 - bottom right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,52 C72,51 76,53 77,58 C78,63 75,67 71,68 C67,69 63,66 62,61 C61,56 64,53 68,52z" />
+
+    <!-- Petal 4 - bottom left -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,52 C36,51 32,53 31,58 C30,63 33,67 37,68 C41,69 45,66 46,61 C47,56 44,53 40,52z" />
+
+    <!-- Petal 5 - top left -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43,37 C40,34 35,34 32,38 C29,42 30,47 34,49 C38,51 42,50 45,46 C48,42 46,40 43,37z" />
+
+    <!-- Center circle -->
+    <path
+        android:fillColor="#FFD4DC"
+        android:pathData="M54,48 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+
+    <!-- Center dots -->
+    <path
+        android:fillColor="#E8556D"
+        android:pathData="M52,46 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+    <path
+        android:fillColor="#E8556D"
+        android:pathData="M56,46 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+    <path
+        android:fillColor="#E8556D"
+        android:pathData="M54,50 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+</vector>

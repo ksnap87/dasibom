@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  SafeAreaView, ActivityIndicator, Alert, Image,
+  SafeAreaView, ActivityIndicator, Alert, Image, Modal,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -105,6 +105,14 @@ export default function FriendProfileScreen() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  const REPORT_REASONS = [
+    { label: '부적절한 사진', value: 'inappropriate_photo' },
+    { label: '허위 프로필', value: 'fake_profile' },
+    { label: '불쾌한 대화', value: 'offensive_chat' },
+    { label: '기타', value: 'other' },
+  ];
 
   useEffect(() => {
     getProfile(user_id)
@@ -122,26 +130,17 @@ export default function FriendProfileScreen() {
   };
 
   const handleReport = () => {
-    const reasons = [
-      { text: '부적절한 사진', value: 'inappropriate_photo' },
-      { text: '허위 프로필', value: 'fake_profile' },
-      { text: '불쾌한 대화', value: 'offensive_chat' },
-      { text: '기타', value: 'other' },
-    ];
-    Alert.alert('신고 사유 선택', '어떤 이유로 신고하시겠어요?', [
-      ...reasons.map(r => ({
-        text: r.text,
-        onPress: async () => {
-          try {
-            await reportUser(user_id, r.value);
-            Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 조치하겠습니다.');
-          } catch {
-            Alert.alert('오류', '신고 처리 중 문제가 발생했습니다.');
-          }
-        },
-      })),
-      { text: '취소', style: 'cancel' },
-    ]);
+    setShowReportModal(true);
+  };
+
+  const submitReport = async (reason: string) => {
+    setShowReportModal(false);
+    try {
+      await reportUser(user_id, reason);
+      Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+    } catch {
+      Alert.alert('오류', '신고 처리 중 문제가 발생했습니다.');
+    }
   };
 
   const handleBlock = () => {
@@ -255,6 +254,40 @@ export default function FriendProfileScreen() {
           <Text style={styles.chatBtnText}>💌 채팅 시작하기</Text>
         </TouchableOpacity>
       </View>
+
+      {/* 신고 사유 선택 Modal */}
+      <Modal
+        visible={showReportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReportModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowReportModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>신고 사유 선택</Text>
+            <Text style={styles.modalSub}>어떤 이유로 신고하시겠어요?</Text>
+            {REPORT_REASONS.map(r => (
+              <TouchableOpacity
+                key={r.value}
+                style={styles.modalOption}
+                onPress={() => submitReport(r.value)}
+              >
+                <Text style={styles.modalOptionText}>{r.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              onPress={() => setShowReportModal(false)}
+            >
+              <Text style={styles.modalCancelText}>취소</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -328,4 +361,25 @@ const styles = StyleSheet.create({
   reportBtnText: { fontSize: 14, color: C.sub },
   blockBtn: { paddingVertical: 10, paddingHorizontal: 20 },
   blockBtnText: { fontSize: 14, color: '#D44' },
+
+  // 신고 Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center', padding: 32,
+  },
+  modalContent: {
+    backgroundColor: '#FFF', borderRadius: 16, padding: 24,
+    width: '100%', maxWidth: 340,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 4 },
+  modalSub: { fontSize: 14, color: C.sub, marginBottom: 16 },
+  modalOption: {
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0ECEA',
+  },
+  modalOptionText: { fontSize: 16, color: C.text },
+  modalCancelBtn: {
+    marginTop: 12, paddingVertical: 14, alignItems: 'center',
+    backgroundColor: '#F5F5F5', borderRadius: 10,
+  },
+  modalCancelText: { fontSize: 16, color: C.sub, fontWeight: '600' },
 });
