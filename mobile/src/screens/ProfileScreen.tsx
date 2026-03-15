@@ -368,9 +368,12 @@ export default function ProfileScreen() {
           {profile.bio ? <Text style={styles.heroBio}>{profile.bio}</Text> : null}
           <TouchableOpacity onPress={handlePickPhoto} disabled={uploading} style={styles.changePhotoBtn}>
             <Text style={styles.changePhotoText}>
-              {profile.photo_url ? '사진 변경' : '사진 추가'}
+              {profile.photo_url ? '📷 사진 변경' : '📷 프로필 사진 추가'}
             </Text>
           </TouchableOpacity>
+          {!profile.photo_url && (
+            <Text style={styles.photoHint}>사진을 등록하면 매칭 확률이 높아져요!</Text>
+          )}
         </View>
 
         {/* 가치관 수정 버튼 */}
@@ -655,12 +658,13 @@ const styles = StyleSheet.create({
   // Hero
   hero: { alignItems: 'center', paddingVertical: 24, marginBottom: 8 },
   avatarWrapper: { position: 'relative', marginBottom: 12 },
-  bigPhoto: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: C.primary },
+  bigPhoto: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: C.primary },
   bigAvatar: {
-    width: 100, height: 100, borderRadius: 50, backgroundColor: C.primaryLight,
+    width: 120, height: 120, borderRadius: 60, backgroundColor: C.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  bigAvatarText: { fontSize: 42, color: C.primary, fontWeight: '700' },
+  bigAvatarText: { fontSize: 48, color: C.primary, fontWeight: '700' },
+  photoHint: { fontSize: 13, color: C.sub, marginTop: 6 },
   cameraBtn: {
     position: 'absolute', bottom: 0, right: 0,
     width: 32, height: 32, borderRadius: 16,
