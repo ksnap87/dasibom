@@ -258,6 +258,10 @@ alter table public.profiles
 alter table public.profiles
   add column if not exists credits integer default 3 not null;
 
+-- FCM 푸시 토큰
+alter table public.profiles
+  add column if not exists fcm_token text;
+
 -- 일상 & 생활 신규 필드
 alter table public.profiles
   add column if not exists chronotype text
