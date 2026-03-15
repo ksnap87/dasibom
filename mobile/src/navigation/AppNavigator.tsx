@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, ActivityIndicator, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 
 import { useAuthStore } from '../store/authStore';
+import { registerFCMToken, onTokenRefresh, onForegroundMessage } from '../services/fcm';
 import SplashScreen from '../screens/SplashScreen';
 import AuthScreen from '../screens/AuthScreen';
 import QuestionnaireScreen from '../screens/QuestionnaireScreen';
@@ -68,6 +69,24 @@ function MainTabs() {
 export default function AppNavigator() {
   const { isAuthenticated, isLoading, profile } = useAuthStore();
   const [splashDone, setSplashDone] = React.useState(false);
+  const fcmRegistered = useRef(false);
+
+  // FCM 토큰 등록 + 포그라운드 메시지 수신
+  useEffect(() => {
+    if (!isAuthenticated || !profile || fcmRegistered.current) return;
+    fcmRegistered.current = true;
+
+    registerFCMToken();
+    const unsubRefresh = onTokenRefresh();
+    const unsubMessage = onForegroundMessage((title, body) => {
+      Alert.alert(title, body);
+    });
+
+    return () => {
+      unsubRefresh();
+      unsubMessage();
+    };
+  }, [isAuthenticated, profile]);
 
   // Show splash screen while loading session or for minimum 2 seconds
   if (isLoading && !splashDone) {

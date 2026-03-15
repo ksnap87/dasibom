@@ -1,6 +1,7 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { calculateCompatibilityScore } = require('../utils/scoring');
+const { sendPushToUser } = require('../utils/push');
 
 const router = express.Router();
 const supabase = createClient(
@@ -106,6 +107,12 @@ router.post('/interest', async (req, res) => {
     );
 
   res.json({ matched: true, score });
+
+  // 양쪽 모두에게 매칭 푸시 알림
+  const senderName = p1?.name ?? '누군가';
+  const receiverName = p2?.name ?? '누군가';
+  sendPushToUser(supabase, to_user_id, '새로운 매칭! 💕', `${senderName}님과 매칭되었어요!`, { type: 'new_match' }).catch(() => {});
+  sendPushToUser(supabase, userId, '새로운 매칭! 💕', `${receiverName}님과 매칭되었어요!`, { type: 'new_match' }).catch(() => {});
 });
 
 // POST /api/profiles/credits/deduct — 크레딧 차감

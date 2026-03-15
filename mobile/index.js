@@ -10,6 +10,10 @@ import { AppRegistry, LogBox } from 'react-native';
 import App from './App';
 import { name as appName } from './app.json';
 
+// FCM 백그라운드 메시지 핸들러 (AppRegistry 전에 등록)
+import { setBackgroundHandler } from './src/services/fcm';
+setBackgroundHandler();
+
 // 개발 중 경고 배너 비활성화 (UI 테스트용)
 LogBox.ignoreAllLogs();
 

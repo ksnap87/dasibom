@@ -1,5 +1,6 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
+const { sendPushToUser } = require('../utils/push');
 
 const router = express.Router();
 const supabase = createClient(
@@ -76,6 +77,16 @@ router.post('/', async (req, res) => {
       .single();
 
     res.status(201).json({ ...data, sender });
+
+    // 상대방에게 푸시 알림 발송 (비동기, 응답 차단 X)
+    const recipientId = match.user1_id === req.user.id ? match.user2_id : match.user1_id;
+    sendPushToUser(
+      supabase,
+      recipientId,
+      sender?.name ?? '새 메시지',
+      content.trim().length > 50 ? content.trim().slice(0, 50) + '…' : content.trim(),
+      { type: 'new_message', match_id },
+    ).catch(() => {});
   } catch (err) {
     console.error('메시지 전송 오류:', err);
     res.status(500).json({ error: err.message });
