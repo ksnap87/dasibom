@@ -24,13 +24,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 interface AuthState {
   user: any | null;
-  profile: Profile | null;
+  profile: Profile | null | undefined;  // undefined=로딩중, null=없음, Profile=있음
   isLoading: boolean;
   isAuthenticated: boolean;
   credits: number;
   phoneVerified: boolean;
 
-  setProfile: (p: Profile | null) => void;
+  setProfile: (p: Profile | null | undefined) => void;
   kakaoLogin: () => Promise<void>;
   signOut: () => Promise<void>;
   loadSession: () => Promise<void>;
@@ -46,7 +46,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  profile: null,
+  profile: undefined,
   isLoading: true,
   isAuthenticated: false,
   credits: DEFAULT_CREDITS,
@@ -78,7 +78,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try { await kakaoSdkLogout(); } catch (_) { /* 카카오 로그아웃 실패 무시 */ }
     await supabase.auth.signOut();
     await AsyncStorage.removeItem('access_token');
-    set({ user: null, profile: null, isAuthenticated: false, credits: DEFAULT_CREDITS, phoneVerified: false });
+    set({ user: null, profile: undefined, isAuthenticated: false, credits: DEFAULT_CREDITS, phoneVerified: false });
   },
 
   loadSession: async () => {
