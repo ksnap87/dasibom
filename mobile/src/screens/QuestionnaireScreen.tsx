@@ -1051,7 +1051,7 @@ const styles = StyleSheet.create({
   },
   editHeaderTitle: { fontSize: 18, fontWeight: '700', color: C.text },
   editHeaderSub: { fontSize: 13, color: C.sub },
-  content: { padding: 20, paddingBottom: 100 },
+  content: { padding: 20, paddingBottom: 30 },
   stepTitle: { fontSize: 26, fontWeight: '700', color: C.text, marginBottom: 6 },
   stepSub: { fontSize: 16, color: C.sub, marginBottom: 24 },
   label: { fontSize: 17, fontWeight: '600', color: C.text, marginBottom: 10, marginTop: 4 },
@@ -1064,11 +1064,11 @@ const styles = StyleSheet.create({
   textArea: { height: 100, textAlignVertical: 'top' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   option: {
-    paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10,
+    paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12,
     borderWidth: 1.5, borderColor: C.border, backgroundColor: C.card, minWidth: 80,
   },
   optionSelected: { borderColor: C.primary, backgroundColor: C.primaryLight },
-  optionText: { fontSize: 15, color: C.text, textAlign: 'center' },
+  optionText: { fontSize: 16, color: C.text, textAlign: 'center' },
   optionTextSelected: { color: C.primary, fontWeight: '700' },
   // 문장형 질문 스타일
   qLabel: {
@@ -1151,13 +1151,12 @@ const styles = StyleSheet.create({
   completeBannerText: { fontSize: 18, fontWeight: '700', color: '#27AE60', marginBottom: 6 },
   completeBannerSub: { fontSize: 14, color: '#555' },
   navRow: {
-    flexDirection: 'row', padding: 16, borderTopWidth: 1,
+    flexDirection: 'row', padding: 16, paddingBottom: 32, borderTopWidth: 1,
     borderTopColor: C.border, backgroundColor: C.bg,
-    position: 'absolute', bottom: 0, left: 0, right: 0,
   },
-  backBtn: { paddingHorizontal: 20, paddingVertical: 14 },
-  backBtnText: { fontSize: 16, color: C.sub },
-  nextBtn: { backgroundColor: C.primary, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 14 },
+  backBtn: { paddingHorizontal: 24, paddingVertical: 16 },
+  backBtnText: { fontSize: 17, color: C.sub },
+  nextBtn: { backgroundColor: C.primary, borderRadius: 14, paddingHorizontal: 32, paddingVertical: 16 },
   disabledBtn: { opacity: 0.6 },
-  nextBtnText: { fontSize: 16, color: '#FFF', fontWeight: '700' },
+  nextBtnText: { fontSize: 17, color: '#FFF', fontWeight: '700' },
 });

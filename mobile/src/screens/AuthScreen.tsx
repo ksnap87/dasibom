@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, SafeAreaView,
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 
@@ -31,7 +31,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
         {/* Logo */}
         <View style={styles.logoArea}>
@@ -61,28 +61,28 @@ export default function AuthScreen() {
           다시, 설레는 만남이 시작되는 곳
         </Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  inner: { flex: 1, justifyContent: 'center', padding: 24 },
+  inner: { flex: 1, justifyContent: 'center', padding: 28, paddingBottom: 40 },
   logoArea: { alignItems: 'center', marginBottom: 60 },
-  logoEmoji: { fontSize: 64, marginBottom: 8 },
-  logoText: { fontSize: 40, fontWeight: '700', color: C.primary, letterSpacing: 2 },
-  tagline: { fontSize: 15, color: C.sub, marginTop: 6 },
+  logoEmoji: { fontSize: 72, marginBottom: 12 },
+  logoText: { fontSize: 44, fontWeight: '700', color: C.primary, letterSpacing: 2 },
+  tagline: { fontSize: 16, color: C.sub, marginTop: 8 },
   kakaoBtn: {
     backgroundColor: C.kakaoYellow,
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 14,
+    paddingVertical: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
   },
   kakaoBtnDisabled: { opacity: 0.6 },
-  kakaoIcon: { fontSize: 20, marginRight: 8 },
-  kakaoLabel: { color: C.kakaoText, fontSize: 17, fontWeight: '600' },
-  footer: { textAlign: 'center', color: C.sub, fontSize: 13, lineHeight: 20 },
+  kakaoIcon: { fontSize: 22, marginRight: 10 },
+  kakaoLabel: { color: C.kakaoText, fontSize: 18, fontWeight: '600' },
+  footer: { textAlign: 'center', color: C.sub, fontSize: 14, lineHeight: 22 },
 });

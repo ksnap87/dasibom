@@ -125,6 +125,7 @@ export interface Message {
 export type RootStackParamList = {
   Splash: undefined;
   Auth: undefined;
+  Welcome: undefined;
   Questionnaire: undefined;
   Main: undefined;
   ChatRoom: { match_id: string; other_name: string; other_user_id: string };

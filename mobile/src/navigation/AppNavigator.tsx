@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore';
 import { registerFCMToken, onTokenRefresh, onForegroundMessage } from '../services/fcm';
 import SplashScreen from '../screens/SplashScreen';
 import AuthScreen from '../screens/AuthScreen';
+import WelcomeScreen from '../screens/WelcomeScreen';
 import QuestionnaireScreen from '../screens/QuestionnaireScreen';
 import SuggestionsScreen from '../screens/SuggestionsScreen';
 import MatchesScreen from '../screens/MatchesScreen';
@@ -35,7 +36,7 @@ function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: C.primary,
         tabBarInactiveTintColor: C.sub,
-        tabBarStyle: { height: 62, paddingBottom: 8, paddingTop: 4 },
+        tabBarStyle: { height: 72, paddingBottom: 16, paddingTop: 6 },
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
       }}
     >
@@ -70,7 +71,15 @@ function MainTabs() {
 export default function AppNavigator() {
   const { isAuthenticated, isLoading, profile } = useAuthStore();
   const [splashDone, setSplashDone] = React.useState(false);
+  const [welcomeDone, setWelcomeDone] = React.useState(false);
   const fcmRegistered = useRef(false);
+
+  // 기존 회원(설문 완료)이면 환영 화면 스킵
+  useEffect(() => {
+    if (profile?.questionnaire_completed) {
+      setWelcomeDone(true);
+    }
+  }, [profile]);
 
   // FCM 토큰 등록 + 포그라운드 메시지 수신
   useEffect(() => {
@@ -89,8 +98,18 @@ export default function AppNavigator() {
     };
   }, [isAuthenticated, profile]);
 
-  // Show splash screen while loading session or for minimum 2 seconds
+  // 로딩 중에는 스플래시 표시 (프로필 로드 완료까지 대기)
   if (isLoading && !splashDone) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF8F5' }}>
+        <Text style={{ fontSize: 48, marginBottom: 20 }}>🌸</Text>
+        <ActivityIndicator size="large" color={C.primary} />
+      </View>
+    );
+  }
+
+  // 인증됐지만 프로필 로딩 중 → 로딩 화면 표시 (설문 화면 깜빡임 방지)
+  if (splashDone && isAuthenticated && profile === undefined) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF8F5' }}>
         <Text style={{ fontSize: 48, marginBottom: 20 }}>🌸</Text>
@@ -108,7 +127,13 @@ export default function AppNavigator() {
           </Stack.Screen>
         ) : !isAuthenticated ? (
           <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+        ) : !profile?.questionnaire_completed && !welcomeDone ? (
+          /* 신규 회원: 환영 화면 */
+          <Stack.Screen name="Welcome" options={{ headerShown: false }}>
+            {() => <WelcomeScreen onStart={() => setWelcomeDone(true)} />}
+          </Stack.Screen>
         ) : !profile?.questionnaire_completed ? (
+          /* 환영 화면 후: 설문 */
           <Stack.Screen
             name="Questionnaire"
             component={QuestionnaireScreen}
