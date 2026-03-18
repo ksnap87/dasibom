@@ -36,6 +36,10 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install required SDK components
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - name: Create config.ts from secret
         working-directory: mobile/src
         run: echo "${{ secrets.CONFIG_TS }}" > config.ts
@@ -55,7 +59,7 @@ jobs:
       - name: Build Release APK
         working-directory: mobile/android
         run: |
-          ./gradlew assembleRelease --no-daemon \
+          ./gradlew assembleRelease --no-daemon --stacktrace \
             -PRELEASE_STORE_FILE=dasibom-release.keystore \
             -PRELEASE_STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }} \
             -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
