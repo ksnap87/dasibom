@@ -4,6 +4,7 @@
  */
 import React, { useEffect } from 'react';
 import { StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/store/authStore';
 
@@ -30,9 +31,9 @@ export default function App() {
   }, [isAuthenticated, setProfile]);
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF8F5" />
       <AppNavigator />
-    </>
+    </SafeAreaProvider>
   );
 }
