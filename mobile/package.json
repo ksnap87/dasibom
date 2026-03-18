@@ -28,7 +28,6 @@
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.0.0",
     "react-native-url-polyfill": "^3.0.0",
-    "sp-react-native-in-app-updates": "^1.5.0",
     "text-encoding": "^0.7.0",
     "zustand": "^5.0.0"
   },

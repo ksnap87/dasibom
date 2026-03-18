@@ -3,13 +3,10 @@
  * Root component: loads session then renders AppNavigator.
  */
 import React, { useEffect } from 'react';
-import { Platform, StatusBar } from 'react-native';
+import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import SpInAppUpdates, { IAUUpdateKind } from 'sp-react-native-in-app-updates';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/store/authStore';
-
-const inAppUpdates = new SpInAppUpdates(false);
 
 export default function App() {
   const { loadSession, isAuthenticated, setProfile } = useAuthStore();
@@ -17,21 +14,6 @@ export default function App() {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
-
-  // 앱 실행 시 Play Store 업데이트 확인
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    inAppUpdates
-      .checkNeedsUpdate()
-      .then((result) => {
-        if (result.shouldUpdate) {
-          inAppUpdates.startUpdate({
-            updateType: IAUUpdateKind.FLEXIBLE,
-          });
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   // After login, try to fetch profile so questionnaire_completed is known
   useEffect(() => {
