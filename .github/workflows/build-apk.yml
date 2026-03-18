@@ -96,6 +96,17 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION-$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
 
+      - name: Verify APK exists
+        run: |
+          APK_PATH="mobile/android/app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "::error::APK not found at $APK_PATH"
+            echo "Listing build outputs:"
+            find mobile/android/app/build/outputs -type f -name "*.apk" 2>/dev/null || echo "No APK files found"
+            exit 1
+          fi
+          echo "APK found: $(ls -lh $APK_PATH)"
+
       - name: Upload APK to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
@@ -113,4 +124,5 @@ jobs:
             2. 안드로이드 설정 → 알 수 없는 앱 설치 허용
             3. APK 파일 실행하여 설치
           files: mobile/android/app/build/outputs/apk/release/app-release.apk
+          fail_on_missing_files: true
           token: ${{ secrets.GITHUB_TOKEN }}
