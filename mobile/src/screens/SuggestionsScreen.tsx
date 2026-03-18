@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.primaryLight, borderRadius: 12,
   },
   quoteText: { fontSize: 13, color: C.primary, fontStyle: 'italic', textAlign: 'center', lineHeight: 20 },
-  list: { padding: 16, gap: 16 },
+  list: { padding: 16, paddingBottom: 32, gap: 16 },
 
   card: { backgroundColor: C.card, borderRadius: 16, padding: 18, elevation: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
