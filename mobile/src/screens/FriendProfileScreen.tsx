@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, ActivityIndicator, Alert, Image, Modal,
@@ -105,6 +105,7 @@ export default function FriendProfileScreen() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
   const REPORT_REASONS = [
@@ -114,12 +115,18 @@ export default function FriendProfileScreen() {
     { label: '기타', value: 'other' },
   ];
 
-  useEffect(() => {
+  const loadProfile = useCallback(() => {
+    setLoading(true);
+    setError(false);
     getProfile(user_id)
       .then(setProfile)
-      .catch(() => Alert.alert('오류', '프로필을 불러오지 못했습니다.'))
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [user_id]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handleChat = () => {
     if (phoneVerified) {
@@ -171,10 +178,14 @@ export default function FriendProfileScreen() {
     return <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>;
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyText}>프로필을 불러올 수 없습니다.</Text>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorText}>프로필을 불러올 수 없습니다.</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={loadProfile} activeOpacity={0.7}>
+          <Text style={styles.retryBtnText}>다시 시도</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -241,10 +252,20 @@ export default function FriendProfileScreen() {
 
         {/* 신고/차단 */}
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.reportBtn} onPress={handleReport}>
+          <TouchableOpacity
+            style={styles.reportBtn}
+            onPress={handleReport}
+            accessibilityLabel={`${other_name}님 신고하기`}
+            accessibilityRole="button"
+          >
             <Text style={styles.reportBtnText}>신고</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.blockBtn} onPress={handleBlock}>
+          <TouchableOpacity
+            style={styles.blockBtn}
+            onPress={handleBlock}
+            accessibilityLabel={`${other_name}님 차단하기`}
+            accessibilityRole="button"
+          >
             <Text style={styles.blockBtnText}>차단</Text>
           </TouchableOpacity>
         </View>
@@ -299,8 +320,14 @@ export default function FriendProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16, color: C.sub },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  errorIcon: { fontSize: 48, marginBottom: 12 },
+  errorText: { fontSize: 16, color: C.sub, marginBottom: 20, textAlign: 'center' },
+  retryBtn: {
+    backgroundColor: C.primary, borderRadius: 12,
+    paddingHorizontal: 28, paddingVertical: 12,
+  },
+  retryBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
   content: { padding: 16, paddingBottom: 20 },
 
   hero: { alignItems: 'center', paddingVertical: 24, marginBottom: 8 },

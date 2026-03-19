@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, ActivityIndicator, Alert, Image, Switch, Linking,
+  Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback,
 } from 'react-native';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -84,6 +85,8 @@ const C = {
   sub: '#777777',
   border: '#E0D5D0',
   gold: '#F9A825',
+  success: '#27AE60',
+  muted: '#6C7B95',
 };
 
 const LABELS: Record<string, Record<string, string>> = {
@@ -184,6 +187,7 @@ export default function ProfileScreen() {
   // 자기소개 편집
   const [editingBio, setEditingBio] = useState(false);
   const [bioText, setBioText] = useState('');
+  const [savingBio, setSavingBio] = useState(false);
 
   // ── 설정 상태 ──
   const [previewQuestions, setPreviewQuestions] = useState<string[]>(DEFAULT_PREVIEW_QUESTIONS);
@@ -475,12 +479,15 @@ export default function ProfileScreen() {
   };
 
   const handleSaveBio = async () => {
+    setSavingBio(true);
     try {
       await updateMyProfile({ bio: bioText.trim() });
       setProfile(prev => prev ? { ...prev, bio: bioText.trim() } : prev);
       setEditingBio(false);
     } catch (err: any) {
       Alert.alert('오류', err.message ?? '저장 실패');
+    } finally {
+      setSavingBio(false);
     }
   };
 
@@ -530,7 +537,9 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
         {/* 크레딧 배너 */}
         <View style={styles.creditBanner}>
@@ -560,10 +569,10 @@ export default function ProfileScreen() {
           </View>
         )}
         {phoneVerified && (
-          <View style={[styles.verifyBanner, { borderColor: '#27AE60', backgroundColor: '#E8F5E9' }]}>
+          <View style={[styles.verifyBanner, { borderColor: C.success, backgroundColor: '#E8F5E9' }]}>
             <Text style={styles.verifyIcon}>✅</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.verifyTitle, { color: '#27AE60' }]}>본인인증 완료</Text>
+              <Text style={[styles.verifyTitle, { color: C.success }]}>본인인증 완료</Text>
               <Text style={styles.verifySub}>채팅 기능이 활성화되었습니다</Text>
             </View>
           </View>
@@ -617,8 +626,12 @@ export default function ProfileScreen() {
                 <TouchableOpacity onPress={() => { setEditingBio(false); setBioText(profile.bio || ''); }}>
                   <Text style={styles.bioCancelText}>취소</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveBio}>
-                  <Text style={styles.bioSaveText}>저장</Text>
+                <TouchableOpacity onPress={handleSaveBio} disabled={savingBio}>
+                  {savingBio ? (
+                    <ActivityIndicator size="small" color={C.primary} />
+                  ) : (
+                    <Text style={styles.bioSaveText}>저장</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -655,7 +668,7 @@ export default function ProfileScreen() {
                     </View>
                   )}
                   {isBg && (
-                    <View style={[styles.photoBadge, { backgroundColor: '#6C7B95' }]}>
+                    <View style={[styles.photoBadge, { backgroundColor: C.muted }]}>
                       <Text style={styles.photoBadgeText}>배경</Text>
                     </View>
                   )}
@@ -673,7 +686,11 @@ export default function ProfileScreen() {
             )}
           </View>
           {photos.length === 0 && (
-            <Text style={styles.photoHint}>사진을 등록하면 매칭 확률이 높아져요!</Text>
+            <TouchableOpacity style={styles.photoEmptyPlaceholder} onPress={handleAddPhoto} disabled={uploading}>
+              <Text style={styles.photoEmptyIcon}>📷</Text>
+              <Text style={styles.photoEmptyText}>사진을 등록하면 매칭 확률이 높아져요!</Text>
+              <Text style={styles.photoEmptySub}>탭하여 첫 사진을 추가해보세요</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -721,8 +738,8 @@ export default function ProfileScreen() {
               <Switch
                 value={goalMatch}
                 onValueChange={(v) => saveDiscoveryFilters(regionFilter, v)}
-                trackColor={{ false: '#DDD', true: C.primary }}
-                thumbColor="#FFF"
+                trackColor={{ false: '#E0D5D0', true: C.primaryLight }}
+                thumbColor={goalMatch ? C.primary : '#FFF'}
               />
             </View>
           </View>
@@ -963,6 +980,8 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+      </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -1066,6 +1085,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   photoAddText: { fontSize: 28, color: C.sub },
+  photoEmptyPlaceholder: {
+    borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: 14,
+    paddingVertical: 24, paddingHorizontal: 16, alignItems: 'center', marginTop: 8,
+  },
+  photoEmptyIcon: { fontSize: 32, marginBottom: 8 },
+  photoEmptyText: { fontSize: 15, color: C.text, fontWeight: '600', textAlign: 'center' },
+  photoEmptySub: { fontSize: 13, color: C.primary, fontWeight: '500', marginTop: 4 },
 
   // 가치관 수정 버튼
   editValueBtn: {

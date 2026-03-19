@@ -188,7 +188,10 @@ function passesRequired(item: SuggestionProfile, conditions: string[], myProfile
   return true;
 }
 
-// ── 카드 컴포넌트 (가치관 중심, 사진 없음) ─────────────────────
+// ── 컴팩트 카드에 보여줄 핵심 필드 ───────────────────────────
+const PREVIEW_FIELDS = ['relationship_goal', 'personality_type', 'smoking', 'drinking'];
+
+// ── 카드 컴포넌트 (컴팩트 + 탭하면 펼침) ─────────────────────
 function ProfileCard({
   item,
   onLike,
@@ -200,6 +203,7 @@ function ProfileCard({
   onPass: () => void;
   acting: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const age = new Date().getFullYear() - item.birth_year;
   const translateX = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(1)).current;
@@ -224,8 +228,18 @@ function ProfileCard({
   const handleLike = () => animateOut('right', onLike);
   const handlePass = () => animateOut('left', onPass);
 
-  // 호환성 점수를 퍼센트로 표시
   const scorePercent = Math.round(item.compatibility_score * 100);
+
+  // 핵심 정보 태그 (컴팩트 뷰)
+  const previewTags = PREVIEW_FIELDS
+    .map(field => {
+      const meta = FIELD_LABELS[field];
+      if (!meta) return null;
+      const val = getDisplayValue(field, (item as any)[field]);
+      if (!val) return null;
+      return { icon: meta.icon, val };
+    })
+    .filter(Boolean) as { icon: string; val: string }[];
 
   return (
     <Animated.View
@@ -238,64 +252,88 @@ function ProfileCard({
       ]}
     >
       {/* Header: 이니셜 + 기본정보 + 호환성 점수 */}
-      <View style={styles.cardHeader}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+      <TouchableOpacity activeOpacity={0.7} onPress={() => setExpanded(!expanded)}>
+        <View style={styles.cardHeader}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+          </View>
+          <View style={styles.cardInfo}>
+            <Text style={styles.nameText}>{item.name}, {age}세</Text>
+            <Text style={styles.cityText}>📍 {item.city}</Text>
+          </View>
+          <View style={styles.scoreBadge}>
+            <Text style={styles.scoreText}>{scorePercent}%</Text>
+            <Text style={styles.scoreLabel}>호환</Text>
+          </View>
         </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.nameText}>{item.name}, {age}세</Text>
-          <Text style={styles.cityText}>📍 {item.city}</Text>
-        </View>
-        <View style={styles.scoreBadge}>
-          <Text style={styles.scoreText}>{scorePercent}%</Text>
-          <Text style={styles.scoreLabel}>호환</Text>
-        </View>
-      </View>
 
-      {/* 취미 태그 (있으면) */}
-      {item.hobbies && item.hobbies.length > 0 && (
-        <View style={styles.hobbyRow}>
-          {item.hobbies.slice(0, 5).map((h, i) => (
-            <View key={i} style={styles.hobbyTag}>
-              <Text style={styles.hobbyText}>{h}</Text>
+        {/* 컴팩트: 핵심 태그 한 줄 */}
+        <View style={styles.previewRow}>
+          {previewTags.map((t, i) => (
+            <View key={i} style={styles.previewTag}>
+              <Text style={styles.previewTagText}>{t.icon} {t.val}</Text>
             </View>
           ))}
         </View>
-      )}
 
-      {/* 카테고리별 가치관 답변 */}
-      {CATEGORY_SECTIONS.map(section => {
-        const rows = section.fields
-          .map(field => {
-            const meta = FIELD_LABELS[field];
-            if (!meta) return null;
-            const val = getDisplayValue(field, (item as any)[field]);
-            if (!val) return null;
-            return { field, meta, val };
-          })
-          .filter(Boolean) as { field: string; meta: FieldMeta; val: string }[];
+        {!expanded && (
+          <Text style={styles.expandHint}>탭하여 상세보기 ▼</Text>
+        )}
+      </TouchableOpacity>
 
-        if (rows.length === 0) return null;
+      {/* 펼침: 전체 가치관 + 취미 + 자기소개 */}
+      {expanded && (
+        <View style={styles.expandedSection}>
+          {/* 취미 태그 */}
+          {item.hobbies && item.hobbies.length > 0 && (
+            <View style={styles.hobbyRow}>
+              {item.hobbies.slice(0, 5).map((h, i) => (
+                <View key={i} style={styles.hobbyTag}>
+                  <Text style={styles.hobbyText}>{h}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
-        return (
-          <View key={section.title} style={styles.qaCategory}>
-            <Text style={styles.qaCategoryTitle}>{section.title}</Text>
-            {rows.map(({ field, meta, val }) => (
-              <View key={field} style={styles.qaRow}>
-                <Text style={styles.qaLabel}>{meta.icon} {meta.label}</Text>
-                <Text style={styles.qaValue}>{val}</Text>
+          {/* 카테고리별 가치관 */}
+          {CATEGORY_SECTIONS.map(section => {
+            const rows = section.fields
+              .map(field => {
+                const meta = FIELD_LABELS[field];
+                if (!meta) return null;
+                const val = getDisplayValue(field, (item as any)[field]);
+                if (!val) return null;
+                return { field, meta, val };
+              })
+              .filter(Boolean) as { field: string; meta: FieldMeta; val: string }[];
+
+            if (rows.length === 0) return null;
+
+            return (
+              <View key={section.title} style={styles.qaCategory}>
+                <Text style={styles.qaCategoryTitle}>{section.title}</Text>
+                {rows.map(({ field, meta, val }) => (
+                  <View key={field} style={styles.qaRow}>
+                    <Text style={styles.qaLabel}>{meta.icon} {meta.label}</Text>
+                    <Text style={styles.qaValue}>{val}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        );
-      })}
+            );
+          })}
 
-      {/* 자기소개 (있으면) */}
-      {item.bio ? (
-        <View style={styles.bioSection}>
-          <Text style={styles.bioText}>"{item.bio}"</Text>
+          {/* 자기소개 */}
+          {item.bio ? (
+            <View style={styles.bioSection}>
+              <Text style={styles.bioText}>"{item.bio}"</Text>
+            </View>
+          ) : null}
+
+          <TouchableOpacity onPress={() => setExpanded(false)}>
+            <Text style={styles.expandHint}>접기 ▲</Text>
+          </TouchableOpacity>
         </View>
-      ) : null}
+      )}
 
       {/* Actions */}
       <View style={styles.actionRow}>
@@ -580,6 +618,14 @@ const styles = StyleSheet.create({
   },
   scoreText: { fontSize: 18, fontWeight: '800', color: C.primary },
   scoreLabel: { fontSize: 10, color: C.primary, marginTop: -2 },
+
+  previewRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
+  previewTag: {
+    backgroundColor: '#F5F0EE', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10,
+  },
+  previewTagText: { fontSize: 13, color: C.text },
+  expandHint: { fontSize: 12, color: C.sub, textAlign: 'center', paddingVertical: 6 },
+  expandedSection: { marginTop: 8, borderTopWidth: 1, borderTopColor: '#F5F0EE', paddingTop: 12 },
 
   hobbyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   hobbyTag: {

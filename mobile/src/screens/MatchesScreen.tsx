@@ -3,14 +3,18 @@ import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   RefreshControl, SafeAreaView, Alert, Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { getMutualMatches } from '../api/client';
 import { useAuthStore } from '../store/authStore';
-import { MutualMatch, RootStackParamList } from '../types';
+import { MutualMatch, RootStackParamList, MainTabParamList } from '../types';
 import SkeletonLoader from '../components/SkeletonLoader';
 
-type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Matches'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 const C = {
   primary: '#E8556D',
@@ -165,7 +169,7 @@ export default function MatchesScreen() {
           </Text>
           <TouchableOpacity
             style={styles.goSuggestionsBtn}
-            onPress={() => (nav as any).navigate('Suggestions')}
+            onPress={() => nav.navigate('Suggestions')}
           >
             <Text style={styles.goSuggestionsBtnText}>추천 보러가기</Text>
           </TouchableOpacity>
@@ -214,7 +218,7 @@ const styles = StyleSheet.create({
   avatarContainer: { position: 'relative' },
   avatar: {
     width: 52, height: 52, borderRadius: 26,
-    borderWidth: 1, borderColor: '#EEE',
+    borderWidth: 1, borderColor: C.border,
   },
   avatarPlaceholder: {
     width: 52, height: 52, borderRadius: 26,

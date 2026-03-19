@@ -127,6 +127,47 @@ const HOBBIES = [
   { value: 'fishing', label: '낚시' },
 ];
 
+// ── 도-시 데이터 ─────────────────────────────────────────────
+const REGIONS: Record<string, string[]> = {
+  '서울특별시': ['전체'],
+  '부산광역시': ['전체'],
+  '대구광역시': ['전체'],
+  '인천광역시': ['전체'],
+  '광주광역시': ['전체'],
+  '대전광역시': ['전체'],
+  '울산광역시': ['전체'],
+  '세종특별자치시': ['전체'],
+  '경기도': [
+    '수원시', '성남시', '고양시', '용인시', '부천시', '안산시', '안양시',
+    '남양주시', '화성시', '평택시', '의정부시', '시흥시', '파주시', '광명시',
+    '김포시', '군포시', '광주시', '이천시', '양주시', '오산시', '구리시',
+    '안성시', '포천시', '의왕시', '하남시', '여주시', '동두천시', '과천시',
+  ],
+  '강원도': [
+    '춘천시', '원주시', '강릉시', '동해시', '태백시', '속초시', '삼척시',
+  ],
+  '충청북도': [
+    '청주시', '충주시', '제천시',
+  ],
+  '충청남도': [
+    '천안시', '공주시', '보령시', '아산시', '서산시', '논산시', '계룡시', '당진시',
+  ],
+  '전라북도': [
+    '전주시', '군산시', '익산시', '정읍시', '남원시', '김제시',
+  ],
+  '전라남도': [
+    '목포시', '여수시', '순천시', '나주시', '광양시',
+  ],
+  '경상북도': [
+    '포항시', '경주시', '김천시', '안동시', '구미시', '영주시', '영천시',
+    '상주시', '문경시', '경산시',
+  ],
+  '경상남도': [
+    '창원시', '진주시', '통영시', '사천시', '김해시', '밀양시', '거제시', '양산시',
+  ],
+  '제주특별자치도': ['제주시', '서귀포시'],
+};
+
 type FormData = Record<string, any>;
 
 const EMPTY_FORM: FormData = {
@@ -247,8 +288,7 @@ export default function QuestionnaireScreen() {
         if (!form.name.trim()) return warn('이름을 입력해주세요.');
         if (!form.birth_year || isNaN(Number(form.birth_year))) return warn('출생연도를 입력해주세요.');
         if (!form.gender) return warn('성별을 선택해주세요.');
-        if (!form.looking_for) return warn('찾는 상대를 선택해주세요.');
-        if (!form.city.trim()) return warn('거주 도시를 입력해주세요.');
+        if (!form.city.trim()) return warn('거주 지역을 선택해주세요.');
         return true;
 
       // ── 1: 성격 & 감성 (5문항 모두 필수) ──
@@ -318,11 +358,12 @@ export default function QuestionnaireScreen() {
     if (!validateStep()) return;
     setSaving(true);
     try {
+      const { _province, _showProvince, _showCity, ...formData } = form;
       const payload = {
-        ...form,
-        birth_year: Number(form.birth_year),
-        age_min: form.age_min ? Number(form.age_min) : null,
-        age_max: form.age_max ? Number(form.age_max) : null,
+        ...formData,
+        birth_year: Number(formData.birth_year),
+        age_min: formData.age_min ? Number(formData.age_min) : null,
+        age_max: formData.age_max ? Number(formData.age_max) : null,
         questionnaire_completed: true,
       };
 
@@ -371,20 +412,91 @@ export default function QuestionnaireScreen() {
 
             <Text style={styles.label}>성별 *</Text>
             <View style={styles.row}>
-              <OptionButton label="남성" selected={form.gender === 'male'} onPress={() => set('gender', 'male')} />
-              <OptionButton label="여성" selected={form.gender === 'female'} onPress={() => set('gender', 'female')} />
+              <OptionButton label="남성" selected={form.gender === 'male'} onPress={() => { set('gender', 'male'); set('looking_for', 'female'); }} />
+              <OptionButton label="여성" selected={form.gender === 'female'} onPress={() => { set('gender', 'female'); set('looking_for', 'male'); }} />
             </View>
 
-            <Text style={styles.label}>찾는 상대 *</Text>
-            <View style={styles.row}>
-              <OptionButton label="남성" selected={form.looking_for === 'male'} onPress={() => set('looking_for', 'male')} />
-              <OptionButton label="여성" selected={form.looking_for === 'female'} onPress={() => set('looking_for', 'female')} />
-              <OptionButton label="무관" selected={form.looking_for === 'any'} onPress={() => set('looking_for', 'any')} />
-            </View>
+            <Text style={styles.label}>거주 지역 *</Text>
+            {/* 도/광역시 드롭다운 */}
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => set('_showProvince', !form._showProvince)}
+              activeOpacity={0.7}
+            >
+              <Text style={form._province ? styles.dropdownText : styles.dropdownPlaceholder}>
+                {form._province || '시/도 선택'}
+              </Text>
+              <Text style={styles.dropdownArrow}>{form._showProvince ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {form._showProvince && (
+              <View style={styles.dropdownList}>
+                <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
+                  {Object.keys(REGIONS).map(province => (
+                    <TouchableOpacity
+                      key={province}
+                      style={[styles.dropdownItem, form._province === province && styles.dropdownItemSelected]}
+                      onPress={() => {
+                        set('_province', province);
+                        set('_showProvince', false);
+                        set('_showCity', false);
+                        const cities = REGIONS[province];
+                        if (cities.length === 1 && cities[0] === '전체') {
+                          set('city', province.replace(/특별시|광역시|특별자치시/, ''));
+                        } else {
+                          set('city', '');
+                        }
+                      }}
+                    >
+                      <Text style={[styles.dropdownItemText, form._province === province && styles.dropdownItemTextSelected]}>
+                        {province}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
-            <Text style={styles.label}>거주 도시 *</Text>
-            <TextInput style={styles.input} value={form.city} onChangeText={v => set('city', v)}
-              placeholder="예: 서울, 부산, 대전" placeholderTextColor={C.sub} />
+            {/* 시/군 드롭다운 (도 선택 후, 시가 여러 개인 경우) */}
+            {form._province && REGIONS[form._province] && REGIONS[form._province][0] !== '전체' && (
+              <>
+                <TouchableOpacity
+                  style={[styles.dropdown, { marginTop: 10 }]}
+                  onPress={() => set('_showCity', !form._showCity)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={form.city ? styles.dropdownText : styles.dropdownPlaceholder}>
+                    {form.city ? form.city.split(' ').pop() : '시/군 선택'}
+                  </Text>
+                  <Text style={styles.dropdownArrow}>{form._showCity ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+                {form._showCity && (
+                  <View style={styles.dropdownList}>
+                    <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
+                      {REGIONS[form._province].map(city => {
+                        const fullCity = `${form._province.replace(/도$/, '')} ${city}`;
+                        return (
+                          <TouchableOpacity
+                            key={city}
+                            style={[styles.dropdownItem, form.city === fullCity && styles.dropdownItemSelected]}
+                            onPress={() => {
+                              set('city', fullCity);
+                              set('_showCity', false);
+                            }}
+                          >
+                            <Text style={[styles.dropdownItemText, form.city === fullCity && styles.dropdownItemTextSelected]}>
+                              {city}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
+              </>
+            )}
+            {form.city ? (
+              <Text style={styles.selectedCity}>📍 {form.city}</Text>
+            ) : null}
 
             <Text style={styles.label}>자기소개 (선택)</Text>
             <TextInput style={[styles.input, styles.textArea]} value={form.bio} onChangeText={v => set('bio', v)}
@@ -1062,6 +1174,24 @@ const styles = StyleSheet.create({
     color: C.text, marginBottom: 12, backgroundColor: C.card,
   },
   textArea: { height: 100, textAlignVertical: 'top' },
+  dropdown: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    borderWidth: 1.5, borderColor: C.border, borderRadius: 10,
+    paddingHorizontal: 16, paddingVertical: 14, backgroundColor: C.card, marginBottom: 4,
+  },
+  dropdownText: { fontSize: 16, color: C.text },
+  dropdownPlaceholder: { fontSize: 16, color: C.sub },
+  dropdownArrow: { fontSize: 12, color: C.sub },
+  dropdownList: {
+    borderWidth: 1.5, borderColor: C.border, borderRadius: 10,
+    backgroundColor: C.card, marginBottom: 8, overflow: 'hidden',
+  },
+  dropdownScroll: { maxHeight: 200 },
+  dropdownItem: { paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: '#F5F0EE' },
+  dropdownItemSelected: { backgroundColor: C.primaryLight },
+  dropdownItemText: { fontSize: 15, color: C.text },
+  dropdownItemTextSelected: { color: C.primary, fontWeight: '700' },
+  selectedCity: { fontSize: 15, color: C.primary, fontWeight: '700', marginBottom: 12, marginTop: 8 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   option: {
     paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12,
