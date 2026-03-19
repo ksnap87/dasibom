@@ -1,3 +1,6 @@
+-- Ensure uuid extension is available
+create extension if not exists "uuid-ossp" with schema extensions;
+
 -- ============================================================
 -- MIGRATION: 반려동물 필드 추가
 -- ============================================================
@@ -19,7 +22,7 @@ create index if not exists idx_profiles_phone_hash on public.profiles (phone_has
 -- CONTACT_HASHES (연락처 기반 추천 제외)
 -- ============================================================
 create table if not exists public.contact_hashes (
-  id            uuid default uuid_generate_v4() primary key,
+  id            uuid default gen_random_uuid() primary key,
   user_id       uuid references public.profiles(id) on delete cascade not null,
   phone_hash    text not null,
   unique (user_id, phone_hash)
