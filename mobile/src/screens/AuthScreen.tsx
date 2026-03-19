@@ -60,6 +60,22 @@ export default function AuthScreen() {
         <Text style={styles.footer}>
           다시, 설레는 만남이 시작되는 곳
         </Text>
+
+        {__DEV__ && (
+          <TouchableOpacity
+            style={styles.devSkip}
+            onPress={() => {
+              // 개발모드: 인증 상태만 설정하여 메인 화면으로 이동
+              useAuthStore.setState({
+                isAuthenticated: true,
+                user: { id: 'dev-user' },
+                profile: { questionnaire_completed: true } as any,
+              });
+            }}
+          >
+            <Text style={styles.devSkipText}>[DEV] 로그인 건너뛰기</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -67,9 +83,9 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  inner: { flex: 1, justifyContent: 'center', padding: 28, paddingBottom: 40 },
-  logoArea: { alignItems: 'center', marginBottom: 60 },
-  logoEmoji: { fontSize: 72, marginBottom: 12 },
+  inner: { flex: 1, justifyContent: 'center', padding: 28, paddingBottom: 20 },
+  logoArea: { alignItems: 'center', marginBottom: 40 },
+  logoEmoji: { fontSize: 64, marginBottom: 10 },
   logoText: { fontSize: 44, fontWeight: '700', color: C.primary, letterSpacing: 2 },
   tagline: { fontSize: 16, color: C.sub, marginTop: 8 },
   kakaoBtn: {
@@ -85,4 +101,6 @@ const styles = StyleSheet.create({
   kakaoIcon: { fontSize: 22, marginRight: 10 },
   kakaoLabel: { color: C.kakaoText, fontSize: 18, fontWeight: '600' },
   footer: { textAlign: 'center', color: C.sub, fontSize: 14, lineHeight: 22 },
+  devSkip: { marginTop: 16, padding: 12, alignItems: 'center' },
+  devSkipText: { color: '#999', fontSize: 13 },
 });

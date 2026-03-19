@@ -20,6 +20,8 @@ const C = {
   sub: '#999999',
   border: '#F0ECEA',
   inputBg: '#FFFFFF',
+  overlay: 'rgba(0,0,0,0.5)',
+  error: '#E53935',
 };
 
 /** "오늘", "어제", 날짜 형식 반환 */
@@ -72,7 +74,12 @@ function Avatar({ photoUrl, name, size = 36 }: { photoUrl?: string; name: string
   );
 }
 
-function Bubble({ msg, isMe, showReadMark }: { msg: Message; isMe: boolean; showReadMark: boolean }) {
+function Bubble({
+  msg, isMe, showReadMark, sendFailed, onRetry,
+}: {
+  msg: Message; isMe: boolean; showReadMark: boolean;
+  sendFailed?: boolean; onRetry?: () => void;
+}) {
   const time = new Date(msg.created_at).toLocaleTimeString('ko-KR', {
     hour: '2-digit', minute: '2-digit',
   });
@@ -88,7 +95,16 @@ function Bubble({ msg, isMe, showReadMark }: { msg: Message; isMe: boolean; show
           {isMe && (
             <View style={styles.metaLeft}>
               {showReadMark && <Text style={styles.unreadMark}>1</Text>}
-              <Text style={styles.timeText}>{time}</Text>
+              <View style={styles.timeRow}>
+                <Text style={styles.timeText}>{time}</Text>
+                {sendFailed ? (
+                  <TouchableOpacity onPress={onRetry} activeOpacity={0.7}>
+                    <Text style={styles.failedMark}>!</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.deliveredMark}>{'\u2713'}</Text>
+                )}
+              </View>
             </View>
           )}
           <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
@@ -117,11 +133,13 @@ export default function ChatRoomScreen() {
   const { match_id, other_name, other_user_id } = route.params;
   const { user } = useAuthStore();
 
+  const MAX_LENGTH = 500;
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
   const listRef = useRef<FlatList>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -223,6 +241,12 @@ export default function ChatRoomScreen() {
         if (prev.find(m => m.id === newMsg.id)) return prev;
         return [...prev, newMsg];
       });
+      // 전송 성공 시 failedIds에서 제거 (재시도 성공 케이스)
+      setFailedIds(prev => {
+        const next = new Set(prev);
+        next.delete(newMsg.id);
+        return next;
+      });
       // 상대방에게 실시간 전달 (구독된 채널 재사용)
       channelRef.current?.send({
         type: 'broadcast',
@@ -235,6 +259,27 @@ export default function ChatRoomScreen() {
       Alert.alert('오류', err.message ?? '전송 실패');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleRetry = async (failedMsg: Message) => {
+    try {
+      const newMsg = await sendMessage(match_id, failedMsg.content);
+      if (newMsg.sender) senderMapRef.current[newMsg.sender_id] = newMsg.sender;
+      // 실패 메시지를 성공 메시지로 교체
+      setMessages(prev => prev.map(m => m.id === failedMsg.id ? newMsg : m));
+      setFailedIds(prev => {
+        const next = new Set(prev);
+        next.delete(failedMsg.id);
+        return next;
+      });
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'new_message',
+        payload: { message: newMsg },
+      });
+    } catch (err: any) {
+      Alert.alert('오류', err.message ?? '재전송 실패');
     }
   };
 
@@ -284,7 +329,16 @@ export default function ChatRoomScreen() {
               }
               const isMe = item.msg.sender_id === user?.id;
               const showReadMark = isMe && !item.msg.read_at;
-              return <Bubble msg={item.msg} isMe={isMe} showReadMark={showReadMark} />;
+              const sendFailed = failedIds.has(item.msg.id);
+              return (
+                <Bubble
+                  msg={item.msg}
+                  isMe={isMe}
+                  showReadMark={showReadMark}
+                  sendFailed={sendFailed}
+                  onRetry={() => handleRetry(item.msg)}
+                />
+              );
             }}
             contentContainerStyle={styles.messageList}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
@@ -292,26 +346,29 @@ export default function ChatRoomScreen() {
         )}
 
         {/* 입력창 */}
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={text}
-            onChangeText={setText}
-            placeholder="메시지 입력"
-            placeholderTextColor={C.sub}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, (!text.trim() || sending) && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!text.trim() || sending}
-          >
-            {sending
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.sendBtnText}>전송</Text>
-            }
-          </TouchableOpacity>
+        <View style={styles.inputArea}>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={text}
+              onChangeText={setText}
+              placeholder="메시지 입력"
+              placeholderTextColor={C.sub}
+              multiline
+              maxLength={MAX_LENGTH}
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, (!text.trim() || sending) && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={!text.trim() || sending}
+            >
+              {sending
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={styles.sendBtnText}>전송</Text>
+              }
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.charCounter}>{text.length}/{MAX_LENGTH}</Text>
         </View>
       </KeyboardAvoidingView>
 
@@ -362,7 +419,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     marginVertical: 14, paddingHorizontal: 8,
   },
-  dateSepLine: { flex: 1, height: 1, backgroundColor: '#E0D5D0' },
+  dateSepLine: { flex: 1, height: 1, backgroundColor: C.border },
   dateSepText: {
     fontSize: 12, color: '#AA8888', marginHorizontal: 10,
     backgroundColor: '#FCEEF1', paddingHorizontal: 10, paddingVertical: 4,
@@ -381,6 +438,9 @@ const styles = StyleSheet.create({
   unreadMark: { fontSize: 11, color: C.primary, fontWeight: '700' },
   timeText: { fontSize: 11, color: '#AA9999', paddingBottom: 2 },
   timeTextOther: { paddingBottom: 2 },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  deliveredMark: { fontSize: 11, color: '#AA9999' },
+  failedMark: { fontSize: 13, color: C.error, fontWeight: '700', paddingHorizontal: 2 },
 
   bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, maxWidth: 260, elevation: 1 },
   bubbleMe: { backgroundColor: C.myBubble, borderBottomRightRadius: 4 },
@@ -388,10 +448,17 @@ const styles = StyleSheet.create({
   bubbleText: { fontSize: 15, color: C.text, lineHeight: 21 },
   bubbleTextMe: { color: '#FFFFFF' },
 
+  inputArea: {
+    backgroundColor: '#FFF8F5', borderTopWidth: 1, borderTopColor: C.border,
+    paddingTop: 10, paddingHorizontal: 10,
+  },
   inputRow: {
-    flexDirection: 'row', padding: 10, gap: 8,
-    backgroundColor: '#FFF8F5', borderTopWidth: 1, borderTopColor: '#F0ECEA',
+    flexDirection: 'row', gap: 8,
     alignItems: 'flex-end',
+  },
+  charCounter: {
+    fontSize: 11, color: C.sub, textAlign: 'right',
+    paddingRight: 4, paddingTop: 4, paddingBottom: 6,
   },
   input: {
     flex: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10,
@@ -432,7 +499,7 @@ const styles = StyleSheet.create({
 
   // 신고 Modal
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1, backgroundColor: C.overlay,
     justifyContent: 'center', alignItems: 'center', padding: 32,
   },
   modalContent: {

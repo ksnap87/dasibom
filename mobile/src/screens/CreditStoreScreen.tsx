@@ -118,6 +118,7 @@ export default function CreditStoreScreen() {
         {/* 상품 목록 */}
         <Text style={styles.sectionTitle}>크레딧 충전</Text>
 
+        <View pointerEvents={purchasing !== null ? 'none' : 'auto'} style={purchasing !== null ? styles.productListDisabled : undefined}>
         {displayProducts.map(item => (
           <TouchableOpacity
             key={item.id}
@@ -153,6 +154,7 @@ export default function CreditStoreScreen() {
             </View>
           </TouchableOpacity>
         ))}
+        </View>
 
         {/* 안내 */}
         <View style={styles.notice}>
@@ -180,7 +182,7 @@ const styles = StyleSheet.create({
   },
   balanceLabel: { fontSize: 14, color: '#7D5A00', marginBottom: 8 },
   balanceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  balanceIcon: { fontSize: 32 },
+  balanceIcon: { fontSize: 28, width: 36, textAlign: 'center' as const },
   balanceValue: { fontSize: 48, fontWeight: '800', color: '#7D5A00' },
   balanceUnit: { fontSize: 20, color: '#7D5A00', fontWeight: '600' },
 
@@ -196,6 +198,9 @@ const styles = StyleSheet.create({
 
   // 섹션
   sectionTitle: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 12 },
+
+  // 상품 목록 비활성 오버레이
+  productListDisabled: { opacity: 0.5 },
 
   // 상품 카드
   productCard: {
