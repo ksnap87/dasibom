@@ -19,6 +19,29 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({ error: '유효하지 않은 토큰입니다.' });
     }
     req.user = user;
+
+    // 정지된 유저 차단
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('suspended_until, suspension_reason')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.suspended_until) {
+      const suspendedUntil = new Date(profile.suspended_until);
+      if (suspendedUntil > new Date()) {
+        const isPermanent = suspendedUntil.getFullYear() >= 2099;
+        return res.status(403).json({
+          error: isPermanent
+            ? '계정이 영구 정지되었습니다.'
+            : `계정이 ${suspendedUntil.toLocaleDateString('ko-KR')}까지 정지되었습니다.`,
+          reason: profile.suspension_reason,
+          suspended_until: profile.suspended_until,
+          permanent: isPermanent,
+        });
+      }
+    }
+
     next();
   } catch {
     return res.status(401).json({ error: '인증 처리 중 오류가 발생했습니다.' });

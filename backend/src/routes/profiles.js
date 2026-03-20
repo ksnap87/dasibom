@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { calculateCompatibilityScore } = require('../utils/scoring');
 const { sendPushToUser } = require('../utils/push');
+const { filterProfileContent } = require('../utils/contentFilter');
 
 // 전화번호 암호화/복호화 (AES-256-GCM)
 const PHONE_ENCRYPTION_KEY = process.env.PHONE_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
@@ -54,6 +55,24 @@ router.put('/me', async (req, res) => {
   }
   if (updates.hobbies && Array.isArray(updates.hobbies) && updates.hobbies.length > 20) {
     return res.status(400).json({ error: '취미는 최대 20개까지 선택 가능합니다.' });
+  }
+  // 자기소개 금칙어 필터
+  if (updates.bio) {
+    const bioFilter = filterProfileContent(updates.bio);
+    if (bioFilter.blocked) {
+      return res.status(400).json({ error: bioFilter.message });
+    }
+  }
+  // 출생연도 검증 (19세 미만 가입 불가, 비현실적 나이 차단)
+  if (updates.birth_year) {
+    const currentYear = new Date().getFullYear();
+    const age = currentYear - updates.birth_year;
+    if (age < 19) {
+      return res.status(400).json({ error: '19세 이상만 가입할 수 있습니다.' });
+    }
+    if (age > 120 || updates.birth_year < 1900) {
+      return res.status(400).json({ error: '올바른 출생연도를 입력해주세요.' });
+    }
   }
 
   // 먼저 업데이트 시도
@@ -215,6 +234,13 @@ router.post('/report', async (req, res) => {
     .insert({ reporter_id: userId, reported_id, reason, detail: detail || null });
 
   if (error) return res.status(400).json({ error: error.message });
+
+  // 자동 페널티 적용
+  const { data: penalty } = await supabase.rpc('process_report_penalty', {
+    p_reported_id: reported_id,
+  });
+  console.log(`[Report] ${reported_id} 신고 처리:`, penalty);
+
   res.json({ success: true });
 });
 
