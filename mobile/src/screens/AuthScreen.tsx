@@ -3,7 +3,10 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, SafeAreaView,
 } from 'react-native';
-import { useAuthStore } from '../store/authStore';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore, supabase } from '../store/authStore';
+import Config from '../config';
 
 const C = {
   primary: '#E8556D',
@@ -64,16 +67,28 @@ export default function AuthScreen() {
         {__DEV__ && (
           <TouchableOpacity
             style={styles.devSkip}
-            onPress={() => {
-              // 개발모드: 인증 상태만 설정하여 메인 화면으로 이동
-              useAuthStore.setState({
-                isAuthenticated: true,
-                user: { id: 'dev-user' },
-                profile: { questionnaire_completed: true } as any,
-              });
+            onPress={async () => {
+              try {
+                setLoading(true);
+                // 서버에서 실제 Supabase 세션 발급
+                const res = await axios.post(`${Config.API_URL}/api/auth/dev-login`);
+                const { access_token, refresh_token, user } = res.data;
+
+                await AsyncStorage.setItem('access_token', access_token);
+                await supabase.auth.setSession({ access_token, refresh_token });
+
+                useAuthStore.setState({
+                  isAuthenticated: true,
+                  user,
+                });
+              } catch (err: any) {
+                Alert.alert('DEV 로그인 실패', err.message ?? '서버에 연결할 수 없습니다.');
+              } finally {
+                setLoading(false);
+              }
             }}
           >
-            <Text style={styles.devSkipText}>[DEV] 로그인 건너뛰기</Text>
+            <Text style={styles.devSkipText}>[DEV] 테스트 로그인</Text>
           </TouchableOpacity>
         )}
       </View>
