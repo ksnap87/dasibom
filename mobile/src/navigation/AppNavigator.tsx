@@ -104,15 +104,15 @@ function AppNavigatorInner() {
     if (!isAuthenticated || !profile || fcmRegistered.current) return;
     fcmRegistered.current = true;
 
-    registerFCMToken();
+    registerFCMToken().catch(() => {});
     const unsubRefresh = onTokenRefresh();
     const unsubMessage = onForegroundMessage((title, body) => {
       Alert.alert(title, body);
     });
 
     return () => {
-      unsubRefresh();
-      unsubMessage();
+      if (typeof unsubRefresh === 'function') unsubRefresh();
+      if (typeof unsubMessage === 'function') unsubMessage();
     };
   }, [isAuthenticated, profile]);
 

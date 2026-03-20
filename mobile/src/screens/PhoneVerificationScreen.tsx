@@ -13,7 +13,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { useAuthStore } from '../store/authStore';
-import { savePhoneHash } from '../api/client';
+import { savePhoneHash, verifyPhone } from '../api/client';
 import { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -131,15 +131,17 @@ export default function PhoneVerificationScreen() {
       // Firebase 인증 성공 → 앱 인증 상태 업데이트
       await setPhoneVerified(true);
 
-      // 전화번호 해시를 서버에 저장 (연락처 기반 추천 제외용)
+      // 전화번호를 서버에 저장 (해시 + 암호화)
       try {
         const digits = phone.replace(/\D/g, '');
         const normalized = digits.startsWith('0') ? `+82${digits.slice(1)}` : `+82${digits}`;
-        // SHA-256 해시 생성 (간단한 해시)
+        // 해시 저장 (연락처 기반 추천 제외용)
         const { createHash } = await import('../utils/hash');
         const hash = await createHash(normalized);
         await savePhoneHash(hash);
-      } catch (_) { /* 해시 저장 실패해도 인증은 완료 */ }
+        // 암호화된 전화번호 저장 (안전 대응용 — 서버에서 AES-256 암호화)
+        await verifyPhone(normalized);
+      } catch (_) { /* 저장 실패해도 인증은 완료 */ }
 
       // Firebase 전화 인증 계정은 로그아웃 (Supabase 인증과 별개)
       try { await auth().signOut(); } catch {}

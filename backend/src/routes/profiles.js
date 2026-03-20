@@ -1,7 +1,30 @@
 const express = require('express');
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { calculateCompatibilityScore } = require('../utils/scoring');
 const { sendPushToUser } = require('../utils/push');
+
+// 전화번호 암호화/복호화 (AES-256-GCM)
+const PHONE_ENCRYPTION_KEY = process.env.PHONE_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+const ENC_KEY = Buffer.from(PHONE_ENCRYPTION_KEY, 'hex');
+
+function encryptPhone(phone) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', ENC_KEY, iv);
+  let encrypted = cipher.update(phone, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const tag = cipher.getAuthTag().toString('hex');
+  return `${iv.toString('hex')}:${tag}:${encrypted}`;
+}
+
+function decryptPhone(encryptedData) {
+  const [ivHex, tagHex, encrypted] = encryptedData.split(':');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', ENC_KEY, Buffer.from(ivHex, 'hex'));
+  decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
 
 const router = express.Router();
 const supabase = createClient(
@@ -24,6 +47,14 @@ router.get('/me', async (req, res) => {
 // PUT /api/profiles/me — upsert (없으면 생성, 있으면 업데이트)
 router.put('/me', async (req, res) => {
   const { id: _id, ...updates } = req.body;
+
+  // 입력값 검증
+  if (updates.bio && typeof updates.bio === 'string' && updates.bio.length > 100) {
+    return res.status(400).json({ error: '자기소개는 100자까지 입력 가능합니다.' });
+  }
+  if (updates.hobbies && Array.isArray(updates.hobbies) && updates.hobbies.length > 20) {
+    return res.status(400).json({ error: '취미는 최대 20개까지 선택 가능합니다.' });
+  }
 
   // 먼저 업데이트 시도
   const { data: existing } = await supabase
@@ -127,42 +158,53 @@ router.post('/interest', async (req, res) => {
   // 양쪽 모두에게 매칭 푸시 알림
   const senderName = p1?.name ?? '누군가';
   const receiverName = p2?.name ?? '누군가';
-  sendPushToUser(supabase, to_user_id, '새로운 매칭! 💕', `${senderName}님과 매칭되었어요!`, { type: 'new_match' }).catch(() => {});
-  sendPushToUser(supabase, userId, '새로운 매칭! 💕', `${receiverName}님과 매칭되었어요!`, { type: 'new_match' }).catch(() => {});
+  sendPushToUser(supabase, to_user_id, '새로운 매칭! 💕', `${senderName}님과 매칭되었어요!`, { type: 'new_match' }).catch(err => console.error('[Push] 매칭 알림 실패:', err.message));
+  sendPushToUser(supabase, userId, '새로운 매칭! 💕', `${receiverName}님과 매칭되었어요!`, { type: 'new_match' }).catch(err => console.error('[Push] 매칭 알림 실패:', err.message));
 });
 
-// POST /api/profiles/credits/deduct — 크레딧 차감
+// POST /api/profiles/credits/deduct — 크레딧 차감 (atomic)
 router.post('/credits/deduct', async (req, res) => {
   const userId = req.user.id;
   const amount = req.body.amount ?? 1;
 
-  const { data: profile, error: fetchErr } = await supabase
-    .from('profiles')
-    .select('credits')
-    .eq('id', userId)
-    .single();
+  if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+    return res.status(400).json({ error: '유효하지 않은 차감 수량입니다.' });
+  }
 
-  if (fetchErr || !profile) return res.status(400).json({ error: '프로필을 찾을 수 없습니다.' });
-  if (profile.credits < amount) return res.status(400).json({ error: '크레딧이 부족합니다.', credits: profile.credits });
+  const { data, error } = await supabase.rpc('deduct_credits', {
+    p_user_id: userId,
+    p_amount: amount,
+  });
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ credits: profile.credits - amount })
-    .eq('id', userId)
-    .select('credits')
-    .single();
+  if (error) return res.status(500).json({ error: '크레딧 차감 처리 중 오류가 발생했습니다.' });
 
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ credits: data.credits });
+  if (data === -1) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+    return res.status(400).json({ error: '크레딧이 부족합니다.', credits: profile?.credits ?? 0 });
+  }
+
+  res.json({ credits: data });
 });
 
 // POST /api/profiles/report — 신고
+const VALID_REPORT_REASONS = ['inappropriate_photo', 'fake_profile', 'offensive_chat', 'other'];
+
 router.post('/report', async (req, res) => {
   const { reported_id, reason, detail } = req.body;
   const userId = req.user.id;
 
   if (!reported_id || !reason) {
     return res.status(400).json({ error: '필수 정보가 없습니다.' });
+  }
+  if (!VALID_REPORT_REASONS.includes(reason)) {
+    return res.status(400).json({ error: '유효하지 않은 신고 사유입니다.' });
+  }
+  if (detail && typeof detail === 'string' && detail.length > 500) {
+    return res.status(400).json({ error: '상세 내용은 500자까지 입력 가능합니다.' });
   }
   if (reported_id === userId) {
     return res.status(400).json({ error: '자신을 신고할 수 없습니다.' });
@@ -226,7 +268,10 @@ router.delete('/me', async (req, res) => {
 
   // Supabase Auth 유저 삭제
   const { error: authErr } = await supabase.auth.admin.deleteUser(userId);
-  if (authErr) console.error('Auth user delete failed:', authErr.message);
+  if (authErr) {
+    console.error('Auth user delete failed:', authErr.message);
+    return res.status(500).json({ error: '계정 삭제 중 일부 처리에 실패했습니다. 관리자에게 문의해주세요.' });
+  }
 
   res.json({ success: true });
 });
@@ -270,6 +315,10 @@ router.post('/phone-hash', async (req, res) => {
   if (!phone_hash) {
     return res.status(400).json({ error: 'phone_hash 필요' });
   }
+  // SHA256 hex 형식 검증
+  if (typeof phone_hash !== 'string' || !/^[a-f0-9]{64}$/i.test(phone_hash)) {
+    return res.status(400).json({ error: '유효하지 않은 phone_hash 형식입니다.' });
+  }
 
   const { error } = await supabase
     .from('profiles')
@@ -278,6 +327,83 @@ router.post('/phone-hash', async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
+});
+
+// POST /api/profiles/verify-phone — 본인인증 전화번호 암호화 저장 (안전 대응용)
+router.post('/verify-phone', async (req, res) => {
+  const userId = req.user.id;
+  const { phone_number } = req.body;
+
+  if (!phone_number || typeof phone_number !== 'string') {
+    return res.status(400).json({ error: '전화번호가 필요합니다.' });
+  }
+
+  // 전화번호 형식 검증 (E.164: +821012345678)
+  const digits = phone_number.replace(/\D/g, '');
+  if (digits.length < 10 || digits.length > 15) {
+    return res.status(400).json({ error: '유효하지 않은 전화번호 형식입니다.' });
+  }
+
+  try {
+    const encrypted = encryptPhone(phone_number);
+
+    const { error } = await supabase
+      .from('verified_phones')
+      .upsert({
+        user_id: userId,
+        encrypted_phone: encrypted,
+        verified_at: new Date().toISOString(),
+        verification_method: 'firebase_sms',
+      }, { onConflict: 'user_id' });
+
+    if (error) return res.status(500).json({ error: '전화번호 저장 실패' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('전화번호 암호화 저장 실패:', err.message);
+    res.status(500).json({ error: '처리 중 오류가 발생했습니다.' });
+  }
+});
+
+// GET /api/profiles/admin/phone/:userId — 관리자 전용: 암호화된 전화번호 복호화 조회
+// 데이팅 폭력 등 긴급 상황 시 수사기관 협조용
+router.get('/admin/phone/:userId', async (req, res) => {
+  // 관리자 인증: ADMIN_SECRET 헤더 필요
+  const adminSecret = req.headers['x-admin-secret'];
+  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
+    return res.status(403).json({ error: '관리자 권한이 필요합니다.' });
+  }
+
+  const { userId } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from('verified_phones')
+      .select('encrypted_phone, verified_at, verification_method')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ error: '인증된 전화번호가 없습니다.' });
+    }
+
+    const phone = decryptPhone(data.encrypted_phone);
+
+    // 카카오 정보도 함께 조회
+    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+
+    res.json({
+      user_id: userId,
+      phone_number: phone,
+      verified_at: data.verified_at,
+      verification_method: data.verification_method,
+      kakao_id: authUser?.user_metadata?.kakao_id ?? null,
+      kakao_nickname: authUser?.user_metadata?.nickname ?? null,
+      kakao_email: authUser?.user_metadata?.kakao_email ?? null,
+    });
+  } catch (err) {
+    console.error('전화번호 복호화 실패:', err.message);
+    res.status(500).json({ error: '조회 중 오류가 발생했습니다.' });
+  }
 });
 
 module.exports = router;

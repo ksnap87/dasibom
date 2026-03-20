@@ -1,8 +1,18 @@
 const express = require('express');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
+
+// 인증 엔드포인트 Rate Limiting: IP당 15분에 10회
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -17,7 +27,7 @@ function generatePassword(kakaoId) {
 }
 
 // POST /api/auth/kakao
-router.post('/kakao', async (req, res) => {
+router.post('/kakao', authLimiter, async (req, res) => {
   const { kakaoAccessToken } = req.body;
   if (!kakaoAccessToken) {
     return res.status(400).json({ error: '카카오 토큰이 필요합니다.' });
@@ -83,11 +93,10 @@ router.post('/kakao', async (req, res) => {
 });
 
 // POST /api/auth/dev-login — 개발용 테스트 로그인 (실제 Supabase 세션 발급)
-router.post('/dev-login', async (req, res) => {
-  // TODO: 출시 전 이 엔드포인트 비활성화
-  // if (process.env.NODE_ENV === 'production') {
-  //   return res.status(403).json({ error: '개발 모드에서만 사용 가능합니다.' });
-  // }
+router.post('/dev-login', authLimiter, async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: '개발 모드에서만 사용 가능합니다.' });
+  }
 
   try {
     const testKakaoId = 'dev_test_user_12345';

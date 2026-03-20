@@ -47,27 +47,18 @@ router.post('/verify-purchase', async (req, res) => {
     return res.status(400).json({ error: '이미 처리된 구매입니다.' });
   }
 
-  // 크레딧 지급
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('credits')
-    .eq('id', userId)
-    .single();
+  // 크레딧 지급 (atomic)
+  const { data: newCredits, error: rpcErr } = await supabase.rpc('add_credits', {
+    p_user_id: userId,
+    p_amount: creditAmount,
+  });
 
-  const currentCredits = profile?.credits ?? 0;
-  const newCredits = currentCredits + creditAmount;
-
-  const { error: updateErr } = await supabase
-    .from('profiles')
-    .update({ credits: newCredits })
-    .eq('id', userId);
-
-  if (updateErr) {
+  if (rpcErr || newCredits === -1) {
     return res.status(500).json({ error: '크레딧 지급 실패' });
   }
 
   // 구매 기록 저장
-  await supabase
+  const { error: historyErr } = await supabase
     .from('purchase_history')
     .insert({
       user_id: userId,
@@ -76,11 +67,18 @@ router.post('/verify-purchase', async (req, res) => {
       credit_amount: creditAmount,
     });
 
+  if (historyErr) {
+    console.error('구매 기록 저장 실패:', historyErr.message);
+  }
+
   res.json({ credits: newCredits, added: creditAmount });
 });
 
 // POST /api/credits/add — 테스트용 크레딧 추가 (개발 환경 전용)
 router.post('/add', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: '개발 모드에서만 사용 가능합니다.' });
+  }
   const userId = req.user.id;
   const amount = req.body.amount ?? 3;
 
@@ -88,21 +86,12 @@ router.post('/add', async (req, res) => {
     return res.status(400).json({ error: '유효하지 않은 수량입니다.' });
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('credits')
-    .eq('id', userId)
-    .single();
+  const { data: newCredits, error } = await supabase.rpc('add_credits', {
+    p_user_id: userId,
+    p_amount: amount,
+  });
 
-  const currentCredits = profile?.credits ?? 0;
-  const newCredits = currentCredits + amount;
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({ credits: newCredits })
-    .eq('id', userId);
-
-  if (error) return res.status(500).json({ error: '크레딧 추가 실패' });
+  if (error || newCredits === -1) return res.status(500).json({ error: '크레딧 추가 실패' });
   res.json({ credits: newCredits, added: amount });
 });
 

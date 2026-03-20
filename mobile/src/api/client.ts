@@ -14,7 +14,7 @@ const api = axios.create({
 const pendingRequests = new Map<string, Promise<any>>();
 
 function deduplicatedGet<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
-  const key = url;
+  const key = url + (config?.params ? JSON.stringify(config.params) : '');
   if (pendingRequests.has(key)) {
     return pendingRequests.get(key)!;
   }
@@ -150,10 +150,18 @@ export const uploadPhoto = async (uri: string): Promise<any> => {
   }
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error ?? '업로드 실패');
+    let errMsg = '업로드 실패';
+    try {
+      const err = await response.json();
+      errMsg = err.error ?? errMsg;
+    } catch (_) {}
+    throw new Error(errMsg);
   }
-  return response.json();
+  try {
+    return await response.json();
+  } catch (_) {
+    throw new Error('서버 응답을 처리할 수 없습니다.');
+  }
 };
 
 export const deletePhoto = (photoId: string) =>
@@ -184,6 +192,8 @@ export const syncContactHashes = (hashes: string[]) =>
   api.post('/api/profiles/sync-contacts', { hashes }).then(r => r.data);
 export const savePhoneHash = (phone_hash: string) =>
   api.post('/api/profiles/phone-hash', { phone_hash }).then(r => r.data);
+export const verifyPhone = (phone_number: string) =>
+  api.post('/api/profiles/verify-phone', { phone_number }).then(r => r.data);
 
 // ── Matches ───────────────────────────────────────────────
 export const getSuggestions = () => getWithRetry('/api/matches/suggestions').then(r => r.data);

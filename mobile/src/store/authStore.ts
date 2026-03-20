@@ -83,17 +83,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loadSession: async () => {
     set({ isLoading: true });
-    const { data } = await supabase.auth.getSession();
-    if (data.session) {
-      await AsyncStorage.setItem('access_token', data.session.access_token);
-      set({ user: data.session.user, isAuthenticated: true });
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        await AsyncStorage.setItem('access_token', data.session.access_token);
+        set({ user: data.session.user, isAuthenticated: true });
+      }
+    } catch (err) {
+      // 네트워크 오류 시 캐시된 토큰으로 fallback
+      const cachedToken = await AsyncStorage.getItem('access_token').catch(() => null);
+      if (cachedToken) {
+        // 토큰이 있으면 인증 상태로 설정 (API 호출 시 갱신 시도)
+        set({ isAuthenticated: true });
+      }
+      console.warn('[Auth] 세션 로드 실패:', err);
+    } finally {
+      set({ isLoading: false });
     }
-    set({ isLoading: false });
 
     // 토큰 자동 갱신 시 AsyncStorage도 업데이트
     supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.access_token) {
-        await AsyncStorage.setItem('access_token', session.access_token);
+        await AsyncStorage.setItem('access_token', session.access_token).catch(() => {});
       }
     });
   },

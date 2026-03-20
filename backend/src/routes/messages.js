@@ -26,11 +26,15 @@ router.get('/:matchId', async (req, res) => {
     const match = await getMatch(req.params.matchId, req.user.id);
     if (!match) return res.status(403).json({ error: '접근 권한이 없습니다.' });
 
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const offset = parseInt(req.query.offset) || 0;
+
     const { data, error } = await supabase
       .from('messages')
       .select('id, created_at, content, read_at, sender_id')
       .eq('match_id', req.params.matchId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) return res.status(500).json({ error: error.message });
 
@@ -42,7 +46,9 @@ router.get('/:matchId', async (req, res) => {
       .in('id', senderIds);
 
     const senderMap = Object.fromEntries((senders || []).map(s => [s.id, s]));
-    const messages = data.map(m => ({ ...m, sender: senderMap[m.sender_id] || { id: m.sender_id } }));
+    const messages = data
+      .map(m => ({ ...m, sender: senderMap[m.sender_id] || { id: m.sender_id } }))
+      .reverse(); // 시간순 정렬
 
     res.json(messages);
   } catch (err) {
@@ -57,6 +63,9 @@ router.post('/', async (req, res) => {
     const { match_id, content } = req.body;
     if (!match_id || !content?.trim()) {
       return res.status(400).json({ error: '메시지 내용이 없습니다.' });
+    }
+    if (content.trim().length > 500) {
+      return res.status(400).json({ error: '메시지는 500자까지 입력 가능합니다.' });
     }
 
     const match = await getMatch(match_id, req.user.id);
@@ -86,7 +95,7 @@ router.post('/', async (req, res) => {
       sender?.name ?? '새 메시지',
       content.trim().length > 50 ? content.trim().slice(0, 50) + '…' : content.trim(),
       { type: 'new_message', match_id },
-    ).catch(() => {});
+    ).catch(err => console.error('[Push] 메시지 알림 실패:', err.message));
   } catch (err) {
     console.error('메시지 전송 오류:', err);
     res.status(500).json({ error: err.message });
