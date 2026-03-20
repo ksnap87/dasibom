@@ -248,7 +248,7 @@ export default function CreditStoreScreen() {
           <Text style={styles.noticeText}>
             * 결제는 Google Play를 통해 처리됩니다{'\n'}
             * 크레딧은 환불이 불가합니다{'\n'}
-            * 문의: support@dasibom.app
+            * 문의: dasibom.help@gmail.com
           </Text>
         </View>
 

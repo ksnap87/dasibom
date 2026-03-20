@@ -106,8 +106,11 @@ export default function MatchesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const nav = useNavigation<Nav>();
   const { phoneVerified, loadPhoneVerified } = useAuthStore();
+  const [phoneVerifiedLoaded, setPhoneVerifiedLoaded] = useState(false);
 
-  useEffect(() => { loadPhoneVerified(); }, [loadPhoneVerified]);
+  useEffect(() => {
+    loadPhoneVerified().then(() => setPhoneVerifiedLoaded(true));
+  }, [loadPhoneVerified]);
 
   const load = useCallback(async () => {
     try {
@@ -124,7 +127,7 @@ export default function MatchesScreen() {
   useEffect(() => { load(); }, [load]);
 
   const handlePress = (match: MutualMatch) => {
-    if (!phoneVerified) {
+    if (phoneVerifiedLoaded && !phoneVerified) {
       nav.navigate('PhoneVerification', {
         match_id: match.match_id,
         other_name: match.other_user.name,

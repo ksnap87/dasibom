@@ -199,12 +199,17 @@ export default function ChatRoomScreen() {
       .on('broadcast', { event: 'new_message' }, async (payload) => {
         const msg = payload.payload?.message as Message;
         if (!msg?.id || !msg.content || !msg.sender_id) return;
+        // sender 정보가 없으면 캐시에서 보충
+        if (!msg.sender && senderMapRef.current[msg.sender_id]) {
+          msg.sender = senderMapRef.current[msg.sender_id];
+        }
+        if (msg.sender) senderMapRef.current[msg.sender_id] = msg.sender;
         setMessages(prev => {
           if (prev.find(m => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
         // 읽었음을 DB에 반영하고 발신자에게 알림
-        await markRead(match_id);
+        await markRead(match_id).catch(() => {});
         channel.send({
           type: 'broadcast',
           event: 'read_receipt',
