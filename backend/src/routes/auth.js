@@ -82,4 +82,55 @@ router.post('/kakao', async (req, res) => {
   }
 });
 
+// POST /api/auth/dev-login — 개발용 테스트 로그인 (실제 Supabase 세션 발급)
+router.post('/dev-login', async (req, res) => {
+  // TODO: 출시 전 이 엔드포인트 비활성화
+  // if (process.env.NODE_ENV === 'production') {
+  //   return res.status(403).json({ error: '개발 모드에서만 사용 가능합니다.' });
+  // }
+
+  try {
+    const testKakaoId = 'dev_test_user_12345';
+    const email = `kakao_${testKakaoId}@dasibom.kakao`;
+    const password = generatePassword(testKakaoId);
+
+    // 테스트 유저 생성 (이미 존재하면 무시)
+    const { error: createErr } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        kakao_id: testKakaoId,
+        nickname: '테스트유저',
+        provider: 'dev',
+      },
+    });
+
+    if (createErr && !createErr.message?.includes('already been registered')) {
+      console.error('DEV 유저 생성 오류:', createErr.message);
+      return res.status(500).json({ error: '테스트 계정 생성 실패' });
+    }
+
+    // 로그인하여 세션 발급
+    const { data, error: signInErr } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInErr) {
+      console.error('DEV 로그인 오류:', signInErr.message);
+      return res.status(500).json({ error: '테스트 로그인 실패' });
+    }
+
+    return res.json({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      user: data.user,
+    });
+  } catch (err) {
+    console.error('DEV 로그인 오류:', err);
+    return res.status(500).json({ error: '테스트 로그인 처리 중 오류' });
+  }
+});
+
 module.exports = router;
