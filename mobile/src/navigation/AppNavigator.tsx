@@ -1,11 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { View, ActivityIndicator, Alert, Platform } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, ActivityIndicator, Alert, Platform, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import ErrorBoundary from '../components/ErrorBoundary';
 import { useAuthStore } from '../store/authStore';
 import { registerFCMToken, onTokenRefresh, onForegroundMessage } from '../services/fcm';
 import SplashScreen from '../screens/SplashScreen';
@@ -75,11 +76,21 @@ function MainTabs() {
   );
 }
 
-export default function AppNavigator() {
+function AppNavigatorInner() {
   const { isAuthenticated, isLoading, profile } = useAuthStore();
   const [splashDone, setSplashDone] = React.useState(false);
   const [welcomeDone, setWelcomeDone] = React.useState(false);
+  const [offline, setOffline] = useState(false);
   const fcmRegistered = useRef(false);
+
+  // Simple connectivity check on mount
+  useEffect(() => {
+    let mounted = true;
+    fetch('https://clients3.google.com/generate_204', { method: 'HEAD' })
+      .then(() => { if (mounted) setOffline(false); })
+      .catch(() => { if (mounted) setOffline(true); });
+    return () => { mounted = false; };
+  }, []);
 
   // 기존 회원(설문 완료)이면 환영 화면 스킵
   useEffect(() => {
@@ -126,7 +137,13 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <>
+      {offline && (
+        <View style={offlineStyles.banner}>
+          <Text style={offlineStyles.text}>인터넷 연결을 확인해 주세요</Text>
+        </View>
+      )}
+      <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerBackTitle: '뒤로' }}>
         {!splashDone ? (
           <Stack.Screen name="Splash" options={{ headerShown: false }}>
@@ -203,5 +220,27 @@ export default function AppNavigator() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </>
+  );
+}
+
+const offlineStyles = StyleSheet.create({
+  banner: {
+    backgroundColor: '#E53935',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  text: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+});
+
+export default function AppNavigator() {
+  return (
+    <ErrorBoundary>
+      <AppNavigatorInner />
+    </ErrorBoundary>
   );
 }
