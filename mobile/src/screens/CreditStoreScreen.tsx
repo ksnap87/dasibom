@@ -100,7 +100,15 @@ export default function CreditStoreScreen() {
 
         {/* 크레딧 사용처 안내 */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>크레딧으로 할 수 있는 것</Text>
+          <View style={styles.infoHeader}>
+            <Text style={styles.infoTitle}>크레딧으로 할 수 있는 것</Text>
+            <TouchableOpacity
+              style={styles.infoNavBtn}
+              onPress={() => nav.navigate('Profile' as never, { scrollTo: 'recommendations' } as never)}
+            >
+              <Text style={styles.infoNavBtnText}>설정하기 →</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>🔄</Text>
             <Text style={styles.infoText}>가치관 수정 (1개)</Text>
@@ -191,7 +199,10 @@ const styles = StyleSheet.create({
     backgroundColor: C.card, borderRadius: 14, padding: 16, marginBottom: 20,
     elevation: 1,
   },
-  infoTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 12 },
+  infoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  infoTitle: { fontSize: 15, fontWeight: '700', color: C.text },
+  infoNavBtn: { backgroundColor: C.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  infoNavBtnText: { fontSize: 13, color: C.primary, fontWeight: '600' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   infoIcon: { fontSize: 18 },
   infoText: { fontSize: 14, color: C.sub },

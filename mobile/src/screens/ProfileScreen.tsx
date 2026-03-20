@@ -733,17 +733,24 @@ export default function ProfileScreen() {
                 <Text style={styles.radioLabel}>{opt.label}</Text>
               </TouchableOpacity>
             ))}
-            <View style={[styles.row, { marginTop: 12 }]}>
-              <Text style={styles.rowLabel}>나와 같은 관계 목표만</Text>
-              <Switch
-                value={goalMatch}
-                onValueChange={(v) => saveDiscoveryFilters(regionFilter, v)}
-                trackColor={{ false: '#E0D5D0', true: C.primaryLight }}
-                thumbColor={goalMatch ? C.primary : '#FFF'}
-              />
-            </View>
           </View>
         )}
+
+        {/* ─── 관계 목표 필터 ─── */}
+        <View style={styles.section}>
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>💝 나와 같은 관계 목표만</Text>
+              <Text style={[styles.settingDesc, { marginTop: 2, marginBottom: 0 }]}>같은 관계 목표를 가진 상대만 추천받아요</Text>
+            </View>
+            <Switch
+              value={goalMatch}
+              onValueChange={(v) => saveDiscoveryFilters(regionFilter, v)}
+              trackColor={{ false: '#E0D5D0', true: C.primaryLight }}
+              thumbColor={goalMatch ? C.primary : '#FFF'}
+            />
+          </View>
+        </View>
 
         {/* ─── 먼저 확인할 항목 ─── */}
         <View style={styles.section}>
@@ -835,7 +842,8 @@ export default function ProfileScreen() {
         {showRequiredSection && (
           <View style={[styles.section, { marginTop: -12, borderTopLeftRadius: 0, borderTopRightRadius: 0 }]}>
             <Text style={styles.settingDesc}>
-              이 조건에 맞지 않는 상대는 추천에서 제외돼요 (기본 3개, 💎 크레딧으로 추가)
+              이 조건에 맞지 않는 상대는 추천에서 제외돼요{'\n'}
+              {'(기본 3개, 💎 크레딧으로 추가)'}
             </Text>
             {REQUIRED_CONDITION_OPTIONS.map((opt) => {
               const selected = draftRequiredConditions.includes(opt.key);

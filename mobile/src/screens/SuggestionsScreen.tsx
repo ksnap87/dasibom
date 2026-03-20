@@ -533,10 +533,12 @@ export default function SuggestionsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🌸 추천 상대</Text>
-        <View style={styles.headerRight}>
-          <Text style={styles.dailyBadge}>오늘 {dailyCount}/{dailyLimit}</Text>
-          <Text style={styles.headerSub}>{suggestions.length}명</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>🌸 추천 상대</Text>
+          <Text style={styles.headerSub}>{suggestions.length}명 남음</Text>
+        </View>
+        <View style={styles.dailyBadge}>
+          <Text style={styles.dailyBadgeText}>오늘 {dailyCount}/{dailyLimit}</Text>
         </View>
       </View>
 
@@ -590,11 +592,12 @@ export default function SuggestionsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { padding: 20, paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: { padding: 20, paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  headerLeft: { flex: 1 },
   headerTitle: { fontSize: 26, fontWeight: '700', color: C.text },
-  headerRight: { alignItems: 'flex-end' },
-  headerSub: { fontSize: 13, color: C.sub },
-  dailyBadge: { fontSize: 12, color: C.primary, fontWeight: '700', backgroundColor: C.primaryLight, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  headerSub: { fontSize: 13, color: C.sub, marginTop: 2 },
+  dailyBadge: { backgroundColor: C.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, marginTop: 4 },
+  dailyBadgeText: { fontSize: 13, color: C.primary, fontWeight: '700' },
   quoteBanner: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 10, paddingHorizontal: 16,
     backgroundColor: C.primaryLight, borderRadius: 12,
