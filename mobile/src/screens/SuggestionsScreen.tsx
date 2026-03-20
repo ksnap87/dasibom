@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getSuggestions, expressInterest } from '../api/client';
+import api, { getSuggestions, expressInterest } from '../api/client';
 import { SuggestionProfile } from '../types';
 import { useAuthStore } from '../store/authStore';
 import SkeletonLoader from '../components/SkeletonLoader';
@@ -411,8 +411,7 @@ export default function SuggestionsScreen() {
         if (parts.length) params = '?' + parts.join('&');
       }
 
-      // API에 발견 필터 파라미터 전달 (client.ts의 getSuggestions를 직접 확장하지 않고 axios로 직접)
-      const { default: api } = await import('../api/client');
+      // API에 발견 필터 파라미터 전달
       const profileRes = await api.get('/api/profiles/me');
       setMyProfile(profileRes.data);
       const suggestRes = await api.get('/api/matches/suggestions' + params);

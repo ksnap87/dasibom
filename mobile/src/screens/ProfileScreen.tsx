@@ -955,6 +955,9 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* 계정 삭제 */}
+        {/* 앱 버전 */}
+        <Text style={styles.versionText}>다시봄 v1.0.0</Text>
+
         <TouchableOpacity style={styles.deleteBtn} onPress={() => {
           Alert.alert(
             '계정 삭제',
@@ -1223,5 +1226,6 @@ const styles = StyleSheet.create({
   deleteBtn: {
     marginTop: 10, marginBottom: 40, paddingVertical: 14, alignItems: 'center',
   },
+  versionText: { fontSize: 12, color: '#BBB', textAlign: 'center', marginTop: 20 },
   deleteText: { fontSize: 14, color: '#D44', textDecorationLine: 'underline' },
 });

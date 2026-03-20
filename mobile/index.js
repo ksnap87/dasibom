@@ -14,7 +14,9 @@ import { name as appName } from './app.json';
 import { setBackgroundHandler } from './src/services/fcm';
 setBackgroundHandler();
 
-// 개발 중 경고 배너 비활성화 (UI 테스트용)
-LogBox.ignoreAllLogs();
+// 릴리즈 빌드에서만 경고 배너 비활성화
+if (!__DEV__) {
+  LogBox.ignoreAllLogs();
+}
 
 AppRegistry.registerComponent(appName, () => App);
