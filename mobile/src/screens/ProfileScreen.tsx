@@ -153,6 +153,111 @@ function QASection({ title, icon, qaList, profile }: {
   );
 }
 
+// ── 앱 설정 섹션 ─────────────────────────────────────────
+const SETTINGS_KEYS = {
+  pushMatch: '@dasibom_push_match',
+  pushMessage: '@dasibom_push_message',
+  showAge: '@dasibom_show_age',
+  showCity: '@dasibom_show_city',
+};
+
+function SettingsSection() {
+  const [pushMatch, setPushMatch] = useState(true);
+  const [pushMessage, setPushMessage] = useState(true);
+  const [showAge, setShowAge] = useState(true);
+  const [showCity, setShowCity] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [pm, pmsg, sa, sc] = await Promise.all([
+          AsyncStorage.getItem(SETTINGS_KEYS.pushMatch),
+          AsyncStorage.getItem(SETTINGS_KEYS.pushMessage),
+          AsyncStorage.getItem(SETTINGS_KEYS.showAge),
+          AsyncStorage.getItem(SETTINGS_KEYS.showCity),
+        ]);
+        if (pm !== null) setPushMatch(pm !== 'false');
+        if (pmsg !== null) setPushMessage(pmsg !== 'false');
+        if (sa !== null) setShowAge(sa !== 'false');
+        if (sc !== null) setShowCity(sc !== 'false');
+      } catch {}
+      setLoaded(true);
+    })();
+  }, []);
+
+  const toggle = async (key: string, value: boolean, setter: (v: boolean) => void) => {
+    setter(value);
+    await AsyncStorage.setItem(key, String(value));
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <>
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🔔 알림 설정</Text>
+        </View>
+        <View style={styles.settingRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingRowLabel}>매칭 알림</Text>
+            <Text style={styles.settingRowSub}>새로운 매칭 시 알림</Text>
+          </View>
+          <Switch
+            value={pushMatch}
+            onValueChange={v => toggle(SETTINGS_KEYS.pushMatch, v, setPushMatch)}
+            trackColor={{ false: '#E0D5D0', true: '#FCEEF1' }}
+            thumbColor={pushMatch ? '#E8556D' : '#FFF'}
+          />
+        </View>
+        <View style={styles.settingRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingRowLabel}>메시지 알림</Text>
+            <Text style={styles.settingRowSub}>새 메시지 수신 시 알림</Text>
+          </View>
+          <Switch
+            value={pushMessage}
+            onValueChange={v => toggle(SETTINGS_KEYS.pushMessage, v, setPushMessage)}
+            trackColor={{ false: '#E0D5D0', true: '#FCEEF1' }}
+            thumbColor={pushMessage ? '#E8556D' : '#FFF'}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🔒 공개 설정</Text>
+        </View>
+        <View style={styles.settingRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingRowLabel}>나이 공개</Text>
+            <Text style={styles.settingRowSub}>추천 카드에 나이 표시</Text>
+          </View>
+          <Switch
+            value={showAge}
+            onValueChange={v => toggle(SETTINGS_KEYS.showAge, v, setShowAge)}
+            trackColor={{ false: '#E0D5D0', true: '#FCEEF1' }}
+            thumbColor={showAge ? '#E8556D' : '#FFF'}
+          />
+        </View>
+        <View style={styles.settingRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingRowLabel}>지역 공개</Text>
+            <Text style={styles.settingRowSub}>추천 카드에 지역 표시</Text>
+          </View>
+          <Switch
+            value={showCity}
+            onValueChange={v => toggle(SETTINGS_KEYS.showCity, v, setShowCity)}
+            trackColor={{ false: '#E0D5D0', true: '#FCEEF1' }}
+            thumbColor={showCity ? '#E8556D' : '#FFF'}
+          />
+        </View>
+      </View>
+    </>
+  );
+}
+
 function Section({ title, children, onEdit }: {
   title: string; children: React.ReactNode; onEdit?: () => void;
 }) {
@@ -937,6 +1042,13 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* ─── 앱 설정 ─── */}
+        <View style={styles.groupHeader}>
+          <Text style={styles.groupHeaderText}>앱 설정</Text>
+        </View>
+
+        <SettingsSection />
+
         {/* 로그아웃 */}
         <TouchableOpacity style={styles.signOutBtn} onPress={() => {
           Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
@@ -1226,6 +1338,14 @@ const styles = StyleSheet.create({
   deleteBtn: {
     marginTop: 10, marginBottom: 40, paddingVertical: 14, alignItems: 'center',
   },
+  // 설정 행
+  settingRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0ECEA',
+  },
+  settingRowLabel: { fontSize: 15, color: '#2D2D2D', fontWeight: '600' },
+  settingRowSub: { fontSize: 12, color: '#777', marginTop: 2 },
+
   versionText: { fontSize: 12, color: '#BBB', textAlign: 'center', marginTop: 20 },
   deleteText: { fontSize: 14, color: '#D44', textDecorationLine: 'underline' },
 });
