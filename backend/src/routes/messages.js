@@ -1,6 +1,7 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const { sendPushToUser } = require('../utils/push');
+const { filterContent } = require('../utils/contentFilter');
 
 const router = express.Router();
 const supabase = createClient(
@@ -66,6 +67,15 @@ router.post('/', async (req, res) => {
     }
     if (content.trim().length > 500) {
       return res.status(400).json({ error: '메시지는 500자까지 입력 가능합니다.' });
+    }
+
+    // 금칙어 필터
+    const filterResult = filterContent(content.trim());
+    if (filterResult.blocked) {
+      return res.status(400).json({
+        error: filterResult.message,
+        filter_category: filterResult.category,
+      });
     }
 
     const match = await getMatch(match_id, req.user.id);
