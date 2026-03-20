@@ -432,4 +432,19 @@ router.get('/admin/phone/:userId', async (req, res) => {
   }
 });
 
+// POST /api/profiles/checkin — 출석 체크 (매일 1회, 연속 출석 보상)
+router.post('/checkin', async (req, res) => {
+  try {
+    const { data, error } = await supabase.rpc('daily_checkin', {
+      p_user_id: req.user.id,
+    });
+
+    if (error) return res.status(500).json({ error: '출석 체크 처리 중 오류가 발생했습니다.' });
+    res.json(data);
+  } catch (err) {
+    console.error('출석 체크 오류:', err.message);
+    res.status(500).json({ error: '출석 체크 실패' });
+  }
+});
+
 module.exports = router;

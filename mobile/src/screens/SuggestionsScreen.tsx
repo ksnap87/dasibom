@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api, { getSuggestions, expressInterest } from '../api/client';
+import api, { getSuggestions, expressInterest, dailyCheckin } from '../api/client';
 import { SuggestionProfile } from '../types';
 import { useAuthStore } from '../store/authStore';
 import SkeletonLoader from '../components/SkeletonLoader';
@@ -369,6 +369,9 @@ export default function SuggestionsScreen() {
   const [dailyLimit, setDailyLimit] = useState(DAILY_LIMIT);
   const [dailyDone, setDailyDone] = useState(false);
   const [myProfile, setMyProfile] = useState<any>(null);
+  const [checkinStreak, setCheckinStreak] = useState(0);
+  const [checkinReward, setCheckinReward] = useState(0);
+  const [checkinDone, setCheckinDone] = useState(false);
   const { credits, deductCredit, loadCredits } = useAuthStore();
 
   const loadLocalSettings = useCallback(async () => {
@@ -433,7 +436,19 @@ export default function SuggestionsScreen() {
 
   useEffect(() => {
     loadLocalSettings().then(load);
-  }, [loadLocalSettings, load]);
+    // 출석 체크
+    dailyCheckin().then(data => {
+      setCheckinStreak(data.streak ?? 0);
+      setCheckinReward(data.reward ?? 0);
+      setCheckinDone(true);
+      if (data.reward > 0 && !data.already_checked) {
+        showToast(`연속 ${data.streak}일 출석! 크레딧 ${data.reward}개 획득`);
+        loadCredits();
+      } else if (!data.already_checked) {
+        showToast(`출석 체크 완료! 연속 ${data.streak}일째`);
+      }
+    }).catch(() => {});
+  }, [loadLocalSettings, load, loadCredits]);
 
   const incrementDailyCount = async () => {
     const today = new Date().toISOString().slice(0, 10);
@@ -541,6 +556,16 @@ export default function SuggestionsScreen() {
         </View>
       </View>
 
+      {/* 출석 체크 배너 */}
+      {checkinDone && checkinStreak > 0 && (
+        <View style={styles.streakBanner}>
+          <Text style={styles.streakText}>
+            {'🔥'} 연속 {checkinStreak}일 출석 중
+            {checkinStreak >= 7 ? '  |  7일마다 크레딧 1개' : `  |  ${7 - (checkinStreak % 7)}일 후 보상`}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.quoteBanner}>
         <Text style={styles.quoteText}>"{getDailyQuote()}"</Text>
       </View>
@@ -597,6 +622,11 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 13, color: C.sub, marginTop: 2 },
   dailyBadge: { backgroundColor: C.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, marginTop: 4 },
   dailyBadgeText: { fontSize: 13, color: C.primary, fontWeight: '700' },
+  streakBanner: {
+    marginHorizontal: 16, marginBottom: 6, paddingVertical: 8, paddingHorizontal: 14,
+    backgroundColor: '#FFF3E0', borderRadius: 10, borderWidth: 1, borderColor: '#FFE0B2',
+  },
+  streakText: { fontSize: 13, color: '#E65100', fontWeight: '600', textAlign: 'center' },
   quoteBanner: {
     marginHorizontal: 16, marginBottom: 8, paddingVertical: 10, paddingHorizontal: 16,
     backgroundColor: C.primaryLight, borderRadius: 12,

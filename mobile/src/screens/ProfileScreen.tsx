@@ -157,30 +157,42 @@ function QASection({ title, icon, qaList, profile }: {
 const SETTINGS_KEYS = {
   pushMatch: '@dasibom_push_match',
   pushMessage: '@dasibom_push_message',
+  pushSound: '@dasibom_push_sound',
+  pushVibrate: '@dasibom_push_vibrate',
   showAge: '@dasibom_show_age',
   showCity: '@dasibom_show_city',
+  largeText: '@dasibom_large_text',
 };
 
 function SettingsSection() {
   const [pushMatch, setPushMatch] = useState(true);
   const [pushMessage, setPushMessage] = useState(true);
+  const [pushSound, setPushSound] = useState(true);
+  const [pushVibrate, setPushVibrate] = useState(true);
   const [showAge, setShowAge] = useState(true);
   const [showCity, setShowCity] = useState(true);
+  const [largeText, setLargeText] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        const [pm, pmsg, sa, sc] = await Promise.all([
+        const [pm, pmsg, ps, pv, sa, sc, lt] = await Promise.all([
           AsyncStorage.getItem(SETTINGS_KEYS.pushMatch),
           AsyncStorage.getItem(SETTINGS_KEYS.pushMessage),
+          AsyncStorage.getItem(SETTINGS_KEYS.pushSound),
+          AsyncStorage.getItem(SETTINGS_KEYS.pushVibrate),
           AsyncStorage.getItem(SETTINGS_KEYS.showAge),
           AsyncStorage.getItem(SETTINGS_KEYS.showCity),
+          AsyncStorage.getItem(SETTINGS_KEYS.largeText),
         ]);
         if (pm !== null) setPushMatch(pm !== 'false');
         if (pmsg !== null) setPushMessage(pmsg !== 'false');
+        if (ps !== null) setPushSound(ps !== 'false');
+        if (pv !== null) setPushVibrate(pv !== 'false');
         if (sa !== null) setShowAge(sa !== 'false');
         if (sc !== null) setShowCity(sc !== 'false');
+        if (lt !== null) setLargeText(lt === 'true');
       } catch {}
       setLoaded(true);
     })();
@@ -223,6 +235,30 @@ function SettingsSection() {
             thumbColor={pushMessage ? '#E8556D' : '#FFF'}
           />
         </View>
+        <View style={styles.settingRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingRowLabel}>알림 소리</Text>
+            <Text style={styles.settingRowSub}>알림 수신 시 소리</Text>
+          </View>
+          <Switch
+            value={pushSound}
+            onValueChange={v => toggle(SETTINGS_KEYS.pushSound, v, setPushSound)}
+            trackColor={{ false: '#E0D5D0', true: '#FCEEF1' }}
+            thumbColor={pushSound ? '#E8556D' : '#FFF'}
+          />
+        </View>
+        <View style={styles.settingRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingRowLabel}>알림 진동</Text>
+            <Text style={styles.settingRowSub}>알림 수신 시 진동</Text>
+          </View>
+          <Switch
+            value={pushVibrate}
+            onValueChange={v => toggle(SETTINGS_KEYS.pushVibrate, v, setPushVibrate)}
+            trackColor={{ false: '#E0D5D0', true: '#FCEEF1' }}
+            thumbColor={pushVibrate ? '#E8556D' : '#FFF'}
+          />
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -252,6 +288,43 @@ function SettingsSection() {
             trackColor={{ false: '#E0D5D0', true: '#FCEEF1' }}
             thumbColor={showCity ? '#E8556D' : '#FFF'}
           />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{'👁️'} 접근성</Text>
+        </View>
+        <Text style={styles.settingRowLabel}>글씨 크기</Text>
+        <View style={styles.fontSizeRow}>
+          {[
+            { label: '기본', value: 'small' },
+            { label: '크게', value: 'medium' },
+            { label: '매우 크게', value: 'large' },
+          ].map(opt => {
+            const isActive = (!largeText && opt.value === 'small') ||
+              (largeText === 'medium' && opt.value === 'medium') ||
+              (largeText === 'large' && opt.value === 'large');
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.fontSizeBtn, isActive && styles.fontSizeBtnActive]}
+                onPress={() => {
+                  const val = opt.value === 'small' ? false : opt.value;
+                  setLargeText(val as any);
+                  AsyncStorage.setItem(SETTINGS_KEYS.largeText, String(val));
+                }}
+              >
+                <Text style={[
+                  styles.fontSizeBtnText,
+                  isActive && styles.fontSizeBtnTextActive,
+                  opt.value === 'medium' && { fontSize: 16 },
+                  opt.value === 'large' && { fontSize: 18 },
+                ]}>가</Text>
+                <Text style={[styles.fontSizeLabel, isActive && styles.fontSizeLabelActive]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
     </>
@@ -1345,6 +1418,22 @@ const styles = StyleSheet.create({
   },
   settingRowLabel: { fontSize: 15, color: '#2D2D2D', fontWeight: '600' },
   settingRowSub: { fontSize: 12, color: '#777', marginTop: 2 },
+
+  // 글씨 크기 선택
+  fontSizeRow: {
+    flexDirection: 'row', gap: 10, marginTop: 10,
+  },
+  fontSizeBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: 12,
+    borderWidth: 1.5, borderColor: '#E0D5D0', backgroundColor: '#FAFAFA',
+  },
+  fontSizeBtnActive: {
+    borderColor: '#E8556D', backgroundColor: '#FCEEF1',
+  },
+  fontSizeBtnText: { fontSize: 14, color: '#777', fontWeight: '700' },
+  fontSizeBtnTextActive: { color: '#E8556D' },
+  fontSizeLabel: { fontSize: 11, color: '#999', marginTop: 4 },
+  fontSizeLabelActive: { color: '#E8556D' },
 
   versionText: { fontSize: 12, color: '#BBB', textAlign: 'center', marginTop: 20 },
   deleteText: { fontSize: 14, color: '#D44', textDecorationLine: 'underline' },
