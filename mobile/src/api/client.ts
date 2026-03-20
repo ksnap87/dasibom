@@ -192,6 +192,8 @@ export const syncContactHashes = (hashes: string[]) =>
   api.post('/api/profiles/sync-contacts', { hashes }).then(r => r.data);
 export const savePhoneHash = (phone_hash: string) =>
   api.post('/api/profiles/phone-hash', { phone_hash }).then(r => r.data);
+export const dailyCheckin = () =>
+  api.post('/api/profiles/checkin').then(r => r.data);
 export const verifyPhone = (phone_number: string) =>
   api.post('/api/profiles/verify-phone', { phone_number }).then(r => r.data);
 
