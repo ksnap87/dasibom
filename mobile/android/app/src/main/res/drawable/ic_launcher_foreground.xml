@@ -5,47 +5,70 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Cherry blossom flower icon (5-petal design) centered in safe zone -->
-    <!-- Safe zone is 66x66 centered (21,21 to 87,87) -->
+    <!-- Cherry blossom (벚꽃) — 5-petal design, centered in adaptive icon safe zone -->
+    <!-- Safe zone: 66x66 centered at (54,54), range (21,21)-(87,87) -->
 
-    <!-- Petal 1 - top -->
+    <!-- Petal 1 - top (12 o'clock) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,30 C58,30 62,34 62,40 C62,46 58,48 54,48 C50,48 46,46 46,40 C46,34 50,30 54,30z" />
+        android:pathData="M54,24 C60,24 66,30 66,38 C66,46 60,50 54,50 C48,50 42,46 42,38 C42,30 48,24 54,24z" />
+    <path
+        android:fillColor="#FFE8EC"
+        android:pathData="M54,28 C58,28 62,32 62,37 C62,42 58,44 54,44 C50,44 46,42 46,37 C46,32 50,28 54,28z" />
 
-    <!-- Petal 2 - top right -->
+    <!-- Petal 2 - top right (2 o'clock) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M65,37 C68,34 73,34 76,38 C79,42 78,47 74,49 C70,51 66,50 63,46 C60,42 62,40 65,37z" />
+        android:pathData="M68,32 C73,28 80,29 83,35 C86,41 83,48 77,50 C71,52 65,49 62,43 C59,37 63,36 68,32z" />
+    <path
+        android:fillColor="#FFE8EC"
+        android:pathData="M69,36 C73,33 77,34 79,38 C81,42 79,46 75,47 C71,48 68,46 66,42 C64,38 65,39 69,36z" />
 
-    <!-- Petal 3 - bottom right -->
+    <!-- Petal 3 - bottom right (4 o'clock) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M68,52 C72,51 76,53 77,58 C78,63 75,67 71,68 C67,69 63,66 62,61 C61,56 64,53 68,52z" />
+        android:pathData="M72,55 C78,53 83,56 84,63 C85,70 81,75 75,76 C69,77 64,73 63,66 C62,59 66,57 72,55z" />
+    <path
+        android:fillColor="#FFE8EC"
+        android:pathData="M72,59 C76,58 79,60 79,64 C80,68 77,71 74,72 C70,72 68,70 67,66 C66,62 68,60 72,59z" />
 
-    <!-- Petal 4 - bottom left -->
+    <!-- Petal 4 - bottom left (8 o'clock) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M40,52 C36,51 32,53 31,58 C30,63 33,67 37,68 C41,69 45,66 46,61 C47,56 44,53 40,52z" />
+        android:pathData="M36,55 C30,53 25,56 24,63 C23,70 27,75 33,76 C39,77 44,73 45,66 C46,59 42,57 36,55z" />
+    <path
+        android:fillColor="#FFE8EC"
+        android:pathData="M36,59 C32,58 29,60 29,64 C28,68 31,71 34,72 C38,72 40,70 41,66 C42,62 40,60 36,59z" />
 
-    <!-- Petal 5 - top left -->
+    <!-- Petal 5 - top left (10 o'clock) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M43,37 C40,34 35,34 32,38 C29,42 30,47 34,49 C38,51 42,50 45,46 C48,42 46,40 43,37z" />
-
-    <!-- Center circle -->
+        android:pathData="M40,32 C35,28 28,29 25,35 C22,41 25,48 31,50 C37,52 43,49 46,43 C49,37 45,36 40,32z" />
     <path
-        android:fillColor="#FFD4DC"
-        android:pathData="M54,48 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+        android:fillColor="#FFE8EC"
+        android:pathData="M39,36 C35,33 31,34 29,38 C27,42 29,46 33,47 C37,48 40,46 42,42 C44,38 43,39 39,36z" />
 
-    <!-- Center dots -->
+    <!-- Center circle - soft pink -->
+    <path
+        android:fillColor="#FFD0D8"
+        android:pathData="M54,54 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" />
+
+    <!-- Center accent circle -->
+    <path
+        android:fillColor="#F8A4B4"
+        android:pathData="M54,54 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+
+    <!-- Center dots (pistils) -->
     <path
         android:fillColor="#E8556D"
-        android:pathData="M52,46 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+        android:pathData="M51,52 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
     <path
         android:fillColor="#E8556D"
-        android:pathData="M56,46 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+        android:pathData="M57,52 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
     <path
         android:fillColor="#E8556D"
-        android:pathData="M54,50 m-1.2,0 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+        android:pathData="M54,57 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <path
+        android:fillColor="#D4455D"
+        android:pathData="M54,52 m-1,0 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0" />
 </vector>
