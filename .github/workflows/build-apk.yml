@@ -56,10 +56,10 @@ jobs:
         working-directory: mobile/android
         run: chmod +x gradlew
 
-      - name: Build Release APK
+      - name: Build Release APK + AAB
         working-directory: mobile/android
         run: |
-          ./gradlew assembleRelease --no-daemon --stacktrace \
+          ./gradlew assembleRelease bundleRelease --no-daemon --stacktrace \
             -PRELEASE_STORE_FILE=dasibom-release.keystore \
             -PRELEASE_STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }} \
             -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
@@ -89,21 +89,21 @@ jobs:
               body: `## Build Error Log (last 200 lines)\n\`\`\`\n${tail}\n\`\`\`\n\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             });
 
-      - name: Find APK file
+      - name: Find build artifacts
         id: apk
         run: |
           echo "=== Searching for APK files ==="
-          find mobile/android -name "*.apk" -type f 2>/dev/null || true
           APK=$(find mobile/android -name "*.apk" -type f 2>/dev/null | head -1)
-          if [ -z "$APK" ]; then
-            echo "❌ APK not found!"
-            find mobile/android/app/build -type f -name "*.apk" -o -name "*.aab" 2>/dev/null || true
+          AAB=$(find mobile/android -name "*.aab" -type f 2>/dev/null | head -1)
+          if [ -z "$APK" ] && [ -z "$AAB" ]; then
+            echo "❌ No build artifacts found!"
             ls -laR mobile/android/app/build/outputs/ 2>/dev/null || echo "No outputs dir"
             exit 1
           fi
           echo "Found APK: $APK"
-          ls -la "$APK"
-          echo "path=$APK" >> $GITHUB_OUTPUT
+          echo "Found AAB: $AAB"
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+          echo "aab_path=$AAB" >> $GITHUB_OUTPUT
 
       - name: Get version name
         id: version
@@ -112,12 +112,15 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION-$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
 
-      - name: Upload APK to GitHub Releases
+      - name: Upload artifacts to GitHub Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          FILES=""
+          [ -n "${{ steps.apk.outputs.apk_path }}" ] && FILES="$FILES ${{ steps.apk.outputs.apk_path }}"
+          [ -n "${{ steps.apk.outputs.aab_path }}" ] && FILES="$FILES ${{ steps.apk.outputs.aab_path }}"
           gh release create "${{ steps.version.outputs.tag }}" \
-            "${{ steps.apk.outputs.path }}" \
+            $FILES \
             --title "다시봄 ${{ steps.version.outputs.tag }}" \
             --notes "## 다시봄 자동 빌드
 

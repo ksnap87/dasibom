@@ -189,12 +189,13 @@ router.get('/', async (req, res) => {
   // 각 매칭의 마지막 메시지 + 안 읽은 메시지 수 조회
   const matchIds = matches.map(m => m.match_id);
   if (matchIds.length > 0) {
-    // 마지막 메시지 조회 (match_id별 최신 1건)
+    // 마지막 메시지 조회 (match_id별 최신 1건) — 최대 200개로 제한
     const { data: lastMessages } = await supabase
       .from('messages')
       .select('match_id, content, created_at, sender_id')
       .in('match_id', matchIds)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(matchIds.length * 2);
 
     // match_id별 마지막 메시지 맵
     const lastMsgMap = {};

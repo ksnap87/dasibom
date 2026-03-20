@@ -15,7 +15,11 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : '*', // 개발 시 전체 허용, 프로덕션에서는 ALLOWED_ORIGINS 환경변수 설정 필요
+}));
 app.use(express.json());
 
 // Supabase Storage 버킷 자동 생성 (서버 시작 시 1회)

@@ -242,9 +242,10 @@ export default function ProfileScreen() {
   // 추천조건 바로가기로 이동 시 자동 스크롤
   useEffect(() => {
     if (route.params?.scrollTo === 'recommendations' && !loading) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         scrollRef.current?.scrollTo({ y: recommendationsY.current, animated: true });
       }, 300);
+      return () => clearTimeout(timer);
     }
   }, [route.params?.scrollTo, loading]);
 

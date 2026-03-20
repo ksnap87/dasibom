@@ -198,7 +198,7 @@ export default function ChatRoomScreen() {
       .channel(`chat_${match_id}`, { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'new_message' }, async (payload) => {
         const msg = payload.payload?.message as Message;
-        if (!msg) return;
+        if (!msg?.id || !msg.content || !msg.sender_id) return;
         setMessages(prev => {
           if (prev.find(m => m.id === msg.id)) return prev;
           return [...prev, msg];
@@ -224,7 +224,9 @@ export default function ChatRoomScreen() {
     channelRef.current = channel;
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe().finally(() => {
+        supabase.removeChannel(channel);
+      });
       channelRef.current = null;
     };
   }, [match_id, other_name, nav, load]);
@@ -283,6 +285,28 @@ export default function ChatRoomScreen() {
     }
   };
 
+  const renderItem = useCallback(({ item }: { item: ListItem }) => {
+    if (item.type === 'date') {
+      return <DateSeparator label={item.label} />;
+    }
+    const isMe = item.msg.sender_id === user?.id;
+    const showReadMark = isMe && !item.msg.read_at;
+    const sendFailed = failedIds.has(item.msg.id);
+    return (
+      <Bubble
+        msg={item.msg}
+        isMe={isMe}
+        showReadMark={showReadMark}
+        sendFailed={sendFailed}
+        onRetry={() => handleRetry(item.msg)}
+      />
+    );
+  }, [user?.id, failedIds, handleRetry]);
+
+  const handleContentSizeChange = useCallback(() => {
+    listRef.current?.scrollToEnd({ animated: false });
+  }, []);
+
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>;
   }
@@ -323,25 +347,9 @@ export default function ChatRoomScreen() {
             ref={listRef}
             data={listItems}
             keyExtractor={item => item.key}
-            renderItem={({ item }) => {
-              if (item.type === 'date') {
-                return <DateSeparator label={item.label} />;
-              }
-              const isMe = item.msg.sender_id === user?.id;
-              const showReadMark = isMe && !item.msg.read_at;
-              const sendFailed = failedIds.has(item.msg.id);
-              return (
-                <Bubble
-                  msg={item.msg}
-                  isMe={isMe}
-                  showReadMark={showReadMark}
-                  sendFailed={sendFailed}
-                  onRetry={() => handleRetry(item.msg)}
-                />
-              );
-            }}
+            renderItem={renderItem}
             contentContainerStyle={styles.messageList}
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            onContentSizeChange={handleContentSizeChange}
           />
         )}
 

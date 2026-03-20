@@ -192,7 +192,7 @@ function passesRequired(item: SuggestionProfile, conditions: string[], myProfile
 const PREVIEW_FIELDS = ['relationship_goal', 'personality_type', 'smoking', 'drinking'];
 
 // ── 카드 컴포넌트 (컴팩트 + 탭하면 펼침) ─────────────────────
-function ProfileCard({
+const ProfileCard = React.memo(function ProfileCard({
   item,
   onLike,
   onPass,
@@ -354,7 +354,7 @@ function ProfileCard({
       </View>
     </Animated.View>
   );
-}
+});
 
 // ── 메인 화면 ─────────────────────────────────────────────
 export default function SuggestionsScreen() {
