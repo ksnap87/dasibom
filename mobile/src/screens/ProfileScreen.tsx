@@ -652,6 +652,17 @@ export default function ProfileScreen() {
     );
   };
 
+  const changeCity = async (newCity: string) => {
+    try {
+      await updateMyProfile({ city: newCity });
+      await deductCredit(1);
+      setProfile({ ...profile, city: newCity });
+      Alert.alert('완료', `거주 지역이 ${newCity}(으)로 변경되었습니다.`);
+    } catch {
+      Alert.alert('오류', '변경에 실패했습니다.');
+    }
+  };
+
   const handleSaveBio = async () => {
     setSavingBio(true);
     try {
@@ -729,18 +740,26 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 본인인증 배너 (미인증 시) */}
+        {/* 본인인증 배너 (미인증 시) — 탭하면 인증 화면 이동 */}
         {!phoneVerified && (
-          <View style={styles.verifyBanner}>
+          <TouchableOpacity
+            style={styles.verifyBanner}
+            activeOpacity={0.7}
+            onPress={() => nav.navigate('PhoneVerification', {
+              match_id: '',
+              other_name: '',
+              other_user_id: '',
+            })}
+          >
             <AppText style={styles.verifyIcon}>📱</AppText>
             <View style={{ flex: 1 }}>
               <AppText style={styles.verifyTitle}>본인인증이 필요합니다</AppText>
-              <AppText style={styles.verifySub}>채팅을 시작하려면 휴대폰 인증이 필요해요</AppText>
+              <AppText style={styles.verifySub}>탭하여 휴대폰 인증을 진행하세요</AppText>
             </View>
             <View style={styles.verifyBadge}>
-              <AppText style={styles.verifyBadgeText}>미인증</AppText>
+              <AppText style={styles.verifyBadgeText}>인증하기 →</AppText>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
         {phoneVerified && (
           <View style={[styles.verifyBanner, { borderColor: C.success, backgroundColor: '#E8F5E9' }]}>
@@ -763,7 +782,7 @@ export default function ProfileScreen() {
 
           {/* 프로필 사진 (배경 위에 겹침) */}
           <View style={styles.avatarOverlay}>
-            <TouchableOpacity onPress={() => setShowPhotoGallery(v => !v)} style={styles.avatarWrapper}>
+            <TouchableOpacity onPress={handleAddPhoto} style={styles.avatarWrapper} disabled={uploading}>
               {profile.photo_url ? (
                 <Image source={{ uri: profile.photo_url }} style={styles.bigPhoto} />
               ) : (
@@ -771,19 +790,64 @@ export default function ProfileScreen() {
                   <AppText style={styles.bigAvatarText}>{profile.name.charAt(0)}</AppText>
                 </View>
               )}
-              <View style={styles.cameraBtn}>
-                {uploading
-                  ? <ActivityIndicator size="small" color="#FFF" />
-                  : <AppText style={styles.cameraBtnText}>📷</AppText>
-                }
-              </View>
+              {uploading && (
+                <View style={styles.avatarLoading}>
+                  <ActivityIndicator size="small" color="#FFF" />
+                </View>
+              )}
             </TouchableOpacity>
           </View>
 
-          <AppText style={styles.heroName}>{profile.name}</AppText>
-          <AppText style={styles.heroSub}>{age}세 · {profile.city}</AppText>
+          <AppText style={styles.heroName}>{profile.nickname || profile.name}</AppText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <AppText style={styles.heroSub}>{age}세 · </AppText>
+            <TouchableOpacity onPress={() => {
+              if (credits <= 0) {
+                Alert.alert('크레딧 부족', '거주 지역 변경에는 크레딧 1개가 필요합니다.');
+                return;
+              }
+              Alert.alert('거주 지역 변경', `크레딧 1개를 사용합니다.\n보유: ${credits}개\n\n수도권 / 광역시 / 기타 중 선택하세요.`, [
+                { text: '취소', style: 'cancel' },
+                { text: '수도권', onPress: () => {
+                  Alert.alert('수도권', '지역을 선택하세요.', [
+                    { text: '서울', onPress: () => changeCity('서울') },
+                    { text: '경기', onPress: () => changeCity('경기') },
+                    { text: '인천', onPress: () => changeCity('인천') },
+                  ]);
+                }},
+                { text: '광역시/기타', onPress: () => {
+                  Alert.alert('지역 선택', '지역을 선택하세요.', [
+                    { text: '부산', onPress: () => changeCity('부산') },
+                    { text: '대구/광주/대전', onPress: () => {
+                      Alert.alert('선택', '', [
+                        { text: '대구', onPress: () => changeCity('대구') },
+                        { text: '광주', onPress: () => changeCity('광주') },
+                        { text: '대전', onPress: () => changeCity('대전') },
+                      ]);
+                    }},
+                    { text: '그 외', onPress: () => {
+                      Alert.alert('선택', '', [
+                        { text: '울산', onPress: () => changeCity('울산') },
+                        { text: '세종', onPress: () => changeCity('세종') },
+                        { text: '강원', onPress: () => changeCity('강원') },
+                        { text: '충북/충남', onPress: () => {
+                          Alert.alert('선택', '', [
+                            { text: '충북', onPress: () => changeCity('충북') },
+                            { text: '충남', onPress: () => changeCity('충남') },
+                            { text: '전북', onPress: () => changeCity('전북') },
+                          ]);
+                        }},
+                      ]);
+                    }},
+                  ]);
+                }},
+              ]);
+            }}>
+              <AppText style={[styles.heroSub, { textDecorationLine: 'underline', color: C.primary }]}>{profile.city} ✏️</AppText>
+            </TouchableOpacity>
+          </View>
 
-          {/* 자기소개 (100자) */}
+          {/* 자기소개 (프로필 바로 아래) */}
           {editingBio ? (
             <View style={styles.bioEditBox}>
               <TextInput
@@ -818,7 +882,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* 사진 갤러리 (최대 5장) */}
+        {/* 사진 갤러리 (최대 5장) — 컴팩트 */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <AppText style={styles.sectionTitle}>📸 내 사진</AppText>
@@ -859,13 +923,6 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             )}
           </View>
-          {photos.length === 0 && (
-            <TouchableOpacity style={styles.photoEmptyPlaceholder} onPress={handleAddPhoto} disabled={uploading}>
-              <AppText style={styles.photoEmptyIcon}>📷</AppText>
-              <AppText style={styles.photoEmptyText}>사진을 등록하면 매칭 확률이 높아져요!</AppText>
-              <AppText style={styles.photoEmptySub}>탭하여 첫 사진을 추가해보세요</AppText>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* ─── 추천 조건 그룹 헤더 ─── */}
@@ -1233,13 +1290,11 @@ const styles = StyleSheet.create({
   },
   bigAvatarText: { fontSize: 40, color: C.primary, fontWeight: '700' },
   photoHint: { fontSize: 13, color: C.sub, marginTop: 8, textAlign: 'center' },
-  cameraBtn: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#FFF',
+  avatarLoading: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 50, backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  cameraBtnText: { fontSize: 14 },
   heroName: { fontSize: 26, fontWeight: '700', color: C.text, marginTop: 4 },
   heroSub: { fontSize: 15, color: C.sub, marginTop: 3 },
   heroBio: { fontSize: 14, color: '#555', marginTop: 8, textAlign: 'center', lineHeight: 20 },

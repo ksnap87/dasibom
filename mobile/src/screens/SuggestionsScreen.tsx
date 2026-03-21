@@ -263,10 +263,10 @@ const ProfileCard = React.memo(function ProfileCard({
       <TouchableOpacity activeOpacity={0.7} onPress={() => setExpanded(!expanded)}>
         <View style={styles.cardHeader}>
           <View style={styles.avatarCircle}>
-            <AppText style={styles.avatarText}>{item.name?.charAt(0) ?? '?'}</AppText>
+            <AppText style={styles.avatarText}>{(item.nickname || item.name)?.charAt(0) ?? '?'}</AppText>
           </View>
           <View style={styles.cardInfo}>
-            <AppText style={styles.nameText}>{item.name}, {age}세</AppText>
+            <AppText style={styles.nameText}>{item.nickname || item.name}, {age}세</AppText>
             <AppText style={styles.cityText}>📍 {item.city}</AppText>
           </View>
           <View style={styles.scoreBadge}>
