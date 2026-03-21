@@ -171,7 +171,7 @@ function SettingsSection() {
   const [pushVibrate, setPushVibrate] = useState(true);
   const [showAge, setShowAge] = useState(true);
   const [showCity, setShowCity] = useState(true);
-  const [largeText, setLargeText] = useState(false);
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('small');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -192,7 +192,7 @@ function SettingsSection() {
         if (pv !== null) setPushVibrate(pv !== 'false');
         if (sa !== null) setShowAge(sa !== 'false');
         if (sc !== null) setShowCity(sc !== 'false');
-        if (lt !== null) setLargeText(lt === 'true');
+        if (lt !== null && (lt === 'small' || lt === 'medium' || lt === 'large')) setFontSize(lt);
       } catch {}
       setLoaded(true);
     })();
@@ -297,29 +297,25 @@ function SettingsSection() {
         </View>
         <Text style={styles.settingRowLabel}>글씨 크기</Text>
         <View style={styles.fontSizeRow}>
-          {[
-            { label: '기본', value: 'small' },
-            { label: '크게', value: 'medium' },
-            { label: '매우 크게', value: 'large' },
-          ].map(opt => {
-            const isActive = (!largeText && opt.value === 'small') ||
-              (largeText === 'medium' && opt.value === 'medium') ||
-              (largeText === 'large' && opt.value === 'large');
+          {([
+            { label: '기본', value: 'small' as const, sample: 14 },
+            { label: '크게', value: 'medium' as const, sample: 17 },
+            { label: '매우 크게', value: 'large' as const, sample: 20 },
+          ]).map(opt => {
+            const isActive = fontSize === opt.value;
             return (
               <TouchableOpacity
                 key={opt.value}
                 style={[styles.fontSizeBtn, isActive && styles.fontSizeBtnActive]}
                 onPress={() => {
-                  const val = opt.value === 'small' ? false : opt.value;
-                  setLargeText(val as any);
-                  AsyncStorage.setItem(SETTINGS_KEYS.largeText, String(val));
+                  setFontSize(opt.value);
+                  AsyncStorage.setItem(SETTINGS_KEYS.largeText, opt.value);
                 }}
               >
                 <Text style={[
                   styles.fontSizeBtnText,
                   isActive && styles.fontSizeBtnTextActive,
-                  opt.value === 'medium' && { fontSize: 16 },
-                  opt.value === 'large' && { fontSize: 18 },
+                  { fontSize: opt.sample },
                 ]}>가</Text>
                 <Text style={[styles.fontSizeLabel, isActive && styles.fontSizeLabelActive]}>{opt.label}</Text>
               </TouchableOpacity>
