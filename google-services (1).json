@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "178984829310",
+    "project_id": "dasibom-app",
+    "storage_bucket": "dasibom-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:178984829310:android:0295d54dfabd294cf9f32f",
+        "android_client_info": {
+          "package_name": "com.dasibom"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD64WlhY5KyrSoZAL851-HbA02Fzj2pVi0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:178984829310:android:cb2e6380cfa5bbb7f9f32f",
+        "android_client_info": {
+          "package_name": "com.tulipapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD64WlhY5KyrSoZAL851-HbA02Fzj2pVi0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

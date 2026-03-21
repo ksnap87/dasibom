@@ -6,9 +6,10 @@
  */
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
+  View, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, ActivityIndicator, Alert,
 } from 'react-native';
+import AppText from '../components/AppText';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { updateMyProfile } from '../api/client';
@@ -36,7 +37,7 @@ function OptionButton({ label, selected, onPress }: { label: string; selected: b
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{label}</Text>
+      <AppText style={[styles.optionText, selected && styles.optionTextSelected]}>{label}</AppText>
     </TouchableOpacity>
   );
 }
@@ -50,8 +51,8 @@ function BigOption({ label, desc, selected, onPress }: {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Text style={[styles.bigOptionLabel, selected && styles.bigOptionLabelSelected]}>{label}</Text>
-      <Text style={styles.bigOptionDesc}>{desc}</Text>
+      <AppText style={[styles.bigOptionLabel, selected && styles.bigOptionLabelSelected]}>{label}</AppText>
+      <AppText style={styles.bigOptionDesc}>{desc}</AppText>
     </TouchableOpacity>
   );
 }
@@ -69,7 +70,7 @@ function ChipGroup({ options, selected, onToggle }: {
           style={[styles.chip, selected.includes(o.value) && styles.chipSelected]}
           onPress={() => onToggle(o.value)}
         >
-          <Text style={[styles.chipText, selected.includes(o.value) && styles.chipTextSelected]}>{o.label}</Text>
+          <AppText style={[styles.chipText, selected.includes(o.value) && styles.chipTextSelected]}>{o.label}</AppText>
         </TouchableOpacity>
       ))}
     </View>
@@ -85,7 +86,7 @@ function ImportanceRow({ value, onChange }: { value: number; onChange: (v: numbe
           style={[styles.importanceBtn, value === n && styles.importanceBtnSelected]}
           onPress={() => onChange(n)}
         >
-          <Text style={[styles.importanceBtnText, value === n && styles.importanceBtnTextSelected]}>{n}</Text>
+          <AppText style={[styles.importanceBtnText, value === n && styles.importanceBtnTextSelected]}>{n}</AppText>
         </TouchableOpacity>
       ))}
     </View>
@@ -372,8 +373,11 @@ export default function QuestionnaireScreen() {
         questionnaire_completed: true,
       };
 
+      // 먼저 프로필 업데이트 시도
+      const updated = await updateMyProfile(payload);
+
       if (isEditMode) {
-        // 크레딧 1개 차감
+        // 프로필 업데이트 성공 후에만 크레딧 차감
         const ok = await deductCredit(1);
         if (!ok) {
           Alert.alert('크레딧 부족', '가치관 수정에는 크레딧 1개가 필요합니다.\n현재 보유: 0개');
@@ -382,7 +386,6 @@ export default function QuestionnaireScreen() {
         Alert.alert('알림', `가치관을 수정했습니다.\n남은 크레딧: ${credits - 1}개`);
       }
 
-      const updated = await updateMyProfile(payload);
       setProfile(updated);
 
       if (isEditMode) {
@@ -404,34 +407,34 @@ export default function QuestionnaireScreen() {
       case 0:
         return (
           <>
-            <Text style={styles.stepTitle}>기본 정보</Text>
-            <Text style={styles.stepSub}>간단한 정보를 알려주세요</Text>
+            <AppText style={styles.stepTitle}>기본 정보</AppText>
+            <AppText style={styles.stepSub}>간단한 정보를 알려주세요</AppText>
 
-            <Text style={styles.label}>이름 *</Text>
+            <AppText style={styles.label}>이름 *</AppText>
             <TextInput style={styles.input} value={form.name} onChangeText={v => set('name', v)}
               placeholder="이름 또는 닉네임" placeholderTextColor={C.sub} />
 
-            <Text style={styles.label}>출생연도 *</Text>
+            <AppText style={styles.label}>출생연도 *</AppText>
             <TextInput style={styles.input} value={form.birth_year} onChangeText={v => set('birth_year', v)}
               placeholder="예: 1965" keyboardType="numeric" maxLength={4} placeholderTextColor={C.sub} />
 
-            <Text style={styles.label}>성별 *</Text>
+            <AppText style={styles.label}>성별 *</AppText>
             <View style={styles.row}>
               <OptionButton label="남성" selected={form.gender === 'male'} onPress={() => { set('gender', 'male'); set('looking_for', 'female'); }} />
               <OptionButton label="여성" selected={form.gender === 'female'} onPress={() => { set('gender', 'female'); set('looking_for', 'male'); }} />
             </View>
 
-            <Text style={styles.label}>거주 지역 *</Text>
+            <AppText style={styles.label}>거주 지역 *</AppText>
             {/* 도/광역시 드롭다운 */}
             <TouchableOpacity
               style={styles.dropdown}
               onPress={() => set('_showProvince', !form._showProvince)}
               activeOpacity={0.7}
             >
-              <Text style={form._province ? styles.dropdownText : styles.dropdownPlaceholder}>
+              <AppText style={form._province ? styles.dropdownText : styles.dropdownPlaceholder}>
                 {form._province || '시/도 선택'}
-              </Text>
-              <Text style={styles.dropdownArrow}>{form._showProvince ? '▲' : '▼'}</Text>
+              </AppText>
+              <AppText style={styles.dropdownArrow}>{form._showProvince ? '▲' : '▼'}</AppText>
             </TouchableOpacity>
             {form._showProvince && (
               <View style={styles.dropdownList}>
@@ -452,9 +455,9 @@ export default function QuestionnaireScreen() {
                         }
                       }}
                     >
-                      <Text style={[styles.dropdownItemText, form._province === province && styles.dropdownItemTextSelected]}>
+                      <AppText style={[styles.dropdownItemText, form._province === province && styles.dropdownItemTextSelected]}>
                         {province}
-                      </Text>
+                      </AppText>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -469,10 +472,10 @@ export default function QuestionnaireScreen() {
                   onPress={() => set('_showCity', !form._showCity)}
                   activeOpacity={0.7}
                 >
-                  <Text style={form.city ? styles.dropdownText : styles.dropdownPlaceholder}>
+                  <AppText style={form.city ? styles.dropdownText : styles.dropdownPlaceholder}>
                     {form.city ? form.city.split(' ').pop() : '시/군 선택'}
-                  </Text>
-                  <Text style={styles.dropdownArrow}>{form._showCity ? '▲' : '▼'}</Text>
+                  </AppText>
+                  <AppText style={styles.dropdownArrow}>{form._showCity ? '▲' : '▼'}</AppText>
                 </TouchableOpacity>
                 {form._showCity && (
                   <View style={styles.dropdownList}>
@@ -488,9 +491,9 @@ export default function QuestionnaireScreen() {
                               set('_showCity', false);
                             }}
                           >
-                            <Text style={[styles.dropdownItemText, form.city === fullCity && styles.dropdownItemTextSelected]}>
+                            <AppText style={[styles.dropdownItemText, form.city === fullCity && styles.dropdownItemTextSelected]}>
                               {city}
-                            </Text>
+                            </AppText>
                           </TouchableOpacity>
                         );
                       })}
@@ -500,10 +503,10 @@ export default function QuestionnaireScreen() {
               </>
             )}
             {form.city ? (
-              <Text style={styles.selectedCity}>📍 {form.city}</Text>
+              <AppText style={styles.selectedCity}>📍 {form.city}</AppText>
             ) : null}
 
-            <Text style={styles.label}>자기소개 (선택)</Text>
+            <AppText style={styles.label}>자기소개 (선택)</AppText>
             <TextInput style={[styles.input, styles.textArea]} value={form.bio} onChangeText={v => set('bio', v)}
               placeholder="간단한 자기소개를 작성해주세요" multiline numberOfLines={4}
               textAlignVertical="top" placeholderTextColor={C.sub} />
@@ -514,11 +517,11 @@ export default function QuestionnaireScreen() {
       case 1:
         return (
           <>
-            <Text style={styles.stepTitle}>성격 & 감성</Text>
-            <Text style={styles.stepSub}>나는 어떤 사람인가요?</Text>
+            <AppText style={styles.stepTitle}>성격 & 감성</AppText>
+            <AppText style={styles.stepSub}>나는 어떤 사람인가요?</AppText>
 
             {/* Q1. 성격 유형 */}
-            <Text style={styles.qLabel}>평소 나는...</Text>
+            <AppText style={styles.qLabel}>평소 나는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'introvert', emoji: '🌿', label: '혼자 있을 때 에너지가 충전돼요' },
@@ -530,16 +533,16 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.personality_type === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('personality_type', o.value)}
                 >
-                  <Text style={styles.sentenceEmoji}>{o.emoji}</Text>
-                  <Text style={[styles.sentenceText, form.personality_type === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={styles.sentenceEmoji}>{o.emoji}</AppText>
+                  <AppText style={[styles.sentenceText, form.personality_type === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q2. 감정 표현 */}
-            <Text style={styles.qLabel}>힘들거나 속상한 일이 생기면, 나는...</Text>
+            <AppText style={styles.qLabel}>힘들거나 속상한 일이 생기면, 나는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'suppress',      label: '혼자 조용히 생각을 정리해요' },
@@ -551,15 +554,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.emotional_expression === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('emotional_expression', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.emotional_expression === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.emotional_expression === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q3. 대화 스타일 */}
-            <Text style={styles.qLabel}>누군가와 이야기할 때 나는...</Text>
+            <AppText style={styles.qLabel}>누군가와 이야기할 때 나는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'listener', label: '주로 들어주는 역할이 편해요' },
@@ -571,15 +574,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.communication_style === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('communication_style', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.communication_style === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.communication_style === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q4. 갈등 스타일 */}
-            <Text style={styles.qLabel}>의견이 맞지 않을 때, 나는...</Text>
+            <AppText style={styles.qLabel}>의견이 맞지 않을 때, 나는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'space',       label: '잠시 시간을 두고 나서 이야기하는 편이에요' },
@@ -591,15 +594,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.conflict_style === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('conflict_style', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.conflict_style === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.conflict_style === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q5. 새로운 만남 */}
-            <Text style={styles.qLabel}>새로운 사람을 사귀는 건...</Text>
+            <AppText style={styles.qLabel}>새로운 사람을 사귀는 건...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'rarely',     label: '낯설고 조금 어렵게 느껴져요' },
@@ -611,9 +614,9 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.social_frequency === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('social_frequency', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.social_frequency === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.social_frequency === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -624,11 +627,11 @@ export default function QuestionnaireScreen() {
       case 2:
         return (
           <>
-            <Text style={styles.stepTitle}>일상 & 생활 습관</Text>
-            <Text style={styles.stepSub}>평소 생활 방식을 알려주세요</Text>
+            <AppText style={styles.stepTitle}>일상 & 생활 습관</AppText>
+            <AppText style={styles.stepSub}>평소 생활 방식을 알려주세요</AppText>
 
             {/* Q1. 아침형/저녁형 */}
-            <Text style={styles.qLabel}>나는...</Text>
+            <AppText style={styles.qLabel}>나는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'morning',  emoji: '🌅', label: '일찍 자고 일찍 일어나요 (아침형)' },
@@ -640,16 +643,16 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.chronotype === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('chronotype', o.value)}
                 >
-                  <Text style={styles.sentenceEmoji}>{o.emoji}</Text>
-                  <Text style={[styles.sentenceText, form.chronotype === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={styles.sentenceEmoji}>{o.emoji}</AppText>
+                  <AppText style={[styles.sentenceText, form.chronotype === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q2. 쉬는 날 */}
-            <Text style={styles.qLabel}>쉬는 날에는 주로...</Text>
+            <AppText style={styles.qLabel}>쉬는 날에는 주로...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'home',      label: '집에서 조용히 쉬는 게 좋아요' },
@@ -661,15 +664,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.rest_style === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('rest_style', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.rest_style === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.rest_style === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q3. 운동 */}
-            <Text style={styles.qLabel}>운동은...</Text>
+            <AppText style={styles.qLabel}>운동은...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'never',     label: '거의 안 해요' },
@@ -682,15 +685,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.exercise_frequency === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('exercise_frequency', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.exercise_frequency === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.exercise_frequency === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q4. 식사 */}
-            <Text style={styles.qLabel}>식사는...</Text>
+            <AppText style={styles.qLabel}>식사는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'regular',   label: '규칙적으로 꼭 챙겨 먹어요' },
@@ -703,15 +706,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.meal_style === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('meal_style', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.meal_style === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.meal_style === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q5. 흡연 */}
-            <Text style={styles.qLabel}>흡연은...</Text>
+            <AppText style={styles.qLabel}>흡연은...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'never',        label: '담배를 피운 적 없어요' },
@@ -724,15 +727,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.smoking === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('smoking', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.smoking === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.smoking === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q6. 음주 */}
-            <Text style={styles.qLabel}>술자리는...</Text>
+            <AppText style={styles.qLabel}>술자리는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'never',    label: '거의 안 마셔요' },
@@ -745,9 +748,9 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.drinking === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('drinking', o.value)}
                 >
-                  <Text style={[styles.sentenceText, form.drinking === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.drinking === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -758,9 +761,9 @@ export default function QuestionnaireScreen() {
       case 3:
         return (
           <>
-            <Text style={styles.stepTitle}>취미 & 관심사</Text>
-            <Text style={styles.stepSub}>즐기는 활동을 모두 골라주세요</Text>
-            <Text style={styles.qLabel}>여가 시간에 나는...</Text>
+            <AppText style={styles.stepTitle}>취미 & 관심사</AppText>
+            <AppText style={styles.stepSub}>즐기는 활동을 모두 골라주세요</AppText>
+            <AppText style={styles.qLabel}>여가 시간에 나는...</AppText>
             <ChipGroup options={HOBBIES} selected={form.hobbies} onToggle={toggleHobby} />
           </>
         );
@@ -769,11 +772,11 @@ export default function QuestionnaireScreen() {
       case 4:
         return (
           <>
-            <Text style={styles.stepTitle}>가족 & 주변 상황</Text>
-            <Text style={styles.stepSub}>현재 가족 구성을 알려주세요</Text>
+            <AppText style={styles.stepTitle}>가족 & 주변 상황</AppText>
+            <AppText style={styles.stepSub}>현재 가족 구성을 알려주세요</AppText>
 
             {/* Q1. 자녀 여부 */}
-            <Text style={styles.qLabel}>자녀에 대해서는...</Text>
+            <AppText style={styles.qLabel}>자녀에 대해서는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { val: true,  label: '자녀가 있어요' },
@@ -784,9 +787,9 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.has_children === o.val && styles.sentenceOptionSelected]}
                   onPress={() => set('has_children', o.val)}
                 >
-                  <Text style={[styles.sentenceText, form.has_children === o.val && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.has_children === o.val && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -794,7 +797,7 @@ export default function QuestionnaireScreen() {
             {/* Q2. 동거 여부 (조건부) */}
             {form.has_children === true && (
               <>
-                <Text style={styles.qLabel}>자녀와의 생활은...</Text>
+                <AppText style={styles.qLabel}>자녀와의 생활은...</AppText>
                 <View style={styles.sentenceRow}>
                   {[
                     { val: true,  label: '자녀와 함께 살고 있어요' },
@@ -805,9 +808,9 @@ export default function QuestionnaireScreen() {
                       style={[styles.sentenceOption, form.children_living_together === o.val && styles.sentenceOptionSelected]}
                       onPress={() => set('children_living_together', o.val)}
                     >
-                      <Text style={[styles.sentenceText, form.children_living_together === o.val && styles.sentenceTextSelected]}>
+                      <AppText style={[styles.sentenceText, form.children_living_together === o.val && styles.sentenceTextSelected]}>
                         {o.label}
-                      </Text>
+                      </AppText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -815,7 +818,7 @@ export default function QuestionnaireScreen() {
             )}
 
             {/* Q3. 추가 자녀 */}
-            <Text style={styles.qLabel}>앞으로 자녀를 더 원하시나요?</Text>
+            <AppText style={styles.qLabel}>앞으로 자녀를 더 원하시나요?</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { val: true,  label: '원해요' },
@@ -826,15 +829,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.wants_more_children === o.val && styles.sentenceOptionSelected]}
                   onPress={() => set('wants_more_children', o.val)}
                 >
-                  <Text style={[styles.sentenceText, form.wants_more_children === o.val && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.wants_more_children === o.val && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q4. 이사 의향 */}
-            <Text style={styles.qLabel}>상대방이 다른 지역에 산다면...</Text>
+            <AppText style={styles.qLabel}>상대방이 다른 지역에 산다면...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { val: true,  label: '이사도 괜찮아요' },
@@ -845,15 +848,15 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.willing_to_relocate === o.val && styles.sentenceOptionSelected]}
                   onPress={() => set('willing_to_relocate', o.val)}
                 >
-                  <Text style={[styles.sentenceText, form.willing_to_relocate === o.val && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.willing_to_relocate === o.val && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q5. 반려동물 여부 */}
-            <Text style={styles.qLabel}>반려동물은...</Text>
+            <AppText style={styles.qLabel}>반려동물은...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { val: true,  label: '반려동물과 함께 살고 있어요' },
@@ -864,9 +867,9 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.has_pet === o.val && styles.sentenceOptionSelected]}
                   onPress={() => set('has_pet', o.val)}
                 >
-                  <Text style={[styles.sentenceText, form.has_pet === o.val && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.has_pet === o.val && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -874,7 +877,7 @@ export default function QuestionnaireScreen() {
             {/* Q6. 반려동물 종류 (조건부) */}
             {form.has_pet === true && (
               <>
-                <Text style={styles.qLabel}>어떤 반려동물을 키우시나요?</Text>
+                <AppText style={styles.qLabel}>어떤 반려동물을 키우시나요?</AppText>
                 <View style={styles.sentenceRow}>
                   {[
                     { value: 'dog',   label: '강아지' },
@@ -887,9 +890,9 @@ export default function QuestionnaireScreen() {
                       style={[styles.sentenceOption, form.pet_type === o.value && styles.sentenceOptionSelected]}
                       onPress={() => set('pet_type', o.value)}
                     >
-                      <Text style={[styles.sentenceText, form.pet_type === o.value && styles.sentenceTextSelected]}>
+                      <AppText style={[styles.sentenceText, form.pet_type === o.value && styles.sentenceTextSelected]}>
                         {o.label}
-                      </Text>
+                      </AppText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -897,7 +900,7 @@ export default function QuestionnaireScreen() {
             )}
 
             {/* Q7. 상대방 반려동물 수용 여부 */}
-            <Text style={styles.qLabel}>상대방의 반려동물은...</Text>
+            <AppText style={styles.qLabel}>상대방의 반려동물은...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { val: true,  label: '반려동물이 있어도 괜찮아요' },
@@ -908,9 +911,9 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.pet_friendly === o.val && styles.sentenceOptionSelected]}
                   onPress={() => set('pet_friendly', o.val)}
                 >
-                  <Text style={[styles.sentenceText, form.pet_friendly === o.val && styles.sentenceTextSelected]}>
+                  <AppText style={[styles.sentenceText, form.pet_friendly === o.val && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -921,11 +924,11 @@ export default function QuestionnaireScreen() {
       case 5:
         return (
           <>
-            <Text style={styles.stepTitle}>관계 & 가치관</Text>
-            <Text style={styles.stepSub}>어떤 만남을 원하시나요?</Text>
+            <AppText style={styles.stepTitle}>관계 & 가치관</AppText>
+            <AppText style={styles.stepSub}>어떤 만남을 원하시나요?</AppText>
 
             {/* Q1. 관계 목표 */}
-            <Text style={styles.qLabel}>저는 이런 만남을 원해요...</Text>
+            <AppText style={styles.qLabel}>저는 이런 만남을 원해요...</AppText>
             {[
               { value: 'marriage',      emoji: '💍', label: '결혼을 진지하게 생각하고 있어요' },
               { value: 'companionship', emoji: '🌿', label: '함께하는 삶의 동반자를 찾고 있어요' },
@@ -937,19 +940,19 @@ export default function QuestionnaireScreen() {
                 style={[styles.relationOption, form.relationship_goal === o.value && styles.relationOptionSelected]}
                 onPress={() => set('relationship_goal', o.value)}
               >
-                <Text style={styles.relationEmoji}>{o.emoji}</Text>
-                <Text style={[styles.relationText, form.relationship_goal === o.value && styles.relationTextSelected]}>
+                <AppText style={styles.relationEmoji}>{o.emoji}</AppText>
+                <AppText style={[styles.relationText, form.relationship_goal === o.value && styles.relationTextSelected]}>
                   {o.label}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
 
             {/* Q2. 가족 중요도 */}
-            <Text style={[styles.qLabel, { marginTop: 8 }]}>가족은 내 삶에서...</Text>
+            <AppText style={[styles.qLabel, { marginTop: 8 }]}>가족은 내 삶에서...</AppText>
             <View style={styles.importanceScale}>
-              <Text style={styles.importanceScaleLabel}>크게 중요하지 않아요</Text>
+              <AppText style={styles.importanceScaleLabel}>크게 중요하지 않아요</AppText>
               <ImportanceRow value={form.family_importance} onChange={v => set('family_importance', v)} />
-              <Text style={[styles.importanceScaleLabel, { textAlign: 'right' }]}>매우 소중하고 중요해요</Text>
+              <AppText style={[styles.importanceScaleLabel, { textAlign: 'right' }]}>매우 소중하고 중요해요</AppText>
             </View>
           </>
         );
@@ -958,11 +961,11 @@ export default function QuestionnaireScreen() {
       case 6:
         return (
           <>
-            <Text style={styles.stepTitle}>종교 & 신념</Text>
-            <Text style={styles.stepSub}>신앙에 대해 솔직하게 알려주세요</Text>
+            <AppText style={styles.stepTitle}>종교 & 신념</AppText>
+            <AppText style={styles.stepSub}>신앙에 대해 솔직하게 알려주세요</AppText>
 
             {/* Q1. 종교 */}
-            <Text style={styles.qLabel}>신앙에 대해서는...</Text>
+            <AppText style={styles.qLabel}>신앙에 대해서는...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'none',         emoji: '🍃', label: '특별한 종교가 없어요 (무교)' },
@@ -976,20 +979,20 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.religion === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('religion', o.value)}
                 >
-                  <Text style={styles.sentenceEmoji}>{o.emoji}</Text>
-                  <Text style={[styles.sentenceText, form.religion === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={styles.sentenceEmoji}>{o.emoji}</AppText>
+                  <AppText style={[styles.sentenceText, form.religion === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q2. 종교 중요도 */}
-            <Text style={[styles.qLabel, { marginTop: 8 }]}>상대방의 종교는...</Text>
+            <AppText style={[styles.qLabel, { marginTop: 8 }]}>상대방의 종교는...</AppText>
             <View style={styles.importanceScale}>
-              <Text style={styles.importanceScaleLabel}>전혀 상관없어요</Text>
+              <AppText style={styles.importanceScaleLabel}>전혀 상관없어요</AppText>
               <ImportanceRow value={form.religion_importance} onChange={v => set('religion_importance', v)} />
-              <Text style={[styles.importanceScaleLabel, { textAlign: 'right' }]}>꼭 맞아야 해요</Text>
+              <AppText style={[styles.importanceScaleLabel, { textAlign: 'right' }]}>꼭 맞아야 해요</AppText>
             </View>
           </>
         );
@@ -998,11 +1001,11 @@ export default function QuestionnaireScreen() {
       case 7:
         return (
           <>
-            <Text style={styles.stepTitle}>현실 조건</Text>
-            <Text style={styles.stepSub}>솔직한 답변이 더 정확한 매칭을 만들어요</Text>
+            <AppText style={styles.stepTitle}>현실 조건</AppText>
+            <AppText style={styles.stepSub}>솔직한 답변이 더 정확한 매칭을 만들어요</AppText>
 
             {/* Q1. 건강 상태 */}
-            <Text style={styles.qLabel}>건강은...</Text>
+            <AppText style={styles.qLabel}>건강은...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'excellent', emoji: '💪', label: '매우 건강해요, 자신 있어요' },
@@ -1015,16 +1018,16 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.health_status === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('health_status', o.value)}
                 >
-                  <Text style={styles.sentenceEmoji}>{o.emoji}</Text>
-                  <Text style={[styles.sentenceText, form.health_status === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={styles.sentenceEmoji}>{o.emoji}</AppText>
+                  <AppText style={[styles.sentenceText, form.health_status === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q2. 재정 상황 */}
-            <Text style={styles.qLabel}>생활은...</Text>
+            <AppText style={styles.qLabel}>생활은...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'stable',      emoji: '🏠', label: '큰 걱정 없이 안정적으로 지내고 있어요' },
@@ -1036,16 +1039,16 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.financial_stability === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('financial_stability', o.value)}
                 >
-                  <Text style={styles.sentenceEmoji}>{o.emoji}</Text>
-                  <Text style={[styles.sentenceText, form.financial_stability === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={styles.sentenceEmoji}>{o.emoji}</AppText>
+                  <AppText style={[styles.sentenceText, form.financial_stability === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q3. 거주 형태 */}
-            <Text style={styles.qLabel}>지금 사는 곳은...</Text>
+            <AppText style={styles.qLabel}>지금 사는 곳은...</AppText>
             <View style={styles.sentenceRow}>
               {[
                 { value: 'alone',         emoji: '🏡', label: '혼자 살고 있어요' },
@@ -1058,27 +1061,27 @@ export default function QuestionnaireScreen() {
                   style={[styles.sentenceOption, form.living_situation === o.value && styles.sentenceOptionSelected]}
                   onPress={() => set('living_situation', o.value)}
                 >
-                  <Text style={styles.sentenceEmoji}>{o.emoji}</Text>
-                  <Text style={[styles.sentenceText, form.living_situation === o.value && styles.sentenceTextSelected]}>
+                  <AppText style={styles.sentenceEmoji}>{o.emoji}</AppText>
+                  <AppText style={[styles.sentenceText, form.living_situation === o.value && styles.sentenceTextSelected]}>
                     {o.label}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Q4. 희망 나이 */}
-            <Text style={styles.qLabel}>만나고 싶은 상대방의 나이는...</Text>
+            <AppText style={styles.qLabel}>만나고 싶은 상대방의 나이는...</AppText>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.ageInputLabel}>최소 나이</Text>
+                <AppText style={styles.ageInputLabel}>최소 나이</AppText>
                 <TextInput style={styles.ageInput} value={form.age_min} onChangeText={v => set('age_min', v)}
                   placeholder="예: 55" keyboardType="numeric" maxLength={3} placeholderTextColor={C.sub} />
               </View>
               <View style={styles.ageSeparator}>
-                <Text style={styles.ageSeparatorText}>~</Text>
+                <AppText style={styles.ageSeparatorText}>~</AppText>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.ageInputLabel}>최대 나이</Text>
+                <AppText style={styles.ageInputLabel}>최대 나이</AppText>
                 <TextInput style={styles.ageInput} value={form.age_max} onChangeText={v => set('age_max', v)}
                   placeholder="예: 70" keyboardType="numeric" maxLength={3} placeholderTextColor={C.sub} />
               </View>
@@ -1086,8 +1089,8 @@ export default function QuestionnaireScreen() {
 
             {!isEditMode && (
               <View style={styles.completeBanner}>
-                <Text style={styles.completeBannerText}>🎉 거의 다 됐어요!</Text>
-                <Text style={styles.completeBannerSub}>완료하면 나와 잘 맞는 분을 찾아드릴게요.</Text>
+                <AppText style={styles.completeBannerText}>🎉 거의 다 됐어요!</AppText>
+                <AppText style={styles.completeBannerSub}>완료하면 나와 잘 맞는 분을 찾아드릴게요.</AppText>
               </View>
             )}
           </>
@@ -1109,15 +1112,15 @@ export default function QuestionnaireScreen() {
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
-          <Text style={styles.stepCount}>{step + 1} / {STEPS.length} — {STEPS[step]}</Text>
+          <AppText style={styles.stepCount}>{step + 1} / {STEPS.length} — {STEPS[step]}</AppText>
         </>
       )}
 
       {/* 수정 모드 헤더 */}
       {isEditMode && (
         <View style={styles.editHeader}>
-          <Text style={styles.editHeaderTitle}>가치관 수정</Text>
-          <Text style={styles.editHeaderSub}>{step + 1}/{STEPS.length} · {STEPS[step]}</Text>
+          <AppText style={styles.editHeaderTitle}>가치관 수정</AppText>
+          <AppText style={styles.editHeaderSub}>{step + 1}/{STEPS.length} · {STEPS[step]}</AppText>
         </View>
       )}
 
@@ -1129,13 +1132,13 @@ export default function QuestionnaireScreen() {
       <View style={styles.navRow}>
         {step > 0 && (
           <TouchableOpacity style={styles.backBtn} onPress={back}>
-            <Text style={styles.backBtnText}>← 이전</Text>
+            <AppText style={styles.backBtnText}>← 이전</AppText>
           </TouchableOpacity>
         )}
         <View style={{ flex: 1 }} />
         {!isLastStep ? (
           <TouchableOpacity style={styles.nextBtn} onPress={next}>
-            <Text style={styles.nextBtnText}>다음 →</Text>
+            <AppText style={styles.nextBtnText}>다음 →</AppText>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -1145,9 +1148,9 @@ export default function QuestionnaireScreen() {
           >
             {saving
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.nextBtnText}>
+              : <AppText style={styles.nextBtnText}>
                   {isEditMode ? `수정 완료 (1 크레딧)` : '완료 & 매칭 시작'}
-                </Text>
+                </AppText>
             }
           </TouchableOpacity>
         )}

@@ -44,6 +44,13 @@ interface AuthState {
   setPhoneVerified: (verified: boolean) => Promise<void>;
 }
 
+// 토큰 자동 갱신 시 AsyncStorage도 업데이트 (한 번만 등록)
+supabase.auth.onAuthStateChange(async (_event, session) => {
+  if (session?.access_token) {
+    await AsyncStorage.setItem('access_token', session.access_token).catch(() => {});
+  }
+});
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   profile: undefined,
@@ -100,13 +107,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       set({ isLoading: false });
     }
-
-    // 토큰 자동 갱신 시 AsyncStorage도 업데이트
-    supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.access_token) {
-        await AsyncStorage.setItem('access_token', session.access_token).catch(() => {});
-      }
-    });
   },
 
   // ── 크레딧 ───────────────────────────────────────────────
@@ -118,7 +118,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // 서버 실패 시 로컬 폴백
       const raw = await AsyncStorage.getItem(CREDITS_KEY);
-      set({ credits: raw !== null ? parseInt(raw, 10) : DEFAULT_CREDITS });
+      const parsed = raw !== null ? parseInt(raw, 10) : DEFAULT_CREDITS;
+      set({ credits: Number.isNaN(parsed) ? DEFAULT_CREDITS : parsed });
     }
   },
 

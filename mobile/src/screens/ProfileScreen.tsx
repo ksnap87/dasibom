@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, ActivityIndicator, Alert, Image, Switch, Linking,
   Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback,
 } from 'react-native';
+import AppText from '../components/AppText';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,6 +16,7 @@ import {
   deletePhoto, setProfilePhoto, setBackgroundPhoto, updateMyProfile,
 } from '../api/client';
 import { useAuthStore } from '../store/authStore';
+import { useFontStore } from '../store/fontStore';
 import { Profile, RootStackParamList } from '../types';
 import {
   PERSONALITY_QA, DAILY_LIFE_QA, FAMILY_QA, RELATIONSHIP_QA,
@@ -40,7 +42,7 @@ const PREVIEW_QUESTION_OPTIONS: { field: string; label: string; icon: string }[]
   { field: 'conflict_style', label: '갈등 해결 방식', icon: '🤝' },
 ];
 
-const DEFAULT_PREVIEW_QUESTIONS = ['relationship_goal', 'religion', 'smoking', 'drinking', 'family_importance'];
+const DEFAULT_PREVIEW_QUESTIONS = ['relationship_goal', 'religion', 'smoking', 'drinking', 'family_importance', 'personality_type', 'health_status'];
 
 const REQUIRED_CONDITION_OPTIONS: { key: string; label: string }[] = [
   // 생활습관
@@ -121,8 +123,8 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+      <AppText style={styles.rowLabel}>{label}</AppText>
+      <AppText style={styles.rowValue}>{value}</AppText>
     </View>
   );
 }
@@ -132,8 +134,8 @@ function QARow({ qa, profile }: { qa: QAItem; profile: any }) {
   if (!answer) return null;
   return (
     <View style={styles.qaRow}>
-      <Text style={styles.qaQuestion}>Q. {qa.question}</Text>
-      <Text style={styles.qaAnswer}>{answer}</Text>
+      <AppText style={styles.qaQuestion}>Q. {qa.question}</AppText>
+      <AppText style={styles.qaAnswer}>{answer}</AppText>
     </View>
   );
 }
@@ -146,7 +148,7 @@ function QASection({ title, icon, qaList, profile }: {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{icon} {title}</Text>
+        <AppText style={styles.sectionTitle}>{icon} {title}</AppText>
       </View>
       {qaList.map(qa => <QARow key={qa.field} qa={qa} profile={profile} />)}
     </View>
@@ -171,20 +173,19 @@ function SettingsSection() {
   const [pushVibrate, setPushVibrate] = useState(true);
   const [showAge, setShowAge] = useState(true);
   const [showCity, setShowCity] = useState(true);
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('small');
+  const { level: fontSize, setFontSize: setGlobalFontSize } = useFontStore();
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        const [pm, pmsg, ps, pv, sa, sc, lt] = await Promise.all([
+        const [pm, pmsg, ps, pv, sa, sc] = await Promise.all([
           AsyncStorage.getItem(SETTINGS_KEYS.pushMatch),
           AsyncStorage.getItem(SETTINGS_KEYS.pushMessage),
           AsyncStorage.getItem(SETTINGS_KEYS.pushSound),
           AsyncStorage.getItem(SETTINGS_KEYS.pushVibrate),
           AsyncStorage.getItem(SETTINGS_KEYS.showAge),
           AsyncStorage.getItem(SETTINGS_KEYS.showCity),
-          AsyncStorage.getItem(SETTINGS_KEYS.largeText),
         ]);
         if (pm !== null) setPushMatch(pm !== 'false');
         if (pmsg !== null) setPushMessage(pmsg !== 'false');
@@ -192,7 +193,6 @@ function SettingsSection() {
         if (pv !== null) setPushVibrate(pv !== 'false');
         if (sa !== null) setShowAge(sa !== 'false');
         if (sc !== null) setShowCity(sc !== 'false');
-        if (lt !== null && (lt === 'small' || lt === 'medium' || lt === 'large')) setFontSize(lt);
       } catch {}
       setLoaded(true);
     })();
@@ -209,12 +209,12 @@ function SettingsSection() {
     <>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🔔 알림 설정</Text>
+          <AppText style={styles.sectionTitle}>🔔 알림 설정</AppText>
         </View>
         <View style={styles.settingRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.settingRowLabel}>매칭 알림</Text>
-            <Text style={styles.settingRowSub}>새로운 매칭 시 알림</Text>
+            <AppText style={styles.settingRowLabel}>매칭 알림</AppText>
+            <AppText style={styles.settingRowSub}>새로운 매칭 시 알림</AppText>
           </View>
           <Switch
             value={pushMatch}
@@ -225,8 +225,8 @@ function SettingsSection() {
         </View>
         <View style={styles.settingRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.settingRowLabel}>메시지 알림</Text>
-            <Text style={styles.settingRowSub}>새 메시지 수신 시 알림</Text>
+            <AppText style={styles.settingRowLabel}>메시지 알림</AppText>
+            <AppText style={styles.settingRowSub}>새 메시지 수신 시 알림</AppText>
           </View>
           <Switch
             value={pushMessage}
@@ -237,8 +237,8 @@ function SettingsSection() {
         </View>
         <View style={styles.settingRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.settingRowLabel}>알림 소리</Text>
-            <Text style={styles.settingRowSub}>알림 수신 시 소리</Text>
+            <AppText style={styles.settingRowLabel}>알림 소리</AppText>
+            <AppText style={styles.settingRowSub}>알림 수신 시 소리</AppText>
           </View>
           <Switch
             value={pushSound}
@@ -249,8 +249,8 @@ function SettingsSection() {
         </View>
         <View style={styles.settingRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.settingRowLabel}>알림 진동</Text>
-            <Text style={styles.settingRowSub}>알림 수신 시 진동</Text>
+            <AppText style={styles.settingRowLabel}>알림 진동</AppText>
+            <AppText style={styles.settingRowSub}>알림 수신 시 진동</AppText>
           </View>
           <Switch
             value={pushVibrate}
@@ -263,12 +263,12 @@ function SettingsSection() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🔒 공개 설정</Text>
+          <AppText style={styles.sectionTitle}>🔒 공개 설정</AppText>
         </View>
         <View style={styles.settingRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.settingRowLabel}>나이 공개</Text>
-            <Text style={styles.settingRowSub}>추천 카드에 나이 표시</Text>
+            <AppText style={styles.settingRowLabel}>나이 공개</AppText>
+            <AppText style={styles.settingRowSub}>추천 카드에 나이 표시</AppText>
           </View>
           <Switch
             value={showAge}
@@ -279,8 +279,8 @@ function SettingsSection() {
         </View>
         <View style={styles.settingRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.settingRowLabel}>지역 공개</Text>
-            <Text style={styles.settingRowSub}>추천 카드에 지역 표시</Text>
+            <AppText style={styles.settingRowLabel}>지역 공개</AppText>
+            <AppText style={styles.settingRowSub}>추천 카드에 지역 표시</AppText>
           </View>
           <Switch
             value={showCity}
@@ -293,9 +293,9 @@ function SettingsSection() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{'👁️'} 접근성</Text>
+          <AppText style={styles.sectionTitle}>{'👁️'} 접근성</AppText>
         </View>
-        <Text style={styles.settingRowLabel}>글씨 크기</Text>
+        <AppText style={styles.settingRowLabel}>글씨 크기</AppText>
         <View style={styles.fontSizeRow}>
           {([
             { label: '기본', value: 'small' as const, sample: 14 },
@@ -308,16 +308,15 @@ function SettingsSection() {
                 key={opt.value}
                 style={[styles.fontSizeBtn, isActive && styles.fontSizeBtnActive]}
                 onPress={() => {
-                  setFontSize(opt.value);
-                  AsyncStorage.setItem(SETTINGS_KEYS.largeText, opt.value);
+                  setGlobalFontSize(opt.value);
                 }}
               >
-                <Text style={[
+                <AppText style={[
                   styles.fontSizeBtnText,
                   isActive && styles.fontSizeBtnTextActive,
                   { fontSize: opt.sample },
-                ]}>가</Text>
-                <Text style={[styles.fontSizeLabel, isActive && styles.fontSizeLabelActive]}>{opt.label}</Text>
+                ]}>가</AppText>
+                <AppText style={[styles.fontSizeLabel, isActive && styles.fontSizeLabelActive]}>{opt.label}</AppText>
               </TouchableOpacity>
             );
           })}
@@ -333,10 +332,10 @@ function Section({ title, children, onEdit }: {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <AppText style={styles.sectionTitle}>{title}</AppText>
         {onEdit && (
           <TouchableOpacity onPress={onEdit} style={styles.sectionEditBtn}>
-            <Text style={styles.sectionEditText}>수정</Text>
+            <AppText style={styles.sectionEditText}>수정</AppText>
           </TouchableOpacity>
         )}
       </View>
@@ -379,7 +378,7 @@ export default function ProfileScreen() {
   const [draftRequiredConditions, setDraftRequiredConditions] = useState<string[]>([]);
   const [requiredDirty, setRequiredDirty] = useState(false);
 
-  const [maxPreviewQuestions, setMaxPreviewQuestions] = useState(5);
+  const [maxPreviewQuestions, setMaxPreviewQuestions] = useState(7);
   const [maxConditions, setMaxConditions] = useState(3);
   const { signOut, setProfile: setStoreProfile, credits, deductCredit, loadCredits, phoneVerified, loadPhoneVerified } = useAuthStore();
 
@@ -701,7 +700,7 @@ export default function ProfileScreen() {
   if (!profile) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyText}>프로필이 없습니다.</Text>
+        <AppText style={styles.emptyText}>프로필이 없습니다.</AppText>
       </View>
     );
   }
@@ -719,36 +718,36 @@ export default function ProfileScreen() {
         {/* 크레딧 배너 */}
         <View style={styles.creditBanner}>
           <View style={styles.creditLeft}>
-            <Text style={styles.creditIcon}>💎</Text>
+            <AppText style={styles.creditIcon}>💎</AppText>
             <View>
-              <Text style={styles.creditLabel}>보유 크레딧</Text>
-              <Text style={styles.creditValue}>{credits}개</Text>
+              <AppText style={styles.creditLabel}>보유 크레딧</AppText>
+              <AppText style={styles.creditValue}>{credits}개</AppText>
             </View>
           </View>
           <TouchableOpacity style={styles.creditBuyBtn} onPress={() => nav.navigate('CreditStore')}>
-            <Text style={styles.creditBuyText}>충전하기</Text>
+            <AppText style={styles.creditBuyText}>충전하기</AppText>
           </TouchableOpacity>
         </View>
 
         {/* 본인인증 배너 (미인증 시) */}
         {!phoneVerified && (
           <View style={styles.verifyBanner}>
-            <Text style={styles.verifyIcon}>📱</Text>
+            <AppText style={styles.verifyIcon}>📱</AppText>
             <View style={{ flex: 1 }}>
-              <Text style={styles.verifyTitle}>본인인증이 필요합니다</Text>
-              <Text style={styles.verifySub}>채팅을 시작하려면 휴대폰 인증이 필요해요</Text>
+              <AppText style={styles.verifyTitle}>본인인증이 필요합니다</AppText>
+              <AppText style={styles.verifySub}>채팅을 시작하려면 휴대폰 인증이 필요해요</AppText>
             </View>
             <View style={styles.verifyBadge}>
-              <Text style={styles.verifyBadgeText}>미인증</Text>
+              <AppText style={styles.verifyBadgeText}>미인증</AppText>
             </View>
           </View>
         )}
         {phoneVerified && (
           <View style={[styles.verifyBanner, { borderColor: C.success, backgroundColor: '#E8F5E9' }]}>
-            <Text style={styles.verifyIcon}>✅</Text>
+            <AppText style={styles.verifyIcon}>✅</AppText>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.verifyTitle, { color: C.success }]}>본인인증 완료</Text>
-              <Text style={styles.verifySub}>채팅 기능이 활성화되었습니다</Text>
+              <AppText style={[styles.verifyTitle, { color: C.success }]}>본인인증 완료</AppText>
+              <AppText style={styles.verifySub}>채팅 기능이 활성화되었습니다</AppText>
             </View>
           </View>
         )}
@@ -769,20 +768,20 @@ export default function ProfileScreen() {
                 <Image source={{ uri: profile.photo_url }} style={styles.bigPhoto} />
               ) : (
                 <View style={styles.bigAvatar}>
-                  <Text style={styles.bigAvatarText}>{profile.name.charAt(0)}</Text>
+                  <AppText style={styles.bigAvatarText}>{profile.name.charAt(0)}</AppText>
                 </View>
               )}
               <View style={styles.cameraBtn}>
                 {uploading
                   ? <ActivityIndicator size="small" color="#FFF" />
-                  : <Text style={styles.cameraBtnText}>📷</Text>
+                  : <AppText style={styles.cameraBtnText}>📷</AppText>
                 }
               </View>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.heroName}>{profile.name}</Text>
-          <Text style={styles.heroSub}>{age}세 · {profile.city}</Text>
+          <AppText style={styles.heroName}>{profile.name}</AppText>
+          <AppText style={styles.heroSub}>{age}세 · {profile.city}</AppText>
 
           {/* 자기소개 (100자) */}
           {editingBio ? (
@@ -796,25 +795,25 @@ export default function ProfileScreen() {
                 placeholder="자기소개를 입력해주세요"
                 placeholderTextColor="#BBB"
               />
-              <Text style={styles.bioCount}>{bioText.length}/100</Text>
+              <AppText style={styles.bioCount}>{bioText.length}/100</AppText>
               <View style={styles.bioActions}>
                 <TouchableOpacity onPress={() => { setEditingBio(false); setBioText(profile.bio || ''); }}>
-                  <Text style={styles.bioCancelText}>취소</Text>
+                  <AppText style={styles.bioCancelText}>취소</AppText>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleSaveBio} disabled={savingBio}>
                   {savingBio ? (
                     <ActivityIndicator size="small" color={C.primary} />
                   ) : (
-                    <Text style={styles.bioSaveText}>저장</Text>
+                    <AppText style={styles.bioSaveText}>저장</AppText>
                   )}
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
             <TouchableOpacity onPress={() => setEditingBio(true)} style={styles.bioTouchable}>
-              <Text style={styles.heroBio}>
+              <AppText style={styles.heroBio}>
                 {profile.bio || '자기소개를 작성해보세요 ✏️'}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           )}
         </View>
@@ -822,8 +821,8 @@ export default function ProfileScreen() {
         {/* 사진 갤러리 (최대 5장) */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>📸 내 사진</Text>
-            <Text style={styles.sectionBadge}>{photos.length}/5</Text>
+            <AppText style={styles.sectionTitle}>📸 내 사진</AppText>
+            <AppText style={styles.sectionBadge}>{photos.length}/5</AppText>
           </View>
           <View style={styles.photoGrid}>
             {photos.map(photo => {
@@ -839,12 +838,12 @@ export default function ProfileScreen() {
                   <Image source={{ uri: photo.url }} style={styles.photoThumb} />
                   {isProfile && (
                     <View style={styles.photoBadge}>
-                      <Text style={styles.photoBadgeText}>대표</Text>
+                      <AppText style={styles.photoBadgeText}>대표</AppText>
                     </View>
                   )}
                   {isBg && (
                     <View style={[styles.photoBadge, { backgroundColor: C.muted }]}>
-                      <Text style={styles.photoBadgeText}>배경</Text>
+                      <AppText style={styles.photoBadgeText}>배경</AppText>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -855,16 +854,16 @@ export default function ProfileScreen() {
                 {uploading ? (
                   <ActivityIndicator size="small" color={C.primary} />
                 ) : (
-                  <Text style={styles.photoAddText}>+</Text>
+                  <AppText style={styles.photoAddText}>+</AppText>
                 )}
               </TouchableOpacity>
             )}
           </View>
           {photos.length === 0 && (
             <TouchableOpacity style={styles.photoEmptyPlaceholder} onPress={handleAddPhoto} disabled={uploading}>
-              <Text style={styles.photoEmptyIcon}>📷</Text>
-              <Text style={styles.photoEmptyText}>사진을 등록하면 매칭 확률이 높아져요!</Text>
-              <Text style={styles.photoEmptySub}>탭하여 첫 사진을 추가해보세요</Text>
+              <AppText style={styles.photoEmptyIcon}>📷</AppText>
+              <AppText style={styles.photoEmptyText}>사진을 등록하면 매칭 확률이 높아져요!</AppText>
+              <AppText style={styles.photoEmptySub}>탭하여 첫 사진을 추가해보세요</AppText>
             </TouchableOpacity>
           )}
         </View>
@@ -874,8 +873,8 @@ export default function ProfileScreen() {
           style={styles.groupHeader}
           onLayout={(e) => { recommendationsY.current = e.nativeEvent.layout.y; }}
         >
-          <Text style={styles.groupHeaderText}>추천 조건</Text>
-          <Text style={styles.groupHeaderSub}>어떤 상대를 만나고 싶은지 설정해보세요</Text>
+          <AppText style={styles.groupHeaderText}>추천 조건</AppText>
+          <AppText style={styles.groupHeaderSub}>어떤 상대를 만나고 싶은지 설정해보세요</AppText>
         </View>
 
         {/* ─── 지역 설정 (드롭다운) ─── */}
@@ -885,19 +884,19 @@ export default function ProfileScreen() {
           onPress={() => setShowRegionSection(v => !v)}
         >
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>📍 지역 설정</Text>
-            <Text style={styles.dropdownArrow}>{showRegionSection ? '▲' : '▼'}</Text>
+            <AppText style={styles.sectionTitle}>📍 지역 설정</AppText>
+            <AppText style={styles.dropdownArrow}>{showRegionSection ? '▲' : '▼'}</AppText>
           </View>
           {!showRegionSection && (
-            <Text style={styles.dropdownSummary}>
+            <AppText style={styles.dropdownSummary}>
               {profile.city || '미설정'} · {REGION_OPTIONS.find(o => o.value === regionFilter)?.label || '전국'}
-            </Text>
+            </AppText>
           )}
         </TouchableOpacity>
         {showRegionSection && (
           <View style={[styles.section, { marginTop: -12, borderTopLeftRadius: 0, borderTopRightRadius: 0 }]}>
-            <Text style={styles.settingDesc}>내 거주지역: {profile.city || '미설정'}</Text>
-            <Text style={styles.settingLabel}>상대 지역 범위</Text>
+            <AppText style={styles.settingDesc}>내 거주지역: {profile.city || '미설정'}</AppText>
+            <AppText style={styles.settingLabel}>상대 지역 범위</AppText>
             {REGION_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.value}
@@ -905,7 +904,7 @@ export default function ProfileScreen() {
                 onPress={() => saveDiscoveryFilters(opt.value, goalMatch)}
               >
                 <View style={[styles.radioCircle, regionFilter === opt.value && styles.radioCircleActive]} />
-                <Text style={styles.radioLabel}>{opt.label}</Text>
+                <AppText style={styles.radioLabel}>{opt.label}</AppText>
               </TouchableOpacity>
             ))}
           </View>
@@ -915,8 +914,8 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowLabel}>💝 나와 같은 관계 목표만</Text>
-              <Text style={[styles.settingDesc, { marginTop: 2, marginBottom: 0 }]}>같은 관계 목표를 가진 상대만 추천받아요</Text>
+              <AppText style={styles.rowLabel}>💝 나와 같은 관계 목표만</AppText>
+              <AppText style={[styles.settingDesc, { marginTop: 2, marginBottom: 0 }]}>같은 관계 목표를 가진 상대만 추천받아요</AppText>
             </View>
             <Switch
               value={goalMatch}
@@ -930,15 +929,15 @@ export default function ProfileScreen() {
         {/* ─── 먼저 확인할 항목 ─── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>👀 먼저 확인할 항목</Text>
-            <Text style={styles.sectionBadge}>{draftPreviewQuestions.length}/{maxPreviewQuestions}</Text>
+            <AppText style={styles.sectionTitle}>👀 먼저 확인할 항목</AppText>
+            <AppText style={styles.sectionBadge}>{draftPreviewQuestions.length}/{maxPreviewQuestions}</AppText>
           </View>
-          <Text style={styles.settingDesc}>상대 카드에서 이 항목의 답변을 미리 확인할 수 있어요</Text>
+          <AppText style={styles.settingDesc}>상대 카드에서 이 항목의 답변을 미리 확인할 수 있어요</AppText>
           <TouchableOpacity
             style={styles.expandBtn}
             onPress={() => setShowPreviewPicker(v => !v)}
           >
-            <Text style={styles.expandBtnText}>{showPreviewPicker ? '접기 ▲' : '항목 선택하기 ▼'}</Text>
+            <AppText style={styles.expandBtnText}>{showPreviewPicker ? '접기 ▲' : '항목 선택하기 ▼'}</AppText>
           </TouchableOpacity>
           {showPreviewPicker && (
             <View style={styles.checkList}>
@@ -951,9 +950,9 @@ export default function ProfileScreen() {
                     onPress={() => togglePreviewQuestion(opt.field)}
                   >
                     <View style={[styles.checkbox, selected && styles.checkboxActive]}>
-                      {selected && <Text style={styles.checkmark}>✓</Text>}
+                      {selected && <AppText style={styles.checkmark}>✓</AppText>}
                     </View>
-                    <Text style={styles.checkLabel}>{opt.icon} {opt.label}</Text>
+                    <AppText style={styles.checkLabel}>{opt.icon} {opt.label}</AppText>
                   </TouchableOpacity>
                 );
               })}
@@ -966,7 +965,7 @@ export default function ProfileScreen() {
               if (!opt) return null;
               return (
                 <View key={field} style={styles.chip}>
-                  <Text style={styles.chipText}>{opt.icon} {opt.label}</Text>
+                  <AppText style={styles.chipText}>{opt.icon} {opt.label}</AppText>
                 </View>
               );
             })}
@@ -975,10 +974,10 @@ export default function ProfileScreen() {
           {previewDirty && (
             <View style={styles.saveRow}>
               <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelPreviewQuestions}>
-                <Text style={styles.cancelBtnText}>취소</Text>
+                <AppText style={styles.cancelBtnText}>취소</AppText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveBtn} onPress={handleSavePreviewQuestions}>
-                <Text style={styles.saveBtnText}>저장</Text>
+                <AppText style={styles.saveBtnText}>저장</AppText>
               </TouchableOpacity>
             </View>
           )}
@@ -991,10 +990,10 @@ export default function ProfileScreen() {
           onPress={() => setShowRequiredSection(v => !v)}
         >
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🚫 절대 안 되는 조건</Text>
+            <AppText style={styles.sectionTitle}>🚫 절대 안 되는 조건</AppText>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={styles.sectionBadge}>{draftRequiredConditions.length}/{maxConditions}</Text>
-              <Text style={styles.dropdownArrow}>{showRequiredSection ? '▲' : '▼'}</Text>
+              <AppText style={styles.sectionBadge}>{draftRequiredConditions.length}/{maxConditions}</AppText>
+              <AppText style={styles.dropdownArrow}>{showRequiredSection ? '▲' : '▼'}</AppText>
             </View>
           </View>
           {!showRequiredSection && draftRequiredConditions.length > 0 && (
@@ -1004,22 +1003,22 @@ export default function ProfileScreen() {
                 if (!opt) return null;
                 return (
                   <View key={key} style={styles.chip}>
-                    <Text style={styles.chipText}>{opt.label}</Text>
+                    <AppText style={styles.chipText}>{opt.label}</AppText>
                   </View>
                 );
               })}
             </View>
           )}
           {!showRequiredSection && draftRequiredConditions.length === 0 && (
-            <Text style={styles.dropdownSummary}>설정된 조건이 없어요</Text>
+            <AppText style={styles.dropdownSummary}>설정된 조건이 없어요</AppText>
           )}
         </TouchableOpacity>
         {showRequiredSection && (
           <View style={[styles.section, { marginTop: -12, borderTopLeftRadius: 0, borderTopRightRadius: 0 }]}>
-            <Text style={styles.settingDesc}>
+            <AppText style={styles.settingDesc}>
               이 조건에 맞지 않는 상대는 추천에서 제외돼요{'\n'}
               {'(기본 3개, 💎 크레딧으로 추가)'}
-            </Text>
+            </AppText>
             {REQUIRED_CONDITION_OPTIONS.map((opt) => {
               const selected = draftRequiredConditions.includes(opt.key);
               return (
@@ -1029,19 +1028,19 @@ export default function ProfileScreen() {
                   onPress={() => toggleRequiredCondition(opt.key)}
                 >
                   <View style={[styles.checkbox, selected && styles.checkboxActive]}>
-                    {selected && <Text style={styles.checkmark}>✓</Text>}
+                    {selected && <AppText style={styles.checkmark}>✓</AppText>}
                   </View>
-                  <Text style={styles.checkLabel}>{opt.label}</Text>
+                  <AppText style={styles.checkLabel}>{opt.label}</AppText>
                 </TouchableOpacity>
               );
             })}
             {requiredDirty && (
               <View style={styles.saveRow}>
                 <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelRequiredConditions}>
-                  <Text style={styles.cancelBtnText}>취소</Text>
+                  <AppText style={styles.cancelBtnText}>취소</AppText>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.saveBtn} onPress={handleSaveRequiredConditions}>
-                  <Text style={styles.saveBtnText}>저장</Text>
+                  <AppText style={styles.saveBtnText}>저장</AppText>
                 </TouchableOpacity>
               </View>
             )}
@@ -1050,8 +1049,8 @@ export default function ProfileScreen() {
 
         {/* ─── 내 가치관 그룹 헤더 ─── */}
         <View style={styles.groupHeader}>
-          <Text style={styles.groupHeaderText}>내 가치관</Text>
-          <Text style={styles.groupHeaderSub}>상대에게 보여지는 나의 답변이에요</Text>
+          <AppText style={styles.groupHeaderText}>내 가치관</AppText>
+          <AppText style={styles.groupHeaderSub}>상대에게 보여지는 나의 답변이에요</AppText>
         </View>
 
         {/* 기본 정보 */}
@@ -1073,13 +1072,13 @@ export default function ProfileScreen() {
         {profile.hobbies && profile.hobbies.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>🎨 취미 & 관심사</Text>
+              <AppText style={styles.sectionTitle}>🎨 취미 & 관심사</AppText>
             </View>
-            <Text style={styles.qaQuestion}>Q. 여가 시간에 나는...</Text>
+            <AppText style={styles.qaQuestion}>Q. 여가 시간에 나는...</AppText>
             <View style={[styles.chipRow, { marginTop: 8 }]}>
               {profile.hobbies.map((h: string) => (
                 <View key={h} style={styles.chip}>
-                  <Text style={styles.chipText}>{HOBBY_LABELS_QA[h] ?? h}</Text>
+                  <AppText style={styles.chipText}>{HOBBY_LABELS_QA[h] ?? h}</AppText>
                 </View>
               ))}
             </View>
@@ -1100,20 +1099,20 @@ export default function ProfileScreen() {
 
         {/* 가치관 수정 버튼 */}
         <TouchableOpacity style={styles.editValueBtn} onPress={handleEditQuestionnaire}>
-          <Text style={styles.editValueIcon}>✏️</Text>
+          <AppText style={styles.editValueIcon}>✏️</AppText>
           <View style={{ flex: 1 }}>
-            <Text style={styles.editValueTitle}>가치관 수정하기</Text>
-            <Text style={styles.editValueSub}>답변을 변경하면 매칭 결과가 달라질 수 있어요</Text>
+            <AppText style={styles.editValueTitle}>가치관 수정하기</AppText>
+            <AppText style={styles.editValueSub}>답변을 변경하면 매칭 결과가 달라질 수 있어요</AppText>
           </View>
           <View style={styles.editValueCost}>
-            <Text style={styles.editValueCostIcon}>💎</Text>
-            <Text style={styles.editValueCostText}>1개</Text>
+            <AppText style={styles.editValueCostIcon}>💎</AppText>
+            <AppText style={styles.editValueCostText}>1개</AppText>
           </View>
         </TouchableOpacity>
 
         {/* ─── 앱 설정 ─── */}
         <View style={styles.groupHeader}>
-          <Text style={styles.groupHeaderText}>앱 설정</Text>
+          <AppText style={styles.groupHeaderText}>앱 설정</AppText>
         </View>
 
         <SettingsSection />
@@ -1125,19 +1124,19 @@ export default function ProfileScreen() {
             { text: '로그아웃', style: 'destructive', onPress: signOut },
           ]);
         }}>
-          <Text style={styles.signOutText}>로그아웃</Text>
+          <AppText style={styles.signOutText}>로그아웃</AppText>
         </TouchableOpacity>
 
         {/* 개인정보처리방침 */}
         <TouchableOpacity style={styles.privacyBtn} onPress={() => {
           Linking.openURL('https://ksnap87.github.io/dasibom/privacy-policy.html');
         }}>
-          <Text style={styles.privacyText}>개인정보처리방침</Text>
+          <AppText style={styles.privacyText}>개인정보처리방침</AppText>
         </TouchableOpacity>
 
         {/* 계정 삭제 */}
         {/* 앱 버전 */}
-        <Text style={styles.versionText}>다시봄 v1.0.0</Text>
+        <AppText style={styles.versionText}>다시봄 v1.0.0</AppText>
 
         <TouchableOpacity style={styles.deleteBtn} onPress={() => {
           Alert.alert(
@@ -1169,7 +1168,7 @@ export default function ProfileScreen() {
             ]
           );
         }}>
-          <Text style={styles.deleteText}>계정 삭제</Text>
+          <AppText style={styles.deleteText}>계정 삭제</AppText>
         </TouchableOpacity>
 
       </ScrollView>

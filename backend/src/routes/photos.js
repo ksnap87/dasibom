@@ -111,6 +111,15 @@ router.delete('/:photoId', async (req, res) => {
 
     if (!photo) return res.status(404).json({ error: '사진을 찾을 수 없습니다.' });
 
+    // 스토리지에서 파일도 삭제
+    try {
+      const urlObj = new URL(photo.url);
+      const pathMatch = urlObj.pathname.match(/\/profile-photos\/(.+)$/);
+      if (pathMatch) {
+        await supabase.storage.from('profile-photos').remove([decodeURIComponent(pathMatch[1])]);
+      }
+    } catch (_) { /* 스토리지 삭제 실패해도 DB 삭제 진행 */ }
+
     await supabase
       .from('profile_photos')
       .delete()
@@ -156,6 +165,15 @@ router.patch('/set-profile', async (req, res) => {
     const { photo_url } = req.body;
     if (!photo_url) return res.status(400).json({ error: 'photo_url이 필요합니다.' });
 
+    // 사용자 소유 사진인지 확인
+    const { data: owned } = await supabase
+      .from('profile_photos')
+      .select('id')
+      .eq('user_id', req.user.id)
+      .eq('url', photo_url)
+      .maybeSingle();
+    if (!owned) return res.status(403).json({ error: '본인의 사진만 설정할 수 있습니다.' });
+
     await supabase
       .from('profiles')
       .update({ photo_url })
@@ -171,6 +189,17 @@ router.patch('/set-profile', async (req, res) => {
 router.patch('/set-background', async (req, res) => {
   try {
     const { background_url } = req.body;
+
+    // null이 아닌 경우 사용자 소유 사진인지 확인
+    if (background_url) {
+      const { data: owned } = await supabase
+        .from('profile_photos')
+        .select('id')
+        .eq('user_id', req.user.id)
+        .eq('url', background_url)
+        .maybeSingle();
+      if (!owned) return res.status(403).json({ error: '본인의 사진만 설정할 수 있습니다.' });
+    }
 
     await supabase
       .from('profiles')

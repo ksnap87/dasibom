@@ -4,11 +4,12 @@
  * Firebase Phone Auth를 사용하여 실제 SMS 인증번호 발송.
  * 인증 완료 후 원래 가려던 ChatRoom으로 이동.
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  View, TextInput, TouchableOpacity, StyleSheet,
   SafeAreaView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import AppText from '../components/AppText';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
@@ -46,6 +47,13 @@ export default function PhoneVerificationScreen() {
 
   const otpRef = useRef<TextInput>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // 언마운트 시 타이머 정리 (메모리 누수 방지)
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   // 쿨다운 타이머 시작 (재발송 방지)
   const startCooldown = () => {
@@ -174,25 +182,25 @@ export default function PhoneVerificationScreen() {
         <View style={styles.inner}>
           {/* 헤더 */}
           <View style={styles.headerArea}>
-            <Text style={styles.headerEmoji}>📱</Text>
-            <Text style={styles.headerTitle}>본인인증</Text>
-            <Text style={styles.headerSub}>
+            <AppText style={styles.headerEmoji}>📱</AppText>
+            <AppText style={styles.headerTitle}>본인인증</AppText>
+            <AppText style={styles.headerSub}>
               {other_name}님과 채팅을 시작하려면{'\n'}휴대폰 본인인증이 필요합니다
-            </Text>
+            </AppText>
           </View>
 
           {/* 인증 이유 설명 */}
           <View style={styles.reasonCard}>
-            <Text style={styles.reasonTitle}>왜 인증이 필요한가요?</Text>
-            <Text style={styles.reasonText}>
+            <AppText style={styles.reasonTitle}>왜 인증이 필요한가요?</AppText>
+            <AppText style={styles.reasonText}>
               다시봄은 50대 이상을 위한 신뢰할 수 있는 만남의 공간입니다.{'\n'}
               본인인증을 통해 신뢰할 수 있는 만남을 보장합니다. 인증 정보는 매칭에 활용되지 않습니다.
-            </Text>
+            </AppText>
           </View>
 
           {/* 전화번호 입력 */}
           <View style={styles.card}>
-            <Text style={styles.inputLabel}>휴대폰 번호</Text>
+            <AppText style={styles.inputLabel}>휴대폰 번호</AppText>
             <View style={styles.phoneRow}>
               <TextInput
                 style={[styles.phoneInput, step === 'otp' && styles.inputDone]}
@@ -211,7 +219,7 @@ export default function PhoneVerificationScreen() {
                 >
                   {loading
                     ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={styles.sendBtnText}>발송</Text>
+                    : <AppText style={styles.sendBtnText}>발송</AppText>
                   }
                 </TouchableOpacity>
               )}
@@ -221,9 +229,9 @@ export default function PhoneVerificationScreen() {
                   onPress={handleResend}
                   disabled={cooldown > 0}
                 >
-                  <Text style={styles.resendText}>
+                  <AppText style={styles.resendText}>
                     {cooldown > 0 ? `재발송 (${cooldown}s)` : '재발송'}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               )}
             </View>
@@ -231,7 +239,7 @@ export default function PhoneVerificationScreen() {
             {/* OTP 입력 (2단계) */}
             {step === 'otp' && (
               <>
-                <Text style={[styles.inputLabel, { marginTop: 16 }]}>인증번호 (6자리)</Text>
+                <AppText style={[styles.inputLabel, { marginTop: 16 }]}>인증번호 (6자리)</AppText>
                 <TextInput
                   ref={otpRef}
                   style={styles.otpInput}
@@ -242,7 +250,7 @@ export default function PhoneVerificationScreen() {
                   maxLength={6}
                   placeholderTextColor={C.sub}
                 />
-                <Text style={styles.otpHint}>📩 {phone}으로 발송된 6자리 번호를 입력하세요</Text>
+                <AppText style={styles.otpHint}>📩 {phone}으로 발송된 6자리 번호를 입력하세요</AppText>
               </>
             )}
           </View>
@@ -256,7 +264,7 @@ export default function PhoneVerificationScreen() {
             >
               {loading
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.verifyBtnText}>인증 완료</Text>
+                : <AppText style={styles.verifyBtnText}>인증 완료</AppText>
               }
             </TouchableOpacity>
           )}
@@ -266,7 +274,7 @@ export default function PhoneVerificationScreen() {
             style={styles.skipBtn}
             onPress={() => nav.goBack()}
           >
-            <Text style={styles.skipText}>나중에 인증하기</Text>
+            <AppText style={styles.skipText}>나중에 인증하기</AppText>
           </TouchableOpacity>
 
         </View>

@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, FlatList, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, Alert, SafeAreaView, Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import AppText from '../components/AppText';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api, { getSuggestions, expressInterest, dailyCheckin } from '../api/client';
 import { SuggestionProfile } from '../types';
@@ -126,6 +127,13 @@ function getDisplayValue(field: string, value: any): string {
   return String(value ?? '');
 }
 
+const HOBBY_LABELS: Record<string, string> = {
+  hiking: '등산', travel: '여행', cooking: '요리', reading: '독서',
+  music: '음악', gardening: '원예', golf: '골프', swimming: '수영',
+  yoga: '요가/필라테스', photography: '사진', volunteering: '봉사활동',
+  movies: '영화 감상', dancing: '댄스', art: '미술/공예', walking: '산책', fishing: '낚시',
+};
+
 // ── 스토리지 키 ────────────────────────────────────────────
 const STORAGE_KEYS = {
   previewQuestions: '@dasibom_preview_questions',
@@ -135,7 +143,7 @@ const STORAGE_KEYS = {
 };
 
 // previewQuestions는 더 이상 사용하지 않지만 설정 호환성 유지
-const DEFAULT_PREVIEW_QUESTIONS = ['relationship_goal', 'religion', 'smoking', 'drinking', 'family_importance'];
+const DEFAULT_PREVIEW_QUESTIONS = ['relationship_goal', 'religion', 'smoking', 'drinking', 'family_importance', 'personality_type', 'health_status'];
 
 const QUOTES = [
   '좋은 인연은 서두르지 않아도 찾아옵니다.',
@@ -228,7 +236,7 @@ const ProfileCard = React.memo(function ProfileCard({
   const handleLike = () => animateOut('right', onLike);
   const handlePass = () => animateOut('left', onPass);
 
-  const scorePercent = Math.round(item.compatibility_score * 100);
+  const scorePercent = item.compatibility_score != null ? Math.round(item.compatibility_score) : 0;
 
   // 핵심 정보 태그 (컴팩트 뷰)
   const previewTags = PREVIEW_FIELDS
@@ -255,15 +263,15 @@ const ProfileCard = React.memo(function ProfileCard({
       <TouchableOpacity activeOpacity={0.7} onPress={() => setExpanded(!expanded)}>
         <View style={styles.cardHeader}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+            <AppText style={styles.avatarText}>{item.name?.charAt(0) ?? '?'}</AppText>
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.nameText}>{item.name}, {age}세</Text>
-            <Text style={styles.cityText}>📍 {item.city}</Text>
+            <AppText style={styles.nameText}>{item.name}, {age}세</AppText>
+            <AppText style={styles.cityText}>📍 {item.city}</AppText>
           </View>
           <View style={styles.scoreBadge}>
-            <Text style={styles.scoreText}>{scorePercent}%</Text>
-            <Text style={styles.scoreLabel}>호환</Text>
+            <AppText style={styles.scoreText}>{scorePercent}%</AppText>
+            <AppText style={styles.scoreLabel}>호환</AppText>
           </View>
         </View>
 
@@ -271,13 +279,13 @@ const ProfileCard = React.memo(function ProfileCard({
         <View style={styles.previewRow}>
           {previewTags.map((t, i) => (
             <View key={i} style={styles.previewTag}>
-              <Text style={styles.previewTagText}>{t.icon} {t.val}</Text>
+              <AppText style={styles.previewTagText}>{t.icon} {t.val}</AppText>
             </View>
           ))}
         </View>
 
         {!expanded && (
-          <Text style={styles.expandHint}>탭하여 상세보기 ▼</Text>
+          <AppText style={styles.expandHint}>탭하여 상세보기 ▼</AppText>
         )}
       </TouchableOpacity>
 
@@ -289,7 +297,7 @@ const ProfileCard = React.memo(function ProfileCard({
             <View style={styles.hobbyRow}>
               {item.hobbies.slice(0, 5).map((h, i) => (
                 <View key={i} style={styles.hobbyTag}>
-                  <Text style={styles.hobbyText}>{h}</Text>
+                  <AppText style={styles.hobbyText}>{HOBBY_LABELS[h] ?? h}</AppText>
                 </View>
               ))}
             </View>
@@ -311,11 +319,11 @@ const ProfileCard = React.memo(function ProfileCard({
 
             return (
               <View key={section.title} style={styles.qaCategory}>
-                <Text style={styles.qaCategoryTitle}>{section.title}</Text>
+                <AppText style={styles.qaCategoryTitle}>{section.title}</AppText>
                 {rows.map(({ field, meta, val }) => (
                   <View key={field} style={styles.qaRow}>
-                    <Text style={styles.qaLabel}>{meta.icon} {meta.label}</Text>
-                    <Text style={styles.qaValue}>{val}</Text>
+                    <AppText style={styles.qaLabel}>{meta.icon} {meta.label}</AppText>
+                    <AppText style={styles.qaValue}>{val}</AppText>
                   </View>
                 ))}
               </View>
@@ -325,12 +333,12 @@ const ProfileCard = React.memo(function ProfileCard({
           {/* 자기소개 */}
           {item.bio ? (
             <View style={styles.bioSection}>
-              <Text style={styles.bioText}>"{item.bio}"</Text>
+              <AppText style={styles.bioText}>"{item.bio}"</AppText>
             </View>
           ) : null}
 
           <TouchableOpacity onPress={() => setExpanded(false)}>
-            <Text style={styles.expandHint}>접기 ▲</Text>
+            <AppText style={styles.expandHint}>접기 ▲</AppText>
           </TouchableOpacity>
         </View>
       )}
@@ -342,14 +350,14 @@ const ProfileCard = React.memo(function ProfileCard({
           onPress={handlePass}
           disabled={acting}
         >
-          <Text style={styles.passBtnText}>다음에</Text>
+          <AppText style={styles.passBtnText}>다음에</AppText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.likeBtn, acting && styles.disabledBtn]}
           onPress={handleLike}
           disabled={acting}
         >
-          <Text style={styles.likeBtnText}>💌 관심 있어요</Text>
+          <AppText style={styles.likeBtnText}>💌 관심 있어요</AppText>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -512,7 +520,7 @@ export default function SuggestionsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🌸 추천 상대</Text>
+          <AppText style={styles.headerTitle}>🌸 추천 상대</AppText>
         </View>
         <SkeletonLoader variant="card" count={2} />
         <ToastContainer />
@@ -525,19 +533,19 @@ export default function SuggestionsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🌸 추천 상대</Text>
+          <AppText style={styles.headerTitle}>🌸 추천 상대</AppText>
         </View>
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🌙</Text>
-          <Text style={styles.emptyTitle}>오늘 추천을 모두 확인했어요</Text>
-          <Text style={styles.emptySub}>
+          <AppText style={styles.emptyEmoji}>🌙</AppText>
+          <AppText style={styles.emptyTitle}>오늘 추천을 모두 확인했어요</AppText>
+          <AppText style={styles.emptySub}>
             오늘 {dailyCount}명을 확인했어요.{'\n'}
             내일 새로운 추천 상대가 찾아올 거예요
-          </Text>
+          </AppText>
           <TouchableOpacity style={styles.creditBtn} onPress={handleUnlockMore}>
-            <Text style={styles.creditBtnText}>💎 크레딧으로 {EXTRA_PER_CREDIT}명 더 보기</Text>
+            <AppText style={styles.creditBtnText}>💎 크레딧으로 {EXTRA_PER_CREDIT}명 더 보기</AppText>
           </TouchableOpacity>
-          <Text style={styles.creditHint}>보유 크레딧: {credits}개</Text>
+          <AppText style={styles.creditHint}>보유 크레딧: {credits}개</AppText>
         </View>
         <ToastContainer />
       </SafeAreaView>
@@ -548,45 +556,45 @@ export default function SuggestionsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>🌸 추천 상대</Text>
-          <Text style={styles.headerSub}>{suggestions.length}명 남음</Text>
+          <AppText style={styles.headerTitle}>🌸 추천 상대</AppText>
+          <AppText style={styles.headerSub}>{suggestions.length}명 남음</AppText>
         </View>
         <View style={styles.dailyBadge}>
-          <Text style={styles.dailyBadgeText}>오늘 {dailyCount}/{dailyLimit}</Text>
+          <AppText style={styles.dailyBadgeText}>오늘 {dailyCount}/{dailyLimit}</AppText>
         </View>
       </View>
 
       {/* 출석 체크 배너 */}
       {checkinDone && checkinStreak > 0 && (
         <View style={styles.streakBanner}>
-          <Text style={styles.streakText}>
+          <AppText style={styles.streakText}>
             {'🔥'} 연속 {checkinStreak}일 출석 중
             {checkinStreak >= 7 ? '  |  7일마다 크레딧 1개' : `  |  ${7 - (checkinStreak % 7)}일 후 보상`}
-          </Text>
+          </AppText>
         </View>
       )}
 
       <View style={styles.quoteBanner}>
-        <Text style={styles.quoteText}>"{getDailyQuote()}"</Text>
+        <AppText style={styles.quoteText}>"{getDailyQuote()}"</AppText>
       </View>
 
       {suggestions.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🌸</Text>
-          <Text style={styles.emptyTitle}>모든 추천 상대를 확인했어요</Text>
-          <Text style={styles.emptySub}>
+          <AppText style={styles.emptyEmoji}>🌸</AppText>
+          <AppText style={styles.emptyTitle}>모든 추천 상대를 확인했어요</AppText>
+          <AppText style={styles.emptySub}>
             잠시 후 새로운 추천 상대가 나타날 거예요{'\n'}
             프로필 탭에서 추천 조건을 조정하면{'\n'}
             더 많은 추천을 받을 수 있어요
-          </Text>
+          </AppText>
           <TouchableOpacity style={styles.refreshBtn} onPress={() => { setRefreshing(true); load(); }}>
-            <Text style={styles.refreshBtnText}>새로고침</Text>
+            <AppText style={styles.refreshBtnText}>새로고침</AppText>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.filterHintBtn}
             onPress={() => nav.navigate('Profile', { scrollTo: 'recommendations' })}
           >
-            <Text style={styles.filterHintText}>추천 조건 바로가기</Text>
+            <AppText style={styles.filterHintText}>추천 조건 바로가기</AppText>
           </TouchableOpacity>
         </View>
       ) : (

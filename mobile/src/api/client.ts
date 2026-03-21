@@ -127,7 +127,7 @@ export const uploadPhoto = async (uri: string): Promise<any> => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
+        // Content-Type 수동 설정 금지: fetch가 FormData의 boundary를 자동 포함
       },
       body: formData,
     });
@@ -196,6 +196,9 @@ export const dailyCheckin = () =>
   api.post('/api/profiles/checkin').then(r => r.data);
 export const verifyPhone = (phone_number: string) =>
   api.post('/api/profiles/verify-phone', { phone_number }).then(r => r.data);
+
+// ── Sent Interests ───────────────────────────────────────
+export const getSentInterests = () => getWithRetry('/api/profiles/sent-interests').then(r => r.data);
 
 // ── Matches ───────────────────────────────────────────────
 export const getSuggestions = () => getWithRetry('/api/matches/suggestions').then(r => r.data);
