@@ -99,6 +99,7 @@ export interface MutualMatch {
   other_user: {
     id: string;
     name: string;
+    nickname?: string;
     birth_year: number;
     city: string;
     photo_url?: string;

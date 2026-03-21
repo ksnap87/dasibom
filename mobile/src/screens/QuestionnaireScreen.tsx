@@ -12,7 +12,7 @@ import {
 import AppText from '../components/AppText';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { updateMyProfile } from '../api/client';
+import { updateMyProfile, checkNickname } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { RootStackParamList } from '../types';
 
@@ -287,6 +287,11 @@ export default function QuestionnaireScreen() {
       // ── 0: 기본 정보 ──
       case 0:
         if (!form.name.trim()) return warn('이름을 입력해주세요.');
+        if (!form.nickname?.trim()) return warn('닉네임을 입력해주세요.');
+        if (form.nickname.trim().length < 2) return warn('닉네임은 2자 이상이어야 합니다.');
+        if (form.nickname.trim().length > 12) return warn('닉네임은 12자 이하여야 합니다.');
+        if (!form._nicknameChecked) return warn('닉네임 중복확인을 해주세요.');
+        if (!form._nicknameAvailable) return warn('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
         if (!form.birth_year || isNaN(Number(form.birth_year))) return warn('출생연도를 입력해주세요.');
         const birthYear = Number(form.birth_year);
         const currentYear = new Date().getFullYear();
@@ -364,7 +369,7 @@ export default function QuestionnaireScreen() {
     if (!validateStep()) return;
     setSaving(true);
     try {
-      const { _province, _showProvince, _showCity, ...formData } = form;
+      const { _province, _showProvince, _showCity, _nicknameChecked, _nicknameAvailable, ...formData } = form;
       const payload = {
         ...formData,
         birth_year: Number(formData.birth_year),
@@ -410,9 +415,58 @@ export default function QuestionnaireScreen() {
             <AppText style={styles.stepTitle}>기본 정보</AppText>
             <AppText style={styles.stepSub}>간단한 정보를 알려주세요</AppText>
 
-            <AppText style={styles.label}>이름 *</AppText>
+            <AppText style={styles.label}>이름 (비공개) *</AppText>
             <TextInput style={styles.input} value={form.name} onChangeText={v => set('name', v)}
-              placeholder="이름 또는 닉네임" placeholderTextColor={C.sub} />
+              placeholder="실명 (상대방에게 공개되지 않습니다)" placeholderTextColor={C.sub} />
+
+            <AppText style={styles.label}>닉네임 (상대방에게 표시) *</AppText>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                value={form.nickname || ''}
+                onChangeText={v => { set('nickname', v); set('_nicknameChecked', false); set('_nicknameAvailable', false); }}
+                placeholder="2~12자 (한글/영문/숫자)"
+                placeholderTextColor={C.sub}
+                maxLength={12}
+              />
+              <TouchableOpacity
+                style={{
+                  backgroundColor: C.primary, borderRadius: 10,
+                  paddingHorizontal: 14, justifyContent: 'center',
+                  opacity: (form.nickname?.trim()?.length ?? 0) < 2 ? 0.5 : 1,
+                }}
+                disabled={(form.nickname?.trim()?.length ?? 0) < 2}
+                onPress={async () => {
+                  try {
+                    const result = await checkNickname(form.nickname.trim());
+                    set('_nicknameChecked', true);
+                    set('_nicknameAvailable', result.available);
+                    Alert.alert(result.available ? '사용 가능' : '사용 불가', result.available ? '사용할 수 있는 닉네임입니다!' : '이미 사용 중인 닉네임입니다.');
+                  } catch {
+                    Alert.alert('오류', '중복확인에 실패했습니다.');
+                  }
+                }}
+              >
+                <AppText style={{ color: '#FFF', fontSize: 14, fontWeight: '700' }}>중복확인</AppText>
+              </TouchableOpacity>
+            </View>
+            {form._nicknameChecked && (
+              <AppText style={{ fontSize: 12, color: form._nicknameAvailable ? '#27AE60' : '#E53935', marginTop: -8, marginBottom: 4, marginLeft: 4 }}>
+                {form._nicknameAvailable ? '✓ 사용 가능한 닉네임입니다' : '✗ 이미 사용 중인 닉네임입니다'}
+              </AppText>
+            )}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              <AppText style={{ fontSize: 12, color: C.sub, width: '100%' }}>추천 닉네임 (탭하여 사용)</AppText>
+              {['봄날의산책', '따뜻한오후', '햇살한줌', '고운마음', '산들바람', '꽃길위에', '노을빛', '소나무'].map(nick => (
+                <TouchableOpacity
+                  key={nick}
+                  style={{ backgroundColor: '#FCEEF1', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5 }}
+                  onPress={() => { set('nickname', nick); set('_nicknameChecked', false); set('_nicknameAvailable', false); }}
+                >
+                  <AppText style={{ fontSize: 13, color: '#E8556D' }}>{nick}</AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <AppText style={styles.label}>출생연도 *</AppText>
             <TextInput style={styles.input} value={form.birth_year} onChangeText={v => set('birth_year', v)}

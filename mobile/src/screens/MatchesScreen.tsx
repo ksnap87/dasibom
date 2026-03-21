@@ -61,7 +61,7 @@ function ChatRow({ match, onPress }: { match: MutualMatch; onPress: () => void }
           <Image source={{ uri: u.photo_url }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <AppText style={styles.avatarInitial}>{u.name.charAt(0)}</AppText>
+            <AppText style={styles.avatarInitial}>{(u.nickname || u.name).charAt(0)}</AppText>
           </View>
         )}
         {isNewMatch && (
@@ -74,7 +74,7 @@ function ChatRow({ match, onPress }: { match: MutualMatch; onPress: () => void }
       {/* 이름 + 마지막 메시지 */}
       <View style={styles.chatInfo}>
         <View style={styles.chatNameRow}>
-          <AppText style={[styles.chatName, hasUnread && styles.chatNameBold]}>{u.name}</AppText>
+          <AppText style={[styles.chatName, hasUnread && styles.chatNameBold]}>{(u.nickname || u.name)}</AppText>
           {isNewMatch && (
             <View style={styles.newMatchTag}>
               <AppText style={styles.newMatchTagText}>새 매칭</AppText>
@@ -202,13 +202,13 @@ export default function MatchesScreen() {
     if (phoneVerifiedLoaded && !phoneVerified) {
       nav.navigate('PhoneVerification', {
         match_id: match.match_id,
-        other_name: match.other_user.name,
+        other_name: match.other_user.nickname || match.other_user.name,
         other_user_id: match.other_user.id,
       });
     } else {
       nav.navigate('ChatRoom', {
         match_id: match.match_id,
-        other_name: match.other_user.name,
+        other_name: match.other_user.nickname || match.other_user.name,
         other_user_id: match.other_user.id,
       });
     }

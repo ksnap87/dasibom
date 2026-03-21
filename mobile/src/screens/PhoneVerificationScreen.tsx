@@ -155,8 +155,14 @@ export default function PhoneVerificationScreen() {
       try { await auth().signOut(); } catch {}
 
       setLoading(false);
-      // 인증 완료 → 채팅방으로 이동 (뒤로가기 스택에서 이 화면 제거)
-      nav.replace('ChatRoom', { match_id, other_name, other_user_id });
+      // 인증 완료 → match_id가 있으면 채팅방, 없으면 뒤로가기
+      if (match_id) {
+        nav.replace('ChatRoom', { match_id, other_name, other_user_id });
+      } else {
+        Alert.alert('인증 완료', '본인인증이 완료되었습니다!', [
+          { text: '확인', onPress: () => nav.goBack() },
+        ]);
+      }
     } catch (error: any) {
       setLoading(false);
       console.error('인증 실패:', error);

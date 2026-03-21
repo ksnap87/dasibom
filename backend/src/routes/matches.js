@@ -133,7 +133,8 @@ router.get('/suggestions', async (req, res) => {
       const familyBonus = familySimilarityBonus(me, c);
       return {
         id: c.id,
-        name: c.name,
+        name: c.nickname || c.name,
+        nickname: c.nickname,
         birth_year: c.birth_year,
         gender: c.gender,
         city: c.city,
@@ -187,8 +188,8 @@ router.get('/', async (req, res) => {
       id,
       created_at,
       compatibility_score,
-      user1:profiles!matches_user1_id_fkey(id, name, birth_year, city, photo_url, bio),
-      user2:profiles!matches_user2_id_fkey(id, name, birth_year, city, photo_url, bio)
+      user1:profiles!matches_user1_id_fkey(id, name, nickname, birth_year, city, photo_url, bio),
+      user2:profiles!matches_user2_id_fkey(id, name, nickname, birth_year, city, photo_url, bio)
     `)
     .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
     .order('created_at', { ascending: false });

@@ -33,6 +33,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+// GET /api/profiles/check-nickname?nickname=xxx — 닉네임 중복 체크
+router.get('/check-nickname', async (req, res) => {
+  const { nickname } = req.query;
+  if (!nickname || typeof nickname !== 'string' || nickname.trim().length < 2) {
+    return res.status(400).json({ error: '닉네임은 2자 이상이어야 합니다.' });
+  }
+  if (nickname.trim().length > 12) {
+    return res.status(400).json({ error: '닉네임은 12자 이하여야 합니다.' });
+  }
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('nickname', nickname.trim())
+    .maybeSingle();
+
+  res.json({ available: !data });
+});
+
 // GET /api/profiles/me
 router.get('/me', async (req, res) => {
   const { data, error } = await supabase
@@ -456,7 +475,7 @@ router.get('/sent-interests', async (req, res) => {
     // 상대 프로필 조회
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, name, birth_year, city, personality_type, relationship_goal')
+      .select('id, name, nickname, birth_year, city, personality_type, relationship_goal')
       .in('id', toUserIds);
 
     const profileMap = {};
@@ -492,7 +511,7 @@ router.get('/sent-interests', async (req, res) => {
 
       return {
         to_user_id: s.to_user_id,
-        name: profile?.name ?? null,
+        name: profile?.nickname || profile?.name ?? null,
         birth_year: profile?.birth_year ?? null,
         city: profile?.city ?? null,
         personality_type: profile?.personality_type ?? null,

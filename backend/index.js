@@ -45,6 +45,22 @@ app.use(express.json());
 app.get('/health', (req, res) => res.json({ status: 'ok', app: '다시봄 API' }));
 
 app.use('/api/auth', authRouter);  // 인증 불필요
+
+// 닉네임 중복체크 — 인증 불필요 (회원가입 전 호출)
+app.get('/api/nickname/check', async (req, res) => {
+  const { nickname } = req.query;
+  if (!nickname || typeof nickname !== 'string' || nickname.trim().length < 2) {
+    return res.status(400).json({ error: '닉네임은 2자 이상이어야 합니다.' });
+  }
+  if (nickname.trim().length > 12) {
+    return res.status(400).json({ error: '닉네임은 12자 이하여야 합니다.' });
+  }
+  const { createClient: c } = require('@supabase/supabase-js');
+  const sb = c(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  const { data } = await sb.from('profiles').select('id').eq('nickname', nickname.trim()).maybeSingle();
+  res.json({ available: !data });
+});
+
 app.use('/api/profiles', verifyToken, profilesRouter);
 app.use('/api/matches', verifyToken, matchesRouter);
 app.use('/api/messages', verifyToken, messagesRouter);
