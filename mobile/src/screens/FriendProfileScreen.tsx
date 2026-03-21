@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, ActivityIndicator, Alert, Image, Modal,
 } from 'react-native';
+import AppText from '../components/AppText';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getProfile, reportUser, blockUser } from '../api/client';
@@ -58,8 +59,8 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+      <AppText style={styles.rowLabel}>{label}</AppText>
+      <AppText style={styles.rowValue}>{value}</AppText>
     </View>
   );
 }
@@ -67,7 +68,7 @@ function Row({ label, value }: { label: string; value?: string | null }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <AppText style={styles.sectionTitle}>{title}</AppText>
       {children}
     </View>
   );
@@ -78,8 +79,8 @@ function QARow({ qa, profile }: { qa: QAItem; profile: any }) {
   if (!answer) return null;
   return (
     <View style={styles.qaRow}>
-      <Text style={styles.qaQuestion}>Q. {qa.question}</Text>
-      <Text style={styles.qaAnswer}>{answer}</Text>
+      <AppText style={styles.qaQuestion}>Q. {qa.question}</AppText>
+      <AppText style={styles.qaAnswer}>{answer}</AppText>
     </View>
   );
 }
@@ -91,7 +92,7 @@ function QASection({ title, icon, qaList, profile }: {
   if (!hasAny) return null;
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{icon} {title}</Text>
+      <AppText style={styles.sectionTitle}>{icon} {title}</AppText>
       {qaList.map(qa => <QARow key={qa.field} qa={qa} profile={profile} />)}
     </View>
   );
@@ -181,16 +182,16 @@ export default function FriendProfileScreen() {
   if (error || !profile) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorText}>프로필을 불러올 수 없습니다.</Text>
+        <AppText style={styles.errorIcon}>⚠️</AppText>
+        <AppText style={styles.errorText}>프로필을 불러올 수 없습니다.</AppText>
         <TouchableOpacity style={styles.retryBtn} onPress={loadProfile} activeOpacity={0.7}>
-          <Text style={styles.retryBtnText}>다시 시도</Text>
+          <AppText style={styles.retryBtnText}>다시 시도</AppText>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const age = new Date().getFullYear() - profile.birth_year;
+  const age = profile.birth_year ? new Date().getFullYear() - profile.birth_year : null;
   const l = (category: string, val?: string | null) =>
     val ? (LABELS[category]?.[val] ?? val) : null;
 
@@ -204,15 +205,15 @@ export default function FriendProfileScreen() {
             <Image source={{ uri: profile.photo_url }} style={styles.bigPhoto} />
           ) : (
             <View style={styles.bigAvatar}>
-              <Text style={styles.bigAvatarText}>{profile.name.charAt(0)}</Text>
+              <AppText style={styles.bigAvatarText}>{profile.name?.charAt(0) ?? '?'}</AppText>
             </View>
           )}
-          <Text style={styles.heroName}>{profile.name}</Text>
-          <Text style={styles.heroSub}>{age}세 · {profile.city}</Text>
-          {profile.bio ? <Text style={styles.heroBio}>{profile.bio}</Text> : null}
+          <AppText style={styles.heroName}>{profile.name}</AppText>
+          <AppText style={styles.heroSub}>{age != null ? `${age}세` : ''}{age != null && profile.city ? ' · ' : ''}{profile.city ?? ''}</AppText>
+          {profile.bio ? <AppText style={styles.heroBio}>{profile.bio}</AppText> : null}
           {!profile.photo_url && (
             <View style={styles.noPhotoHint}>
-              <Text style={styles.noPhotoHintText}>아직 사진을 등록하지 않은 분이에요</Text>
+              <AppText style={styles.noPhotoHintText}>아직 사진을 등록하지 않은 분이에요</AppText>
             </View>
           )}
         </View>
@@ -226,12 +227,12 @@ export default function FriendProfileScreen() {
         {/* 취미 */}
         {profile.hobbies && profile.hobbies.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🎨 취미 & 관심사</Text>
-            <Text style={styles.qaQuestion}>Q. 여가 시간에 나는...</Text>
+            <AppText style={styles.sectionTitle}>🎨 취미 & 관심사</AppText>
+            <AppText style={styles.qaQuestion}>Q. 여가 시간에 나는...</AppText>
             <View style={[styles.chipRow, { marginTop: 8 }]}>
               {profile.hobbies.map((h: string) => (
                 <View key={h} style={styles.chip}>
-                  <Text style={styles.chipText}>{HOBBY_LABELS_QA[h] ?? h}</Text>
+                  <AppText style={styles.chipText}>{HOBBY_LABELS_QA[h] ?? h}</AppText>
                 </View>
               ))}
             </View>
@@ -258,7 +259,7 @@ export default function FriendProfileScreen() {
             accessibilityLabel={`${other_name}님 신고하기`}
             accessibilityRole="button"
           >
-            <Text style={styles.reportBtnText}>신고</Text>
+            <AppText style={styles.reportBtnText}>신고</AppText>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.blockBtn}
@@ -266,7 +267,7 @@ export default function FriendProfileScreen() {
             accessibilityLabel={`${other_name}님 차단하기`}
             accessibilityRole="button"
           >
-            <Text style={styles.blockBtnText}>차단</Text>
+            <AppText style={styles.blockBtnText}>차단</AppText>
           </TouchableOpacity>
         </View>
 
@@ -277,7 +278,7 @@ export default function FriendProfileScreen() {
       {/* 하단 고정 채팅 버튼 */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.8}>
-          <Text style={styles.chatBtnText}>💌 채팅 시작하기</Text>
+          <AppText style={styles.chatBtnText}>💌 채팅 시작하기</AppText>
         </TouchableOpacity>
       </View>
 
@@ -294,22 +295,22 @@ export default function FriendProfileScreen() {
           onPress={() => setShowReportModal(false)}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>신고 사유 선택</Text>
-            <Text style={styles.modalSub}>어떤 이유로 신고하시겠어요?</Text>
+            <AppText style={styles.modalTitle}>신고 사유 선택</AppText>
+            <AppText style={styles.modalSub}>어떤 이유로 신고하시겠어요?</AppText>
             {REPORT_REASONS.map(r => (
               <TouchableOpacity
                 key={r.value}
                 style={styles.modalOption}
                 onPress={() => submitReport(r.value)}
               >
-                <Text style={styles.modalOptionText}>{r.label}</Text>
+                <AppText style={styles.modalOptionText}>{r.label}</AppText>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={styles.modalCancelBtn}
               onPress={() => setShowReportModal(false)}
             >
-              <Text style={styles.modalCancelText}>취소</Text>
+              <AppText style={styles.modalCancelText}>취소</AppText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

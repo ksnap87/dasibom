@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,
+  View, FlatList, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, SafeAreaView, ActivityIndicator,
   Alert, Image, Modal,
 } from 'react-native';
+import AppText from '../components/AppText';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { getMessages, sendMessage, markRead, reportUser } from '../api/client';
 import { useAuthStore, supabase } from '../store/authStore';
@@ -67,9 +68,9 @@ function Avatar({ photoUrl, name, size = 36 }: { photoUrl?: string; name: string
   }
   return (
     <View style={s}>
-      <Text style={{ fontSize: size * 0.4, color: C.primary, fontWeight: '700' }}>
+      <AppText style={{ fontSize: size * 0.4, color: C.primary, fontWeight: '700' }}>
         {name.charAt(0)}
-      </Text>
+      </AppText>
     </View>
   );
 }
@@ -90,27 +91,27 @@ function Bubble({
         <Avatar photoUrl={msg.sender?.photo_url} name={msg.sender?.name ?? '?'} size={36} />
       )}
       <View style={styles.bubbleOuter}>
-        {!isMe && <Text style={styles.senderName}>{msg.sender?.name}</Text>}
+        {!isMe && <AppText style={styles.senderName}>{msg.sender?.name}</AppText>}
         <View style={[styles.bubbleWrap, isMe && styles.bubbleWrapMe]}>
           {isMe && (
             <View style={styles.metaLeft}>
-              {showReadMark && <Text style={styles.unreadMark}>1</Text>}
+              {showReadMark && <AppText style={styles.unreadMark}>1</AppText>}
               <View style={styles.timeRow}>
-                <Text style={styles.timeText}>{time}</Text>
+                <AppText style={styles.timeText}>{time}</AppText>
                 {sendFailed ? (
                   <TouchableOpacity onPress={onRetry} activeOpacity={0.7}>
-                    <Text style={styles.failedMark}>!</Text>
+                    <AppText style={styles.failedMark}>!</AppText>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={styles.deliveredMark}>{'\u2713'}</Text>
+                  <AppText style={styles.deliveredMark}>{'\u2713'}</AppText>
                 )}
               </View>
             </View>
           )}
           <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-            <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>{msg.content}</Text>
+            <AppText style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>{msg.content}</AppText>
           </View>
-          {!isMe && <Text style={[styles.timeText, styles.timeTextOther]}>{time}</Text>}
+          {!isMe && <AppText style={[styles.timeText, styles.timeTextOther]}>{time}</AppText>}
         </View>
       </View>
     </View>
@@ -121,7 +122,7 @@ function DateSeparator({ label }: { label: string }) {
   return (
     <View style={styles.dateSep}>
       <View style={styles.dateSepLine} />
-      <Text style={styles.dateSepText}>{label}</Text>
+      <AppText style={styles.dateSepText}>{label}</AppText>
       <View style={styles.dateSepLine} />
     </View>
   );
@@ -187,7 +188,7 @@ export default function ChatRoomScreen() {
       title: other_name,
       headerRight: () => (
         <TouchableOpacity onPress={handleReport} style={{ paddingHorizontal: 8 }}>
-          <Text style={{ fontSize: 14, color: '#999' }}>신고</Text>
+          <AppText style={{ fontSize: 14, color: '#999' }}>신고</AppText>
         </TouchableOpacity>
       ),
     });
@@ -327,9 +328,9 @@ export default function ChatRoomScreen() {
       >
         {messages.length === 0 ? (
           <View style={styles.emptyChat}>
-            <Text style={styles.emptyChatEmoji}>💌</Text>
-            <Text style={styles.emptyChatText}>첫 메시지를 보내보세요!</Text>
-            <Text style={styles.emptyChatSub}>{other_name}님과의 대화를 시작해보세요.</Text>
+            <AppText style={styles.emptyChatEmoji}>💌</AppText>
+            <AppText style={styles.emptyChatText}>첫 메시지를 보내보세요!</AppText>
+            <AppText style={styles.emptyChatSub}>{other_name}님과의 대화를 시작해보세요.</AppText>
             <View style={styles.icebreakers}>
               {[
                 '주말에 주로 뭐 하세요?',
@@ -342,7 +343,7 @@ export default function ChatRoomScreen() {
                   onPress={() => setText(suggestion)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.icebreakerText}>{suggestion}</Text>
+                  <AppText style={styles.icebreakerText}>{suggestion}</AppText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -377,11 +378,11 @@ export default function ChatRoomScreen() {
             >
               {sending
                 ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.sendBtnText}>전송</Text>
+                : <AppText style={styles.sendBtnText}>전송</AppText>
               }
             </TouchableOpacity>
           </View>
-          <Text style={styles.charCounter}>{text.length}/{MAX_LENGTH}</Text>
+          <AppText style={styles.charCounter}>{text.length}/{MAX_LENGTH}</AppText>
         </View>
       </KeyboardAvoidingView>
 
@@ -398,22 +399,22 @@ export default function ChatRoomScreen() {
           onPress={() => setShowReportModal(false)}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>신고 사유 선택</Text>
-            <Text style={styles.modalSub}>어떤 이유로 신고하시겠어요?</Text>
+            <AppText style={styles.modalTitle}>신고 사유 선택</AppText>
+            <AppText style={styles.modalSub}>어떤 이유로 신고하시겠어요?</AppText>
             {REPORT_REASONS.map(r => (
               <TouchableOpacity
                 key={r.value}
                 style={styles.modalOption}
                 onPress={() => submitReport(r.value)}
               >
-                <Text style={styles.modalOptionText}>{r.label}</Text>
+                <AppText style={styles.modalOptionText}>{r.label}</AppText>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={styles.modalCancelBtn}
               onPress={() => setShowReportModal(false)}
             >
-              <Text style={styles.modalCancelText}>취소</Text>
+              <AppText style={styles.modalCancelText}>취소</AppText>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

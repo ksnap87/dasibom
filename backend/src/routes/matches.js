@@ -11,6 +11,7 @@ const supabase = createClient(
 // GET /api/matches/suggestions — candidates the user hasn't seen yet (sorted by score)
 // Query params: region=same_city|metro|nationwide, relationship_goal_match=true
 router.get('/suggestions', async (req, res) => {
+  try {
   const userId = req.user.id;
   const { region, relationship_goal_match } = req.query;
 
@@ -25,11 +26,23 @@ router.get('/suggestions', async (req, res) => {
     return res.status(400).json({ error: '설문을 먼저 완료해주세요.' });
   }
 
-  // IDs already acted on
+  // IDs already acted on (3일 경과한 좋아요는 만료 → 다시 추천 가능)
+  const EXPIRY_DAYS = 3;
+  const expiryDate = new Date(Date.now() - EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
   const { data: seen } = await supabase
     .from('interests')
-    .select('to_user_id')
+    .select('to_user_id, is_liked, created_at')
     .eq('from_user_id', userId);
+
+  // 만료된 좋아요(3일 경과 + 매칭 안 됨)는 제외 목록에서 빼기
+  const { data: myMatches } = await supabase
+    .from('matches')
+    .select('user1_id, user2_id')
+    .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
+  const matchedUserIds = new Set(
+    (myMatches || []).map(m => m.user1_id === userId ? m.user2_id : m.user1_id)
+  );
 
   // 차단한/차단당한 유저 제외
   const { data: blockedByMe } = await supabase
@@ -59,9 +72,18 @@ router.get('/suggestions', async (req, res) => {
     contactExcludeIds = contactUsers?.map(u => u.id) ?? [];
   }
 
+  // 만료되지 않은 관심만 제외 (pass는 항상 제외, like는 3일 내만 제외)
+  const activeSeenIds = (seen || [])
+    .filter(r => {
+      if (!r.is_liked) return true; // pass는 항상 제외
+      if (matchedUserIds.has(r.to_user_id)) return true; // 매칭된 상대 제외
+      return r.created_at > expiryDate; // 3일 이내 좋아요만 제외
+    })
+    .map(r => r.to_user_id);
+
   const excludeIds = [
     userId,
-    ...(seen?.map(r => r.to_user_id) ?? []),
+    ...activeSeenIds,
     ...(blockedByMe?.map(r => r.blocked_id) ?? []),
     ...(blockedMe?.map(r => r.blocker_id) ?? []),
     ...contactExcludeIds,
@@ -90,16 +112,16 @@ router.get('/suggestions', async (req, res) => {
   const { data: candidates, error } = await query.limit(60);
   if (error) return res.status(500).json({ error: error.message });
 
-  // 자녀 상황 유사도 보너스 점수 계산
+  // 자녀 상황 유사도 보너스 점수 계산 (0-100 스케일)
   function familySimilarityBonus(me, c) {
     let bonus = 0;
     // 자녀 유무 일치
-    if (me.has_children != null && c.has_children != null && me.has_children === c.has_children) bonus += 0.03;
+    if (me.has_children != null && c.has_children != null && me.has_children === c.has_children) bonus += 3;
     // 자녀 동거 상황 일치
-    if (me.children_living_together != null && c.children_living_together != null && me.children_living_together === c.children_living_together) bonus += 0.02;
+    if (me.children_living_together != null && c.children_living_together != null && me.children_living_together === c.children_living_together) bonus += 2;
     // 반려동물 수용 여부: 상대가 반려동물 있는데 내가 pet_friendly=false면 페널티
-    if (c.has_pet === true && me.pet_friendly === false) bonus -= 0.05;
-    if (me.has_pet === true && c.pet_friendly === false) bonus -= 0.05;
+    if (c.has_pet === true && me.pet_friendly === false) bonus -= 5;
+    if (me.has_pet === true && c.pet_friendly === false) bonus -= 5;
     return bonus;
   }
 
@@ -141,17 +163,22 @@ router.get('/suggestions', async (req, res) => {
         has_pet: c.has_pet,
         pet_type: c.pet_type,
         pet_friendly: c.pet_friendly,
-        compatibility_score: Math.min(1, Math.max(0, baseScore + familyBonus)),
+        compatibility_score: Math.min(100, Math.max(0, baseScore + familyBonus)),
       };
     })
     .sort((a, b) => b.compatibility_score - a.compatibility_score)
     .slice(0, 5); // 하루 기본 5명
 
   res.json(results);
+  } catch (err) {
+    console.error('suggestions error:', err);
+    res.status(500).json({ error: '추천 목록을 불러오는 중 오류가 발생했습니다.' });
+  }
 });
 
 // GET /api/matches — mutual matches (chat-enabled)
 router.get('/', async (req, res) => {
+  try {
   const userId = req.user.id;
 
   const { data, error } = await supabase
@@ -231,6 +258,10 @@ router.get('/', async (req, res) => {
   }
 
   res.json(matches);
+  } catch (err) {
+    console.error('matches error:', err);
+    res.status(500).json({ error: '매칭 목록을 불러오는 중 오류가 발생했습니다.' });
+  }
 });
 
 module.exports = router;

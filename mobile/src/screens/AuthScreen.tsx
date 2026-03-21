@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, SafeAreaView,
 } from 'react-native';
+import AppText from '../components/AppText';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore, supabase } from '../store/authStore';
@@ -38,9 +39,9 @@ export default function AuthScreen() {
       <View style={styles.inner}>
         {/* Logo */}
         <View style={styles.logoArea}>
-          <Text style={styles.logoEmoji}>🌸</Text>
-          <Text style={styles.logoText}>다시봄</Text>
-          <Text style={styles.tagline}>당신의 봄날을 다시</Text>
+          <AppText style={styles.logoEmoji}>🌸</AppText>
+          <AppText style={styles.logoText}>다시봄</AppText>
+          <AppText style={styles.tagline}>당신의 봄날을 다시</AppText>
         </View>
 
         {/* 카카오 로그인 버튼 */}
@@ -54,15 +55,15 @@ export default function AuthScreen() {
             <ActivityIndicator color={C.kakaoText} />
           ) : (
             <>
-              <Text style={styles.kakaoIcon}>💬</Text>
-              <Text style={styles.kakaoLabel}>카카오로 시작하기</Text>
+              <AppText style={styles.kakaoIcon}>💬</AppText>
+              <AppText style={styles.kakaoLabel}>카카오로 시작하기</AppText>
             </>
           )}
         </TouchableOpacity>
 
-        <Text style={styles.footer}>
+        <AppText style={styles.footer}>
           다시, 설레는 만남이 시작되는 곳
-        </Text>
+        </AppText>
 
         {__DEV__ && (
           <TouchableOpacity
@@ -88,7 +89,7 @@ export default function AuthScreen() {
               }
             }}
           >
-            <Text style={styles.devSkipText}>[DEV] 테스트 로그인</Text>
+            <AppText style={styles.devSkipText}>[DEV] 테스트 로그인</AppText>
           </TouchableOpacity>
         )}
       </View>

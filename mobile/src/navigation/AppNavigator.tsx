@@ -3,11 +3,12 @@ import { View, ActivityIndicator, Alert, Platform, StyleSheet } from 'react-nati
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppText from '../components/AppText';
 
 import ErrorBoundary from '../components/ErrorBoundary';
 import { useAuthStore } from '../store/authStore';
+import { useFontStore } from '../store/fontStore';
 import { registerFCMToken, onTokenRefresh, onForegroundMessage } from '../services/fcm';
 import SplashScreen from '../screens/SplashScreen';
 import AuthScreen from '../screens/AuthScreen';
@@ -28,7 +29,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const C = { primary: '#E8556D', sub: '#999' };
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return <Text style={{ fontSize: focused ? 26 : 22, opacity: focused ? 1 : 0.6 }}>{emoji}</Text>;
+  return <AppText style={{ fontSize: focused ? 26 : 22, opacity: focused ? 1 : 0.6 }}>{emoji}</AppText>;
 }
 
 function MainTabs() {
@@ -78,10 +79,14 @@ function MainTabs() {
 
 function AppNavigatorInner() {
   const { isAuthenticated, isLoading, profile } = useAuthStore();
+  const { loadFontSize } = useFontStore();
   const [splashDone, setSplashDone] = React.useState(false);
   const [welcomeDone, setWelcomeDone] = React.useState(false);
   const [offline, setOffline] = useState(false);
   const fcmRegistered = useRef(false);
+
+  // 글씨 크기 설정 로드
+  useEffect(() => { loadFontSize(); }, [loadFontSize]);
 
   // Simple connectivity check on mount
   useEffect(() => {
@@ -98,6 +103,11 @@ function AppNavigatorInner() {
       setWelcomeDone(true);
     }
   }, [profile]);
+
+  // 로그아웃 시 FCM 등록 상태 리셋
+  useEffect(() => {
+    if (!isAuthenticated) fcmRegistered.current = false;
+  }, [isAuthenticated]);
 
   // FCM 토큰 등록 + 포그라운드 메시지 수신
   useEffect(() => {
@@ -120,7 +130,7 @@ function AppNavigatorInner() {
   if (isLoading && !splashDone) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF8F5' }}>
-        <Text style={{ fontSize: 48, marginBottom: 20 }}>🌸</Text>
+        <AppText style={{ fontSize: 48, marginBottom: 20 }}>🌸</AppText>
         <ActivityIndicator size="large" color={C.primary} />
       </View>
     );
@@ -130,7 +140,7 @@ function AppNavigatorInner() {
   if (splashDone && isAuthenticated && profile === undefined) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF8F5' }}>
-        <Text style={{ fontSize: 48, marginBottom: 20 }}>🌸</Text>
+        <AppText style={{ fontSize: 48, marginBottom: 20 }}>🌸</AppText>
         <ActivityIndicator size="large" color={C.primary} />
       </View>
     );
@@ -140,7 +150,7 @@ function AppNavigatorInner() {
     <>
       {offline && (
         <View style={offlineStyles.banner}>
-          <Text style={offlineStyles.text}>인터넷 연결을 확인해 주세요</Text>
+          <AppText style={offlineStyles.text}>인터넷 연결을 확인해 주세요</AppText>
         </View>
       )}
       <NavigationContainer>

@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import AppText from './AppText';
 
 interface Props {
   children: ReactNode;
@@ -28,11 +29,11 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <View style={styles.container}>
-          <Text style={styles.emoji}>🌸</Text>
-          <Text style={styles.title}>앱에 문제가 발생했어요</Text>
-          <Text style={styles.subtitle}>잠시 후 다시 시도해 주세요</Text>
+          <AppText style={styles.emoji}>🌸</AppText>
+          <AppText style={styles.title}>앱에 문제가 발생했어요</AppText>
+          <AppText style={styles.subtitle}>잠시 후 다시 시도해 주세요</AppText>
           <TouchableOpacity style={styles.button} onPress={this.handleRetry}>
-            <Text style={styles.buttonText}>다시 시도</Text>
+            <AppText style={styles.buttonText}>다시 시도</AppText>
           </TouchableOpacity>
         </View>
       );

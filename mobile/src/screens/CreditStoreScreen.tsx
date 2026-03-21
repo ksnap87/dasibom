@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
+  View, TouchableOpacity, StyleSheet, SafeAreaView,
   ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
+import AppText from '../components/AppText';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -169,41 +170,41 @@ export default function CreditStoreScreen() {
 
         {/* 현재 보유 크레딧 */}
         <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>보유 크레딧</Text>
+          <AppText style={styles.balanceLabel}>보유 크레딧</AppText>
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceIcon}>💎</Text>
-            <Text style={styles.balanceValue}>{credits}</Text>
-            <Text style={styles.balanceUnit}>개</Text>
+            <AppText style={styles.balanceIcon}>💎</AppText>
+            <AppText style={styles.balanceValue}>{credits}</AppText>
+            <AppText style={styles.balanceUnit}>개</AppText>
           </View>
         </View>
 
         {/* 크레딧 사용처 안내 */}
         <View style={styles.infoCard}>
           <View style={styles.infoHeader}>
-            <Text style={styles.infoTitle}>크레딧으로 할 수 있는 것</Text>
+            <AppText style={styles.infoTitle}>크레딧으로 할 수 있는 것</AppText>
             <TouchableOpacity
               style={styles.infoNavBtn}
               onPress={() => nav.navigate('Profile' as never, { scrollTo: 'recommendations' } as never)}
             >
-              <Text style={styles.infoNavBtnText}>설정하기 →</Text>
+              <AppText style={styles.infoNavBtnText}>설정하기 →</AppText>
             </TouchableOpacity>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🔄</Text>
-            <Text style={styles.infoText}>가치관 수정 (1개)</Text>
+            <AppText style={styles.infoIcon}>🔄</AppText>
+            <AppText style={styles.infoText}>가치관 수정 (1개)</AppText>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>👀</Text>
-            <Text style={styles.infoText}>하루 추천 5명 추가 열람 (1개)</Text>
+            <AppText style={styles.infoIcon}>👀</AppText>
+            <AppText style={styles.infoText}>하루 추천 5명 추가 열람 (1개)</AppText>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🚫</Text>
-            <Text style={styles.infoText}>필수 조건 슬롯 추가 (1개)</Text>
+            <AppText style={styles.infoIcon}>🚫</AppText>
+            <AppText style={styles.infoText}>필수 조건 슬롯 추가 (1개)</AppText>
           </View>
         </View>
 
         {/* 상품 목록 */}
-        <Text style={styles.sectionTitle}>크레딧 충전</Text>
+        <AppText style={styles.sectionTitle}>크레딧 충전</AppText>
 
         <View pointerEvents={purchasing !== null ? 'none' : 'auto'} style={purchasing !== null ? styles.productListDisabled : undefined}>
         {displayProducts.map(item => (
@@ -216,16 +217,16 @@ export default function CreditStoreScreen() {
           >
             {item.popular && (
               <View style={styles.popularBadge}>
-                <Text style={styles.popularText}>BEST</Text>
+                <AppText style={styles.popularText}>BEST</AppText>
               </View>
             )}
             <View style={styles.productLeft}>
-              <Text style={styles.productEmoji}>💎</Text>
+              <AppText style={styles.productEmoji}>💎</AppText>
               <View>
-                <Text style={styles.productCredits}>
-                  {item.credits}개 {item.bonus ? <Text style={styles.bonusText}>{item.bonus}</Text> : null}
-                </Text>
-                <Text style={styles.productLabel}>{item.label}</Text>
+                <AppText style={styles.productCredits}>
+                  {item.credits}개 {item.bonus ? <AppText style={styles.bonusText}>{item.bonus}</AppText> : null}
+                </AppText>
+                <AppText style={styles.productLabel}>{item.label}</AppText>
               </View>
             </View>
             <View style={styles.productRight}>
@@ -233,9 +234,9 @@ export default function CreditStoreScreen() {
                 <ActivityIndicator color={C.primary} />
               ) : (
                 <View style={[styles.priceBtn, item.popular && styles.priceBtnPopular]}>
-                  <Text style={[styles.priceText, item.popular && styles.priceTextPopular]}>
+                  <AppText style={[styles.priceText, item.popular && styles.priceTextPopular]}>
                     {item.price}
-                  </Text>
+                  </AppText>
                 </View>
               )}
             </View>
@@ -245,11 +246,11 @@ export default function CreditStoreScreen() {
 
         {/* 안내 */}
         <View style={styles.notice}>
-          <Text style={styles.noticeText}>
+          <AppText style={styles.noticeText}>
             * 결제는 Google Play를 통해 처리됩니다{'\n'}
             * 크레딧은 환불이 불가합니다{'\n'}
             * 문의: dasibom.help@gmail.com
-          </Text>
+          </AppText>
         </View>
 
       </ScrollView>

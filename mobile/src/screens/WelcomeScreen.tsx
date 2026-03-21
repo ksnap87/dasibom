@@ -1,8 +1,9 @@
 import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, TouchableOpacity, StyleSheet,
   SafeAreaView, Dimensions,
 } from 'react-native';
+import AppText from '../components/AppText';
 
 const { height } = Dimensions.get('window');
 
@@ -26,25 +27,25 @@ export default function WelcomeScreen({ onStart }: Props) {
 
         {/* 메인 콘텐츠 */}
         <View style={styles.content}>
-          <Text style={styles.emoji}>🌸</Text>
-          <Text style={styles.title}>다시봄에 오신 걸{'\n'}환영합니다!</Text>
-          <Text style={styles.desc}>
+          <AppText style={styles.emoji}>🌸</AppText>
+          <AppText style={styles.title}>다시봄에 오신 걸{'\n'}환영합니다!</AppText>
+          <AppText style={styles.desc}>
             간단한 설문을 작성하시면{'\n'}
             가치관이 맞는 분을 추천해드려요
-          </Text>
+          </AppText>
 
           <View style={styles.features}>
             <View style={styles.featureRow}>
-              <Text style={styles.featureIcon}>💝</Text>
-              <Text style={styles.featureText}>가치관 중심의 맞춤 추천</Text>
+              <AppText style={styles.featureIcon}>💝</AppText>
+              <AppText style={styles.featureText}>가치관 중심의 맞춤 추천</AppText>
             </View>
             <View style={styles.featureRow}>
-              <Text style={styles.featureIcon}>🔒</Text>
-              <Text style={styles.featureText}>연락처 기반 지인 제외</Text>
+              <AppText style={styles.featureIcon}>🔒</AppText>
+              <AppText style={styles.featureText}>연락처 기반 지인 제외</AppText>
             </View>
             <View style={styles.featureRow}>
-              <Text style={styles.featureIcon}>✨</Text>
-              <Text style={styles.featureText}>진정성 있는 50+ 만남</Text>
+              <AppText style={styles.featureIcon}>✨</AppText>
+              <AppText style={styles.featureText}>진정성 있는 50+ 만남</AppText>
             </View>
           </View>
         </View>
@@ -56,9 +57,9 @@ export default function WelcomeScreen({ onStart }: Props) {
             onPress={onStart}
             activeOpacity={0.8}
           >
-            <Text style={styles.startLabel}>설문 시작하기</Text>
+            <AppText style={styles.startLabel}>설문 시작하기</AppText>
           </TouchableOpacity>
-          <Text style={styles.note}>약 3분 정도 소요됩니다</Text>
+          <AppText style={styles.note}>약 3분 정도 소요됩니다</AppText>
         </View>
       </View>
     </SafeAreaView>

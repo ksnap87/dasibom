@@ -61,3 +61,50 @@
 - Firebase 서비스 계정 키 → 백엔드 .env
 - FCM Cloud Messaging API 활성화
 - Supabase CLI 연동 (supabase link + db push)
+
+## Sprint 7: 전체 앱 버그 점검 & 수정 (2026-03-21)
+
+### 글씨 크기 기능 구현
+- fontStore.ts (Zustand) — 글씨 크기 상태 관리 (기본/크게/매우 크게, 배율 1.0/1.2/1.4)
+- App.tsx에서 Text.render 래핑 → 모든 Text 컴포넌트에 자동 배율 적용
+- ProfileScreen 설정에서 변경 시 즉시 앱 전체 반영
+
+### 모바일 버그 수정
+- PhoneVerificationScreen: 타이머 interval unmount 시 미정리 → useEffect cleanup 추가 (메모리 누수 수정)
+- authStore: onAuthStateChange 리스너 loadSession 호출마다 중복 등록 → 모듈 레벨 1회 등록으로 변경
+- authStore: loadCredits parseInt NaN 방어 추가
+- Toast: 싱글톤 리스너 다중 마운트 시 덮어쓰기 → Set 기반으로 변경
+- client.ts: 사진 업로드 시 Content-Type 수동 설정 제거 (boundary 누락 버그)
+- AppNavigator: FCM ref 로그아웃 시 리셋 안 됨 → isAuthenticated 감지하여 리셋
+- QuestionnaireScreen: 크레딧 차감 순서 수정 (프로필 업데이트 성공 후 차감)
+- SuggestionsScreen: compatibility_score null 체크, name null 체크, hobby 한국어 레이블 매핑
+- FriendProfileScreen: birth_year/name null 체크 추가 (NaN세 크래시 방지)
+- 시스템 글씨 크기 확대 비활성화 (Text.defaultProps.allowFontScaling = false)
+
+### 백엔드 버그 수정
+- contentFilter.js: regex /gi → /i (lastIndex 리셋 안 되어 50% 확률 필터 통과 버그)
+- matches.js: familySimilarityBonus 0-1 → 0-100 스케일 통일 (bonus 효과 없던 버그)
+- matches.js: suggestions/matches 라우트에 try/catch 추가
+- photos.js: 사진 삭제 시 Supabase Storage에서도 파일 삭제
+- photos.js: set-profile/set-background URL 소유권 검증 추가 (보안)
+
+## Sprint 8: Google Play 결제 검증 (2026-03-21)
+
+### 백엔드
+- `googleapis` 패키지 추가
+- `playStore.js` 유틸리티 생성 — Google Play Developer API v3 연동
+  - 서비스 계정 인증 (GOOGLE_PLAY_SERVICE_ACCOUNT_JSON 환경변수)
+  - `verifyPurchase()` — 구매 영수증 검증 (purchaseState 확인)
+  - `acknowledgePurchase()` — 소모성 상품 승인 (3일 내 미승인 시 자동 환불 방지)
+- `credits.js` 전면 재구성:
+  1. Google Play API로 영수증 검증 (위조 토큰 차단)
+  2. 중복 구매 방지 (purchase_token UNIQUE 제약)
+  3. 크레딧 지급 (atomic RPC)
+  4. 구매 기록 저장 (order_id 포함)
+  5. Google Play acknowledge
+- 테스트용 `/api/credits/add`에 정수 검증 추가
+- 프로덕션에서 Google Play 미설정 시 결제 차단
+
+### Supabase 마이그레이션
+- `purchase_history`에 `order_id` 컬럼 추가
+- `purchase_token` UNIQUE 제약 추가 (DB 레벨 중복 방지)

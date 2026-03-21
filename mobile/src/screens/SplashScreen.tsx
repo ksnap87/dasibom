@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import AppText from '../components/AppText';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -122,10 +123,10 @@ export default function SplashScreen({ onFinish }: Props) {
         {/* 벚꽃 아이콘 (SVG 대신 텍스트 기반) */}
         <View style={styles.flowerContainer}>
           <View style={styles.flowerBg}>
-            <Text style={styles.flowerIcon}>{'✿'}</Text>
+            <AppText style={styles.flowerIcon}>{'✿'}</AppText>
           </View>
         </View>
-        <Text style={styles.title}>다시봄</Text>
+        <AppText style={styles.title}>다시봄</AppText>
       </Animated.View>
 
       <Animated.Text style={[styles.subtitle, { opacity: subtitleFade }]}>
@@ -134,9 +135,9 @@ export default function SplashScreen({ onFinish }: Props) {
 
       {/* 하단 장식 */}
       <View style={styles.bottomDecor}>
-        <Text style={styles.decorDot}>{'·'}</Text>
-        <Text style={styles.decorDot}>{'·'}</Text>
-        <Text style={styles.decorDot}>{'·'}</Text>
+        <AppText style={styles.decorDot}>{'·'}</AppText>
+        <AppText style={styles.decorDot}>{'·'}</AppText>
+        <AppText style={styles.decorDot}>{'·'}</AppText>
       </View>
     </View>
   );

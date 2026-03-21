@@ -1,18 +1,20 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
+import AppText from './AppText';
 
 interface ToastState {
   message: string;
   id: number;
 }
 
-let toastListener: ((msg: string) => void) | null = null;
+const toastListeners = new Set<(msg: string) => void>();
 let idCounter = 0;
 
 export function showToast(message: string) {
-  if (toastListener) {
-    toastListener(message);
-  }
+  // 마지막으로 등록된 리스너에만 전달 (화면 전환 시에도 안전)
+  const listeners = Array.from(toastListeners);
+  const last = listeners[listeners.length - 1];
+  if (last) last(message);
 }
 
 export default function ToastContainer() {
@@ -68,9 +70,9 @@ export default function ToastContainer() {
   }, [translateY, opacity, hide]);
 
   useEffect(() => {
-    toastListener = show;
+    toastListeners.add(show);
     return () => {
-      toastListener = null;
+      toastListeners.delete(show);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
@@ -90,7 +92,7 @@ export default function ToastContainer() {
           },
         ]}
       >
-        <Text style={styles.text}>{toast.message}</Text>
+        <AppText style={styles.text}>{toast.message}</AppText>
       </Animated.View>
     </View>
   );

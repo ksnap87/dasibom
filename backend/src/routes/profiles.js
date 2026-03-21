@@ -432,6 +432,85 @@ router.get('/admin/phone/:userId', async (req, res) => {
   }
 });
 
+// GET /api/profiles/sent-interests — 보낸 관심 히스토리
+// 상태: pending(대기중), matched(매칭됨), expired(3일 경과 만료)
+router.get('/sent-interests', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const EXPIRY_DAYS = 3;
+
+    // 내가 좋아요 누른 목록
+    const { data: sentLikes, error } = await supabase
+      .from('interests')
+      .select('to_user_id, created_at')
+      .eq('from_user_id', userId)
+      .eq('is_liked', true)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!sentLikes || sentLikes.length === 0) return res.json([]);
+
+    const toUserIds = sentLikes.map(s => s.to_user_id);
+
+    // 상대 프로필 조회
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, name, birth_year, city, personality_type, relationship_goal')
+      .in('id', toUserIds);
+
+    const profileMap = {};
+    for (const p of (profiles || [])) profileMap[p.id] = p;
+
+    // 매칭 여부 확인
+    const { data: matches } = await supabase
+      .from('matches')
+      .select('user1_id, user2_id')
+      .or(toUserIds.map(id => {
+        const [u1, u2] = [userId, id].sort();
+        return `and(user1_id.eq.${u1},user2_id.eq.${u2})`;
+      }).join(','));
+
+    const matchedIds = new Set();
+    for (const m of (matches || [])) {
+      matchedIds.add(m.user1_id === userId ? m.user2_id : m.user1_id);
+    }
+
+    const now = new Date();
+    const results = sentLikes.map(s => {
+      const profile = profileMap[s.to_user_id];
+      const createdAt = new Date(s.created_at);
+      const expiresAt = new Date(createdAt.getTime() + EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+      const remainingMs = expiresAt.getTime() - now.getTime();
+
+      let status = 'pending';
+      if (matchedIds.has(s.to_user_id)) {
+        status = 'matched';
+      } else if (remainingMs <= 0) {
+        status = 'expired';
+      }
+
+      return {
+        to_user_id: s.to_user_id,
+        name: profile?.name ?? null,
+        birth_year: profile?.birth_year ?? null,
+        city: profile?.city ?? null,
+        personality_type: profile?.personality_type ?? null,
+        relationship_goal: profile?.relationship_goal ?? null,
+        status,
+        created_at: s.created_at,
+        expires_at: expiresAt.toISOString(),
+        remaining_hours: status === 'pending' ? Math.max(0, Math.floor(remainingMs / (1000 * 60 * 60))) : 0,
+      };
+    });
+
+    res.json(results);
+  } catch (err) {
+    console.error('sent-interests error:', err);
+    res.status(500).json({ error: '보낸 관심 목록을 불러오는 중 오류가 발생했습니다.' });
+  }
+});
+
 // POST /api/profiles/checkin — 출석 체크 (매일 1회, 연속 출석 보상)
 router.post('/checkin', async (req, res) => {
   try {
