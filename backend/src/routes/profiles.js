@@ -511,7 +511,7 @@ router.get('/sent-interests', async (req, res) => {
 
       return {
         to_user_id: s.to_user_id,
-        name: profile?.nickname || profile?.name ?? null,
+        name: profile?.nickname || (profile?.name ?? null),
         birth_year: profile?.birth_year ?? null,
         city: profile?.city ?? null,
         personality_type: profile?.personality_type ?? null,
