@@ -199,7 +199,7 @@ export const verifyPhone = (phone_number: string) =>
 
 // ── Nickname ─────────────────────────────────────────────
 export const checkNickname = (nickname: string) =>
-  api.get('/api/nickname/check', { params: { nickname } }).then(r => r.data);
+  axios.get(`${API_BASE}/api/nickname/check`, { params: { nickname }, timeout: 10000 }).then(r => r.data);
 
 // ── Sent Interests ───────────────────────────────────────
 export const getSentInterests = () => getWithRetry('/api/profiles/sent-interests').then(r => r.data);
