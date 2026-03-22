@@ -3,6 +3,13 @@ backend/.env
 mobile/.env
 mobile/src/config.ts
 mobile/android/app/google-services.json
+google-services.json
+google-services (1).json
+mobile/android/gradle.properties
+
+# 키스토어 (debug.keystore는 허용)
+*.keystore
+!debug.keystore
 
 # Node.js 의존성
 node_modules/
