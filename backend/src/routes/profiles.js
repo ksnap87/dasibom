@@ -110,7 +110,13 @@ router.put('/me', async (req, res) => {
       .select()
       .single());
   } else {
-    // 프로필이 없으면 생성
+    // 프로필 신규 생성 시 필수값 검증
+    const required = { name: '이름', birth_year: '출생연도', gender: '성별', looking_for: '관심 성별', city: '지역' };
+    for (const [field, label] of Object.entries(required)) {
+      if (!updates[field]) {
+        return res.status(400).json({ error: `${label}은(는) 필수 항목입니다.` });
+      }
+    }
     ({ data, error } = await supabase
       .from('profiles')
       .insert({ id: req.user.id, ...updates })
@@ -118,7 +124,16 @@ router.put('/me', async (req, res) => {
       .single());
   }
 
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    // DB 에러를 사용자 친화적 메시지로 변환
+    if (error.message?.includes('null value')) {
+      return res.status(400).json({ error: '필수 항목을 모두 입력해주세요.' });
+    }
+    if (error.message?.includes('check constraint')) {
+      return res.status(400).json({ error: '입력값이 올바르지 않습니다. 다시 확인해주세요.' });
+    }
+    return res.status(400).json({ error: '프로필 저장에 실패했습니다.' });
+  }
   res.json(data);
 });
 
