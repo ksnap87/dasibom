@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const { verifyToken } = require('./src/middleware/auth');
@@ -15,10 +16,20 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 전역 Rate Limiting: IP당 15분에 100회
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(globalLimiter);
+
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : '*', // 개발 시 전체 허용, 프로덕션에서는 ALLOWED_ORIGINS 환경변수 설정 필요
+    : ['https://dasibom-production.up.railway.app'],
 }));
 app.use(express.json());
 

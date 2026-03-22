@@ -94,10 +94,9 @@ router.post('/kakao', authLimiter, async (req, res) => {
 
 // POST /api/auth/dev-login — 개발용 테스트 로그인 (실제 Supabase 세션 발급)
 router.post('/dev-login', authLimiter, async (req, res) => {
-  // 테스트 기간 동안 production에서도 허용
-  // if (process.env.NODE_ENV === 'production') {
-  //   return res.status(403).json({ error: '개발 모드에서만 사용 가능합니다.' });
-  // }
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: '개발 모드에서만 사용 가능합니다.' });
+  }
 
   try {
     const testKakaoId = 'dev_test_user_12345';
