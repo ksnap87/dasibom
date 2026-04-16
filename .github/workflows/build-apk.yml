@@ -58,12 +58,17 @@ jobs:
 
       - name: Build Release APK + AAB
         working-directory: mobile/android
+        env:
+          # GH Actions ubuntu-latest 러너 16GB RAM. 기본 2GB 로는 RN 0.84 + newArch 빌드
+          # 시 JVM GC thrashing 으로 daemon 중단됨 → 6GB 할당.
+          GRADLE_OPTS: "-Xmx6144m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
         run: |
           ./gradlew assembleRelease bundleRelease --no-daemon --stacktrace \
             -PRELEASE_STORE_FILE=dasibom-release.keystore \
             -PRELEASE_STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }} \
             -PRELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }} \
             -PRELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }} \
+            -Dorg.gradle.jvmargs="-Xmx6144m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8" \
             2>&1 | tee /tmp/build-output.txt
         id: build
 
