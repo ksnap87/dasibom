@@ -9,6 +9,7 @@ import {
   View, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, ActivityIndicator, Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppText from '../components/AppText';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -219,6 +220,7 @@ const EMPTY_FORM: FormData = {
 export default function QuestionnaireScreen() {
   const route = useRoute();
   const nav = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const isEditMode = route.name === 'QuestionnaireEdit';
 
   const [step, setStep] = useState(0);
@@ -397,7 +399,9 @@ export default function QuestionnaireScreen() {
         nav.goBack();
       }
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '저장 중 오류가 발생했습니다.');
+      // 백엔드의 친절한 한국어 메시지 우선, 없으면 axios 디폴트
+      const msg = err?.response?.data?.error ?? err?.message ?? '저장 중 오류가 발생했습니다.';
+      Alert.alert('오류', msg);
     } finally {
       setSaving(false);
     }
@@ -1182,8 +1186,8 @@ export default function QuestionnaireScreen() {
         {renderStep()}
       </ScrollView>
 
-      {/* 네비게이션 */}
-      <View style={styles.navRow}>
+      {/* 네비게이션 — 제스처바/홈인디케이터 영역 회피 */}
+      <View style={[styles.navRow, { paddingBottom: Math.max(16, insets.bottom + 8) }]}>
         {step > 0 && (
           <TouchableOpacity style={styles.backBtn} onPress={back}>
             <AppText style={styles.backBtnText}>← 이전</AppText>
@@ -1343,8 +1347,9 @@ const styles = StyleSheet.create({
   completeBannerText: { fontSize: 18, fontWeight: '700', color: '#27AE60', marginBottom: 6 },
   completeBannerSub: { fontSize: 14, color: '#555' },
   navRow: {
-    flexDirection: 'row', padding: 16, paddingBottom: 32, borderTopWidth: 1,
+    flexDirection: 'row', padding: 16, borderTopWidth: 1,
     borderTopColor: C.border, backgroundColor: C.bg,
+    // paddingBottom 은 인라인에서 insets.bottom 적용
   },
   backBtn: { paddingHorizontal: 24, paddingVertical: 16 },
   backBtnText: { fontSize: 17, color: C.sub },
