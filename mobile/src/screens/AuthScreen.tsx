@@ -8,6 +8,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore, supabase } from '../store/authStore';
 import Config from '../config';
+import { getErrorMessage } from '../utils/error';
 
 const C = {
   primary: '#E8556D',
@@ -28,7 +29,7 @@ export default function AuthScreen() {
     } catch (err: any) {
       // 사용자가 카카오 로그인을 취소한 경우
       if (err?.message?.includes('cancel')) return;
-      Alert.alert('로그인 실패', err.message ?? '다시 시도해주세요.');
+      Alert.alert('로그인 실패', getErrorMessage(err, '다시 시도해주세요.'));
     } finally {
       setLoading(false);
     }
@@ -83,7 +84,7 @@ export default function AuthScreen() {
                   user,
                 });
               } catch (err: any) {
-                Alert.alert('DEV 로그인 실패', err.message ?? '서버에 연결할 수 없습니다.');
+                Alert.alert('DEV 로그인 실패', getErrorMessage(err, '서버에 연결할 수 없습니다.'));
               } finally {
                 setLoading(false);
               }

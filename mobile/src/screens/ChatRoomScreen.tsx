@@ -6,9 +6,11 @@ import {
 } from 'react-native';
 import AppText from '../components/AppText';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMessages, sendMessage, markRead, reportUser } from '../api/client';
 import { useAuthStore, supabase } from '../store/authStore';
 import { Message, RootStackParamList } from '../types';
+import { getErrorMessage } from '../utils/error';
 
 type Route = RouteProp<RootStackParamList, 'ChatRoom'>;
 
@@ -131,6 +133,7 @@ function DateSeparator({ label }: { label: string }) {
 export default function ChatRoomScreen() {
   const route = useRoute<Route>();
   const nav = useNavigation();
+  const insets = useSafeAreaInsets();
   const { match_id, other_name, other_user_id } = route.params;
   const { user } = useAuthStore();
 
@@ -163,7 +166,7 @@ export default function ChatRoomScreen() {
       });
       await markRead(match_id);
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '메시지를 불러오지 못했습니다.');
+      Alert.alert('오류', getErrorMessage(err, '메시지를 불러오지 못했습니다.'));
     } finally {
       setLoading(false);
     }
@@ -264,7 +267,7 @@ export default function ChatRoomScreen() {
       setText('');
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '전송 실패');
+      Alert.alert('오류', getErrorMessage(err, '전송 실패'));
     } finally {
       setSending(false);
     }
@@ -287,7 +290,7 @@ export default function ChatRoomScreen() {
         payload: { message: newMsg },
       });
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '재전송 실패');
+      Alert.alert('오류', getErrorMessage(err, '재전송 실패'));
     }
   };
 
@@ -359,8 +362,8 @@ export default function ChatRoomScreen() {
           />
         )}
 
-        {/* 입력창 */}
-        <View style={styles.inputArea}>
+        {/* 입력창 — 키보드 닫혀 있을 때 하단 인디케이터 영역 회피 */}
+        <View style={[styles.inputArea, { paddingBottom: Math.max(0, insets.bottom) }]}>
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}

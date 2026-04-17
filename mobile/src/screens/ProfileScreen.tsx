@@ -23,6 +23,7 @@ import {
   RELIGION_QA, REALITY_QA, HOBBY_LABELS as HOBBY_LABELS_QA,
   QAItem, getAnswerText,
 } from '../data/questionLabels';
+import { getErrorMessage } from '../utils/error';
 
 // ── 설정 상수 ────────────────────────────────────────────
 
@@ -583,7 +584,7 @@ export default function ProfileScreen() {
         setStoreProfile(profile ? { ...profile, photo_url: photo.url } : null);
       }
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '사진 업로드 실패');
+      Alert.alert('오류', getErrorMessage(err, '사진 업로드 실패'));
     } finally {
       setUploading(false);
     }
@@ -607,7 +608,7 @@ export default function ProfileScreen() {
               setProfile(prev => prev ? { ...prev, background_url: undefined } : prev);
             }
           } catch (err: any) {
-            Alert.alert('오류', err.message ?? '삭제 실패');
+            Alert.alert('오류', getErrorMessage(err, '삭제 실패'));
           }
         },
       },
@@ -621,7 +622,7 @@ export default function ProfileScreen() {
       setStoreProfile(profile ? { ...profile, photo_url: photoUrl } : null);
       Alert.alert('완료', '대표 사진이 변경되었습니다.');
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '설정 실패');
+      Alert.alert('오류', getErrorMessage(err, '설정 실패'));
     }
   };
 
@@ -631,7 +632,7 @@ export default function ProfileScreen() {
       setProfile(prev => prev ? { ...prev, background_url: photoUrl } : prev);
       Alert.alert('완료', '배경 사진이 변경되었습니다.');
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '설정 실패');
+      Alert.alert('오류', getErrorMessage(err, '설정 실패'));
     }
   };
 
@@ -670,7 +671,7 @@ export default function ProfileScreen() {
       setProfile(prev => prev ? { ...prev, bio: bioText.trim() } : prev);
       setEditingBio(false);
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '저장 실패');
+      Alert.alert('오류', getErrorMessage(err, '저장 실패'));
     } finally {
       setSavingBio(false);
     }
