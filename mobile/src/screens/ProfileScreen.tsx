@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
   },
   creditLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   creditIcon: { fontSize: 24 },
-  creditLabel: { fontSize: 12, color: '#7D5A00' },
+  creditLabel: { fontSize: 13, color: '#7D5A00' },
   creditValue: { fontSize: 20, fontWeight: '800', color: '#7D5A00' },
   creditBuyBtn: {
     backgroundColor: C.gold, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
@@ -1265,7 +1265,7 @@ const styles = StyleSheet.create({
   },
   verifyIcon: { fontSize: 22 },
   verifyTitle: { fontSize: 14, fontWeight: '700', color: '#7D5A00' },
-  verifySub: { fontSize: 12, color: '#9E7500', marginTop: 2 },
+  verifySub: { fontSize: 13, color: '#9E7500', marginTop: 2 },
   verifyBadge: {
     backgroundColor: '#F9A825', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
   },
@@ -1349,7 +1349,7 @@ const styles = StyleSheet.create({
   },
   editValueIcon: { fontSize: 22 },
   editValueTitle: { fontSize: 15, fontWeight: '700', color: C.primary },
-  editValueSub: { fontSize: 12, color: C.sub, marginTop: 2 },
+  editValueSub: { fontSize: 13, color: C.sub, marginTop: 2 },
   editValueCost: { alignItems: 'center' },
   editValueCostIcon: { fontSize: 16 },
   editValueCostText: { fontSize: 11, color: C.sub, fontWeight: '600' },
@@ -1468,7 +1468,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0ECEA',
   },
   settingRowLabel: { fontSize: 15, color: '#2D2D2D', fontWeight: '600' },
-  settingRowSub: { fontSize: 12, color: '#777', marginTop: 2 },
+  settingRowSub: { fontSize: 13, color: '#777', marginTop: 2 },
 
   // 글씨 크기 선택
   fontSizeRow: {

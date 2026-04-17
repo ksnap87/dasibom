@@ -318,5 +318,5 @@ const styles = StyleSheet.create({
   priceTextPopular: { color: '#FFF' },
 
   notice: { marginTop: 20, padding: 16 },
-  noticeText: { fontSize: 12, color: C.sub, lineHeight: 18 },
+  noticeText: { fontSize: 13, color: C.sub, lineHeight: 19 },
 });

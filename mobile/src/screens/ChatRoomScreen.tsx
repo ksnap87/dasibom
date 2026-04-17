@@ -359,6 +359,7 @@ export default function ChatRoomScreen() {
             renderItem={renderItem}
             contentContainerStyle={styles.messageList}
             onContentSizeChange={handleContentSizeChange}
+            keyboardShouldPersistTaps="handled"
           />
         )}
 

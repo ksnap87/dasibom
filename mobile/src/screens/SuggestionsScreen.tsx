@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, Alert, SafeAreaView, Animated,
+  ActivityIndicator, RefreshControl, Alert, SafeAreaView, Animated, PanResponder,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AppText from '../components/AppText';
@@ -217,16 +217,26 @@ const ProfileCard = React.memo(function ProfileCard({
   const translateX = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(1)).current;
 
+  // 콜백/acting 을 ref 로 보관 — PanResponder 가 useRef 라 stale closure 방지
+  const onLikeRef = useRef(onLike);
+  const onPassRef = useRef(onPass);
+  const actingRef = useRef(acting);
+  useEffect(() => {
+    onLikeRef.current = onLike;
+    onPassRef.current = onPass;
+    actingRef.current = acting;
+  }, [onLike, onPass, acting]);
+
   const animateOut = (direction: 'left' | 'right', callback: () => void) => {
     Animated.parallel([
       Animated.timing(translateX, {
-        toValue: direction === 'right' ? 300 : -300,
-        duration: 250,
+        toValue: direction === 'right' ? 400 : -400,
+        duration: 220,
         useNativeDriver: true,
       }),
       Animated.timing(cardOpacity, {
         toValue: 0,
-        duration: 250,
+        duration: 220,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -236,6 +246,38 @@ const ProfileCard = React.memo(function ProfileCard({
 
   const handleLike = () => animateOut('right', onLike);
   const handlePass = () => animateOut('left', onPass);
+
+  // 좌우 스와이프 제스처 — 시니어용 컨벤션 가이드는 카드 하단에 작게 표시
+  const SWIPE_THRESHOLD = 120;
+  const panResponder = useRef(
+    PanResponder.create({
+      // 가로 이동이 세로보다 클 때만 잡음 (ScrollView/FlatList 와 충돌 안 나게)
+      onMoveShouldSetPanResponder: (_, g) =>
+        !actingRef.current && Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.2,
+      onPanResponderMove: (_, g) => {
+        translateX.setValue(g.dx);
+      },
+      onPanResponderRelease: (_, g) => {
+        if (actingRef.current) return;
+        if (g.dx > SWIPE_THRESHOLD) {
+          animateOut('right', () => onLikeRef.current());
+        } else if (g.dx < -SWIPE_THRESHOLD) {
+          animateOut('left', () => onPassRef.current());
+        } else {
+          // 임계값 미달 → 원위치 (스프링)
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 7,
+            tension: 60,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+      },
+    }),
+  ).current;
 
   const scorePercent = item.compatibility_score != null ? Math.round(item.compatibility_score) : 0;
 
@@ -252,10 +294,20 @@ const ProfileCard = React.memo(function ProfileCard({
 
   return (
     <Animated.View
+      {...panResponder.panHandlers}
       style={[
         styles.card,
         {
-          transform: [{ translateX }],
+          transform: [
+            { translateX },
+            // 살짝 기울이면 스와이프 피드백 직관적
+            {
+              rotate: translateX.interpolate({
+                inputRange: [-300, 0, 300],
+                outputRange: ['-6deg', '0deg', '6deg'],
+              }),
+            },
+          ],
           opacity: cardOpacity,
         },
       ]}
@@ -361,6 +413,9 @@ const ProfileCard = React.memo(function ProfileCard({
           <AppText style={styles.likeBtnText}>💌 관심 있어요</AppText>
         </TouchableOpacity>
       </View>
+
+      {/* 스와이프 안내 — 시니어용 컨벤션 가이드 (작게, 한 번만 노출돼도 충분) */}
+      <AppText style={styles.swipeHint}>← 왼쪽 밀기로 다음에   ·   오른쪽 밀기로 관심 →</AppText>
     </Animated.View>
   );
 });
@@ -700,6 +755,7 @@ const styles = StyleSheet.create({
   likeBtn: { flex: 2, paddingVertical: 14, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center' },
   likeBtnText: { fontSize: 16, color: '#FFF', fontWeight: '700' },
   disabledBtn: { opacity: 0.5 },
+  swipeHint: { fontSize: 12, color: C.sub, textAlign: 'center', marginTop: 10, opacity: 0.7 },
 
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyEmoji: { fontSize: 64, marginBottom: 16 },
