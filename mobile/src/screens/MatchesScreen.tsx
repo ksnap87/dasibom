@@ -248,19 +248,32 @@ export default function MatchesScreen() {
         }
       >
         {/* ── 보낸 관심 섹션 ── */}
-        {sentInterests.length > 0 && (
-          <View style={styles.sentSection}>
-            <TouchableOpacity
-              style={styles.sentHeader}
-              onPress={() => setShowSent(v => !v)}
-              activeOpacity={0.7}
-            >
-              <AppText style={styles.sentHeaderText}>
-                💌 보낸 관심 {pendingSent.length > 0 && `(${pendingSent.length}명 대기중)`}
-              </AppText>
-              <AppText style={styles.sentToggle}>{showSent ? '접기 ▲' : '펼치기 ▼'}</AppText>
-            </TouchableOpacity>
-            {showSent && (
+        <View style={styles.sentSection}>
+          <TouchableOpacity
+            style={styles.sentHeader}
+            onPress={() => setShowSent(v => !v)}
+            activeOpacity={0.7}
+          >
+            <AppText style={styles.sentHeaderText}>
+              💌 보낸 관심 {
+                pendingSent.length > 0
+                  ? `(${pendingSent.length}명 대기중)`
+                  : sentInterests.length === 0
+                    ? '(아직 없어요)'
+                    : ''
+              }
+            </AppText>
+            <AppText style={styles.sentToggle}>{showSent ? '접기 ▲' : '펼치기 ▼'}</AppText>
+          </TouchableOpacity>
+          {showSent && (
+            sentInterests.length === 0 ? (
+              <View style={styles.sentEmpty}>
+                <AppText style={styles.sentEmptyText}>
+                  아직 관심을 보낸 분이 없어요.{'\n'}
+                  추천 탭에서 마음에 드는 분께 관심을 표현해보세요.
+                </AppText>
+              </View>
+            ) : (
               <View>
                 {pendingSent.map(item => (
                   <SentInterestRow key={item.to_user_id} item={item} />
@@ -269,9 +282,9 @@ export default function MatchesScreen() {
                   <SentInterestRow key={item.to_user_id} item={item} />
                 ))}
               </View>
-            )}
-          </View>
-        )}
+            )
+          )}
+        </View>
 
         {/* ── 채팅 목록 ── */}
         {matches.length === 0 ? (
@@ -395,6 +408,11 @@ const styles = StyleSheet.create({
   sentStatus: { alignItems: 'center', gap: 2 },
   sentCountdown: { fontSize: 11, fontWeight: '700' },
   sentStatusText: { fontSize: 11, fontWeight: '600' },
+  sentEmpty: {
+    paddingHorizontal: 20, paddingVertical: 24,
+    borderTopWidth: 1, borderTopColor: C.border,
+  },
+  sentEmptyText: { fontSize: 14, color: C.sub, textAlign: 'center', lineHeight: 20 },
 
   // 빈 상태
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
