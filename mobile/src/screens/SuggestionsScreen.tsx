@@ -11,6 +11,7 @@ import { SuggestionProfile } from '../types';
 import { useAuthStore } from '../store/authStore';
 import SkeletonLoader from '../components/SkeletonLoader';
 import ToastContainer, { showToast } from '../components/Toast';
+import { getErrorMessage } from '../utils/error';
 
 const C = {
   primary: '#E8556D',
@@ -409,18 +410,22 @@ export default function SuggestionsScreen() {
     } catch {}
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (overrideLimit?: number) => {
     try {
       // 발견 필터 로드 (지역/관계목표)
       const dfStr = await AsyncStorage.getItem(STORAGE_KEYS.discoveryFilters);
-      let params = '';
+      const parts: string[] = [];
       if (dfStr) {
         const df = JSON.parse(dfStr);
-        const parts: string[] = [];
         if (df.region_filter && df.region_filter !== 'nationwide') parts.push(`region=${df.region_filter}`);
         if (df.relationship_goal_match) parts.push('relationship_goal_match=true');
-        if (parts.length) params = '?' + parts.join('&');
       }
+      // 크레딧으로 추천 더 받기 시 backend 의 limit 도 늘려야 새 카드가 옴
+      // (안 보내면 backend default 5 만 반환 → 본 사람 제외 후 사실상 빈 결과 가능)
+      if (overrideLimit && overrideLimit > 5) {
+        parts.push(`limit=${overrideLimit}`);
+      }
+      const params = parts.length ? '?' + parts.join('&') : '';
 
       // API에 발견 필터 파라미터 전달
       const profileRes = await api.get('/api/profiles/me');
@@ -435,7 +440,7 @@ export default function SuggestionsScreen() {
 
       setSuggestions(filtered);
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '불러오기 실패');
+      Alert.alert('오류', getErrorMessage(err, '불러오기 실패'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -491,7 +496,8 @@ export default function SuggestionsScreen() {
             await AsyncStorage.setItem(STORAGE_KEYS.dailySeen, JSON.stringify({ date: today, count: dailyCount, limit: newLimit }));
             await loadCredits();
             showToast(`추천 ${EXTRA_PER_CREDIT}명 추가 열람!`);
-            load();
+            // backend 에 늘어난 limit 명시 → 새 카드들이 실제로 옴
+            load(newLimit);
           },
         },
       ],
@@ -510,7 +516,7 @@ export default function SuggestionsScreen() {
         showToast('관심을 표현했어요 💌');
       }
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '처리 실패');
+      Alert.alert('오류', getErrorMessage(err, '처리 실패'));
     } finally {
       setActing(null);
     }

@@ -11,6 +11,7 @@ import { getMutualMatches, getSentInterests } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { MutualMatch, RootStackParamList, MainTabParamList } from '../types';
 import SkeletonLoader from '../components/SkeletonLoader';
+import { getErrorMessage } from '../utils/error';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Matches'>,
@@ -189,7 +190,7 @@ export default function MatchesScreen() {
       setMatches(matchData);
       setSentInterests(sentData);
     } catch (err: any) {
-      Alert.alert('오류', err.message ?? '목록을 불러오지 못했습니다.');
+      Alert.alert('오류', getErrorMessage(err, '목록을 불러오지 못했습니다.'));
     } finally {
       setLoading(false);
       setRefreshing(false);

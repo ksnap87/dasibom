@@ -3,6 +3,7 @@ import {
   View, ScrollView, TouchableOpacity, StyleSheet,
   SafeAreaView, ActivityIndicator, Alert, Image, Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppText from '../components/AppText';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -101,6 +102,7 @@ function QASection({ title, icon, qaList, profile }: {
 export default function FriendProfileScreen() {
   const nav = useNavigation<Nav>();
   const route = useRoute<Route>();
+  const insets = useSafeAreaInsets();
   const { user_id, match_id, other_name } = route.params;
   const { phoneVerified } = useAuthStore();
 
@@ -275,8 +277,8 @@ export default function FriendProfileScreen() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* 하단 고정 채팅 버튼 */}
-      <View style={styles.footer}>
+      {/* 하단 고정 채팅 버튼 — 제스처바/홈인디케이터 회피 */}
+      <View style={[styles.footer, { paddingBottom: Math.max(16, insets.bottom + 8) }]}>
         <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.8}>
           <AppText style={styles.chatBtnText}>💌 채팅 시작하기</AppText>
         </TouchableOpacity>
@@ -385,8 +387,9 @@ const styles = StyleSheet.create({
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: C.bg, padding: 16, paddingBottom: 24,
+    backgroundColor: C.bg, padding: 16,
     borderTopWidth: 1, borderTopColor: C.border,
+    // paddingBottom 은 인라인에서 insets.bottom 적용
   },
   chatBtn: {
     backgroundColor: C.primary, borderRadius: 14, paddingVertical: 16,

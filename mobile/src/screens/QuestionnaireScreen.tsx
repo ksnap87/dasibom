@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { updateMyProfile, checkNickname } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { RootStackParamList } from '../types';
+import { getErrorMessage } from '../utils/error';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -399,9 +400,7 @@ export default function QuestionnaireScreen() {
         nav.goBack();
       }
     } catch (err: any) {
-      // 백엔드의 친절한 한국어 메시지 우선, 없으면 axios 디폴트
-      const msg = err?.response?.data?.error ?? err?.message ?? '저장 중 오류가 발생했습니다.';
-      Alert.alert('오류', msg);
+      Alert.alert('오류', getErrorMessage(err, '저장 중 오류가 발생했습니다.'));
     } finally {
       setSaving(false);
     }

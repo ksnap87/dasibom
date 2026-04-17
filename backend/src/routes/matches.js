@@ -9,11 +9,20 @@ const supabase = createClient(
 );
 
 // GET /api/matches/suggestions — candidates the user hasn't seen yet (sorted by score)
-// Query params: region=same_city|metro|nationwide, relationship_goal_match=true
+// Query params:
+//   region=same_city|metro|nationwide
+//   relationship_goal_match=true
+//   limit=N  (1~50, default 5) — 크레딧으로 추가 추천 시 클라이언트가 늘려 요청
 router.get('/suggestions', async (req, res) => {
   try {
   const userId = req.user.id;
   const { region, relationship_goal_match } = req.query;
+
+  // limit 파라미터 — 기본 5, 최대 50 (악용 방지)
+  const requestedLimit = parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+    ? Math.min(requestedLimit, 50)
+    : 5;
 
   const { data: me, error: meErr } = await supabase
     .from('profiles')
@@ -168,7 +177,7 @@ router.get('/suggestions', async (req, res) => {
       };
     })
     .sort((a, b) => b.compatibility_score - a.compatibility_score)
-    .slice(0, 5); // 하루 기본 5명
+    .slice(0, limit); // 기본 5명, 크레딧 사용 시 클라이언트가 limit 늘려 요청
 
   res.json(results);
   } catch (err) {
