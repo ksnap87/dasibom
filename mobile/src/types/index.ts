@@ -133,7 +133,7 @@ export type RootStackParamList = {
   PhoneVerification: { match_id: string; other_name: string; other_user_id: string };  // 채팅 전 본인인증
   QuestionnaireEdit: undefined;                                   // 크레딧으로 가치관 수정
   CreditStore: undefined;                                          // 크레딧 충전 상점
-  FriendProfile: { user_id: string; match_id: string; other_name: string }; // 매칭 후 상대 프로필
+  FriendProfile: { user_id: string; other_name: string; match_id?: string }; // match_id 없으면 보낸 관심 프리뷰 (채팅 버튼 숨김)
 };
 
 export type MainTabParamList = {
