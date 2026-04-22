@@ -90,13 +90,16 @@ router.get('/suggestions', async (req, res) => {
     })
     .map(r => r.to_user_id);
 
+  // excludeIds 는 모두 DB/요청자의 UUID 인 상태라 이론상 안전하지만,
+  // Supabase 쿼리 문자열에 직접 삽입되므로 방어적으로 UUID 형식만 통과시킴.
+  const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
   const excludeIds = [
     userId,
     ...activeSeenIds,
     ...(blockedByMe?.map(r => r.blocked_id) ?? []),
     ...(blockedMe?.map(r => r.blocker_id) ?? []),
     ...contactExcludeIds,
-  ];
+  ].filter(id => typeof id === 'string' && UUID_RE.test(id));
 
   let query = supabase
     .from('profiles')

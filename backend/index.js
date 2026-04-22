@@ -10,6 +10,7 @@ const messagesRouter = require('./src/routes/messages');
 const photosRouter = require('./src/routes/photos');
 const creditsRouter = require('./src/routes/credits');
 const authRouter = require('./src/routes/auth');
+const adminRouter = require('./src/routes/admin');
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -25,6 +26,23 @@ const globalLimiter = rateLimit({
   legacyHeaders: false,
 });
 app.use(globalLimiter);
+
+// 민감 엔드포인트 — 스팸/열거 방지용 세분화 리밋
+const interestLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 20,
+  message: { error: '너무 많이 눌렀어요. 잠시 후 다시 시도해주세요.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+const messageLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 30,
+  message: { error: '메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도해주세요.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+const nicknameLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 10,
+  message: { error: '닉네임 확인이 너무 잦아요. 잠시 후 다시 시도해주세요.' },
+  standardHeaders: true, legacyHeaders: false,
+});
 
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS
@@ -56,25 +74,17 @@ app.use(express.json());
 app.get('/health', (req, res) => res.json({ status: 'ok', app: '다시봄 API' }));
 
 app.use('/api/auth', authRouter);  // 인증 불필요
+app.use('/api/admin', adminRouter); // HMAC 자체 인증 (verifyToken 우회)
 
-// 닉네임 중복체크 — 인증 불필요 (회원가입 전 호출)
-app.get('/api/nickname/check', async (req, res) => {
-  const { nickname } = req.query;
-  if (!nickname || typeof nickname !== 'string' || nickname.trim().length < 2) {
-    return res.status(400).json({ error: '닉네임은 2자 이상이어야 합니다.' });
-  }
-  if (nickname.trim().length > 12) {
-    return res.status(400).json({ error: '닉네임은 12자 이하여야 합니다.' });
-  }
-  const { createClient: c } = require('@supabase/supabase-js');
-  const sb = c(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-  const { data } = await sb.from('profiles').select('id').eq('nickname', nickname.trim()).maybeSingle();
-  res.json({ available: !data });
-});
+// 닉네임 중복체크는 /api/profiles/check-nickname (인증 필요) 로 이동됨 — 설문 중 호출
+
+// 민감 엔드포인트에 세분 리밋 선적용 (아래 router mount 에서 다시 매치되며 이어짐)
+app.use('/api/profiles/check-nickname', nicknameLimiter);
+app.use('/api/profiles/interest', interestLimiter);
 
 app.use('/api/profiles', verifyToken, profilesRouter);
 app.use('/api/matches', verifyToken, matchesRouter);
-app.use('/api/messages', verifyToken, messagesRouter);
+app.use('/api/messages', verifyToken, messageLimiter, messagesRouter);
 app.use('/api/photos', verifyToken, photosRouter);
 app.use('/api/credits', verifyToken, creditsRouter);
 

@@ -312,7 +312,7 @@ const ProfileCard = React.memo(function ProfileCard({
         },
       ]}
     >
-      {/* Header: 이니셜 + 기본정보 + 호환성 점수 */}
+      {/* Header: 이니셜 + 기본정보 + 매칭 점수 */}
       <TouchableOpacity activeOpacity={0.7} onPress={() => setExpanded(!expanded)}>
         <View style={styles.cardHeader}>
           <View style={styles.avatarCircle}>
@@ -324,7 +324,7 @@ const ProfileCard = React.memo(function ProfileCard({
           </View>
           <View style={styles.scoreBadge}>
             <AppText style={styles.scoreText}>{scorePercent}%</AppText>
-            <AppText style={styles.scoreLabel}>호환</AppText>
+            <AppText style={styles.scoreLabel}>매칭</AppText>
           </View>
         </View>
 
