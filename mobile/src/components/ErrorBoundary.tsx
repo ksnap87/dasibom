@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import AppText from './AppText';
+import crashlytics from '@react-native-firebase/crashlytics';
 
 interface Props {
   children: ReactNode;
@@ -19,6 +20,13 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack);
+    // Crashlytics 로 JS 에러 리포트 — 네이티브 크래시와 달리 자동 수집되지 않으므로 수동 리포트
+    try {
+      crashlytics().log(`React componentStack: ${info.componentStack ?? 'n/a'}`);
+      crashlytics().recordError(error);
+    } catch (_) {
+      // Crashlytics 초기화 실패는 조용히 무시 (앱 동작엔 영향 없음)
+    }
   }
 
   handleRetry = () => {
