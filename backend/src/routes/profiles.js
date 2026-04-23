@@ -6,7 +6,13 @@ const { sendPushToUser } = require('../utils/push');
 const { filterProfileContent } = require('../utils/contentFilter');
 
 // 전화번호 암호화/복호화 (AES-256-GCM)
-const PHONE_ENCRYPTION_KEY = process.env.PHONE_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+// PHONE_ENCRYPTION_KEY 가 없으면 재시작마다 키가 바뀌어 기존 데이터 복호화 불가 → 즉시 종료
+const PHONE_ENCRYPTION_KEY = process.env.PHONE_ENCRYPTION_KEY;
+if (!PHONE_ENCRYPTION_KEY || !/^[0-9a-fA-F]{64}$/.test(PHONE_ENCRYPTION_KEY)) {
+  console.error('[FATAL] PHONE_ENCRYPTION_KEY 환경변수가 없거나 64자리 hex 형식이 아닙니다.');
+  console.error('  → `node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"` 로 생성 후 .env 에 추가하세요.');
+  process.exit(1);
+}
 const ENC_KEY = Buffer.from(PHONE_ENCRYPTION_KEY, 'hex');
 
 function encryptPhone(phone) {
@@ -82,12 +88,12 @@ router.put('/me', async (req, res) => {
       return res.status(400).json({ error: bioFilter.message });
     }
   }
-  // 출생연도 검증 (19세 미만 가입 불가, 비현실적 나이 차단)
+  // 출생연도 검증 — 다시봄은 중년/시니어 대상 (40세 이상)
   if (updates.birth_year) {
     const currentYear = new Date().getFullYear();
     const age = currentYear - updates.birth_year;
-    if (age < 19) {
-      return res.status(400).json({ error: '19세 이상만 가입할 수 있습니다.' });
+    if (age < 40) {
+      return res.status(400).json({ error: '다시봄은 40세 이상만 이용할 수 있어요.' });
     }
     if (age > 120 || updates.birth_year < 1900) {
       return res.status(400).json({ error: '올바른 출생연도를 입력해주세요.' });
@@ -138,7 +144,8 @@ router.put('/me', async (req, res) => {
 });
 
 // GET /api/profiles/:id — public view of another user
-router.get('/:id', async (req, res) => {
+// UUID 형식만 매칭 (sent-interests 같은 다른 GET 라우트가 잘못 잡히지 않도록)
+router.get('/:id([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})', async (req, res) => {
   const PUBLIC_COLS = [
     'id', 'name', 'birth_year', 'gender', 'city', 'photo_url', 'bio',
     'hobbies', 'religion', 'relationship_goal', 'health_status',
@@ -424,47 +431,8 @@ router.post('/verify-phone', async (req, res) => {
   }
 });
 
-// GET /api/profiles/admin/phone/:userId — 관리자 전용: 암호화된 전화번호 복호화 조회
-// 데이팅 폭력 등 긴급 상황 시 수사기관 협조용
-router.get('/admin/phone/:userId', async (req, res) => {
-  // 관리자 인증: ADMIN_SECRET 헤더 필요
-  const adminSecret = req.headers['x-admin-secret'];
-  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
-    return res.status(403).json({ error: '관리자 권한이 필요합니다.' });
-  }
-
-  const { userId } = req.params;
-
-  try {
-    const { data, error } = await supabase
-      .from('verified_phones')
-      .select('encrypted_phone, verified_at, verification_method')
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({ error: '인증된 전화번호가 없습니다.' });
-    }
-
-    const phone = decryptPhone(data.encrypted_phone);
-
-    // 카카오 정보도 함께 조회
-    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
-
-    res.json({
-      user_id: userId,
-      phone_number: phone,
-      verified_at: data.verified_at,
-      verification_method: data.verification_method,
-      kakao_id: authUser?.user_metadata?.kakao_id ?? null,
-      kakao_nickname: authUser?.user_metadata?.nickname ?? null,
-      kakao_email: authUser?.user_metadata?.kakao_email ?? null,
-    });
-  } catch (err) {
-    console.error('전화번호 복호화 실패:', err.message);
-    res.status(500).json({ error: '조회 중 오류가 발생했습니다.' });
-  }
-});
+// Admin 전화번호 복호화 엔드포인트는 /api/admin/phone/:userId 로 분리됨
+// (routes/admin.js — HMAC 인증, verifyToken 우회)
 
 // GET /api/profiles/sent-interests — 보낸 관심 히스토리
 // 상태: pending(대기중), matched(매칭됨), expired(3일 경과 만료)

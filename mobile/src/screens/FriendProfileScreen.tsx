@@ -132,6 +132,7 @@ export default function FriendProfileScreen() {
   }, [loadProfile]);
 
   const handleChat = () => {
+    if (!match_id) return;
     if (phoneVerified) {
       nav.navigate('ChatRoom', { match_id, other_name, other_user_id: user_id });
     } else {
@@ -273,16 +274,18 @@ export default function FriendProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 채팅 버튼 공간 확보 */}
-        <View style={{ height: 80 }} />
+        {/* 채팅 버튼 공간 확보 (매칭된 경우만) */}
+        {match_id ? <View style={{ height: 80 }} /> : <View style={{ height: 16 }} />}
       </ScrollView>
 
-      {/* 하단 고정 채팅 버튼 — 제스처바/홈인디케이터 회피 */}
-      <View style={[styles.footer, { paddingBottom: Math.max(16, insets.bottom + 8) }]}>
-        <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.8}>
-          <AppText style={styles.chatBtnText}>💌 채팅 시작하기</AppText>
-        </TouchableOpacity>
-      </View>
+      {/* 하단 고정 채팅 버튼 — 매칭된 경우에만 표시 */}
+      {match_id && (
+        <View style={[styles.footer, { paddingBottom: Math.max(16, insets.bottom + 8) }]}>
+          <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.8}>
+            <AppText style={styles.chatBtnText}>💌 채팅 시작하기</AppText>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 신고 사유 선택 Modal */}
       <Modal

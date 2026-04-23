@@ -68,27 +68,45 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-api.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    const originalRequest = err.config;
-
-    // 토큰 갱신 로직 (401)
-    if (err.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+// 여러 요청이 동시에 401 을 받아도 refreshSession 은 한 번만 수행.
+// 첫 요청이 새 토큰을 받는 동안 나머지는 같은 Promise 를 기다리게 해서
+// Supabase 에 중복 재발급 호출(+ race 로 인한 revoked 토큰 사용)이 발생하지 않게 한다.
+let refreshingPromise: Promise<string | null> | null = null;
+async function refreshAccessTokenOnce(): Promise<string | null> {
+  if (!refreshingPromise) {
+    refreshingPromise = (async () => {
       try {
-        // 토큰 만료 시 Supabase로 재발급 시도
         const { supabase } = await import('../store/authStore');
         const { data, error } = await supabase.auth.refreshSession();
         if (!error && data.session?.access_token) {
           const newToken = data.session.access_token;
           await AsyncStorage.setItem('access_token', newToken);
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          return api(originalRequest);
+          return newToken;
         }
       } catch (_) {}
-      // 재발급 실패 시 토큰 제거
       await AsyncStorage.removeItem('access_token');
+      return null;
+    })().finally(() => {
+      // 다음 401 이 생기면 다시 시도 가능하도록 즉시 해제
+      refreshingPromise = null;
+    });
+  }
+  return refreshingPromise;
+}
+
+api.interceptors.response.use(
+  (res) => res,
+  async (err) => {
+    const originalRequest = err.config;
+
+    // 토큰 갱신 로직 (401) — 동시에 여러 요청이 와도 refresh 는 1회만
+    if (err.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const newToken = await refreshAccessTokenOnce();
+      if (newToken) {
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return api(originalRequest);
+      }
     }
 
     // 상태 코드별 에러 메시지 추가
@@ -199,7 +217,7 @@ export const verifyPhone = (phone_number: string) =>
 
 // ── Nickname ─────────────────────────────────────────────
 export const checkNickname = (nickname: string) =>
-  axios.get(`${API_BASE}/api/nickname/check`, { params: { nickname }, timeout: 10000 }).then(r => r.data);
+  api.get('/api/profiles/check-nickname', { params: { nickname } }).then(r => r.data);
 
 // ── Sent Interests ───────────────────────────────────────
 export const getSentInterests = () => getWithRetry('/api/profiles/sent-interests').then(r => r.data);

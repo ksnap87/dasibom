@@ -2,6 +2,7 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: "com.google.gms.google-services"
+apply plugin: "com.google.firebase.crashlytics"
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -105,11 +106,15 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // 에뮬레이터의 10.0.2.2:3000 (호스트 로컬 백엔드) HTTP 통신 허용 — 개발 전용
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
         }
         release {
             signingConfig signingConfigs.release.storeFile ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            // 보안: 운영 빌드는 cleartext 차단 — 모든 API 는 HTTPS 만
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
         }
     }
 }

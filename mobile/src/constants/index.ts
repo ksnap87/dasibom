@@ -32,3 +32,9 @@ export const COLORS = {
   error: '#E53935',
   overlay: 'rgba(0,0,0,0.5)',
 };
+
+// 법적 문서 URL — Play Store 심사 필수
+export const LEGAL_URLS = {
+  privacyPolicy: 'https://ksnap87.github.io/dasibom/privacy-policy.html',
+  termsOfService: 'https://ksnap87.github.io/dasibom/terms.html',
+};

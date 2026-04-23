@@ -300,7 +300,7 @@ export default function QuestionnaireScreen() {
         const currentYear = new Date().getFullYear();
         const age = currentYear - birthYear;
         if (birthYear < 1900 || age > 120) return warn('올바른 출생연도를 입력해주세요.');
-        if (age < 19) return warn('19세 이상만 가입할 수 있습니다.');
+        if (age < 40) return warn('다시봄은 40세 이상만 이용할 수 있어요.');
         if (!form.gender) return warn('성별을 선택해주세요.');
         if (!form.city.trim()) return warn('거주 지역을 선택해주세요.');
         return true;

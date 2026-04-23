@@ -3,7 +3,7 @@ import {
   View, FlatList, TouchableOpacity, StyleSheet,
   RefreshControl, SafeAreaView, Alert, Image, ScrollView,
 } from 'react-native';
-import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp, useNavigation, useFocusEffect } from '@react-navigation/native';
 import AppText from '../components/AppText';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -131,14 +131,20 @@ const STATUS_CONFIG = {
   expired: { label: '만료', color: '#999', icon: '⌛' },
 };
 
-function SentInterestRow({ item }: { item: SentInterest }) {
+function SentInterestRow({ item, onPress }: { item: SentInterest; onPress: () => void }) {
   const cfg = STATUS_CONFIG[item.status];
   const currentYear = new Date().getFullYear();
   const age = item.birth_year ? currentYear - item.birth_year : null;
   const isExpired = item.status === 'expired';
 
   return (
-    <View style={[styles.sentRow, isExpired && styles.sentRowExpired]}>
+    <TouchableOpacity
+      style={[styles.sentRow, isExpired && styles.sentRowExpired]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.name ?? '알 수 없음'}님 프로필 보기`}
+    >
       <View style={[styles.sentAvatar, { borderColor: cfg.color }]}>
         <AppText style={[styles.sentAvatarText, isExpired && { opacity: 0.4 }]}>
           {item.name?.charAt(0) ?? '?'}
@@ -163,7 +169,7 @@ function SentInterestRow({ item }: { item: SentInterest }) {
           <AppText style={[styles.sentStatusText, { color: cfg.color }]}>{cfg.label}</AppText>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -197,7 +203,13 @@ export default function MatchesScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // 탭 진입할 때마다 새로 가져오기
+  // (다른 탭에서 관심 누른 직후 매칭 탭 와도 즉시 반영되도록)
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   const handlePress = (match: MutualMatch) => {
     if (phoneVerifiedLoaded && !phoneVerified) {
@@ -277,10 +289,24 @@ export default function MatchesScreen() {
             ) : (
               <View>
                 {pendingSent.map(item => (
-                  <SentInterestRow key={item.to_user_id} item={item} />
+                  <SentInterestRow
+                    key={item.to_user_id}
+                    item={item}
+                    onPress={() => nav.navigate('FriendProfile', {
+                      user_id: item.to_user_id,
+                      other_name: item.name ?? '알 수 없음',
+                    })}
+                  />
                 ))}
                 {otherSent.map(item => (
-                  <SentInterestRow key={item.to_user_id} item={item} />
+                  <SentInterestRow
+                    key={item.to_user_id}
+                    item={item}
+                    onPress={() => nav.navigate('FriendProfile', {
+                      user_id: item.to_user_id,
+                      other_name: item.name ?? '알 수 없음',
+                    })}
+                  />
                 ))}
               </View>
             )
