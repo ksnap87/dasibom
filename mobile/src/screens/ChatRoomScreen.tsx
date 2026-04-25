@@ -11,23 +11,10 @@ import { getMessages, sendMessage, markRead, reportUser } from '../api/client';
 import { useAuthStore, supabase } from '../store/authStore';
 import { Message, RootStackParamList } from '../types';
 import { getErrorMessage } from '../utils/error';
+import { colors, palette, radius, spacing, typography } from '../theme';
 
 type Route = RouteProp<RootStackParamList, 'ChatRoom'>;
 
-const C = {
-  primary: '#E8556D',
-  bg: '#FFF5F3',           // 다시봄 따뜻한 크림 배경
-  myBubble: '#F2728A',     // 내 말풍선: 부드러운 코랄 핑크
-  otherBubble: '#FFFFFF',
-  text: '#2D2D2D',
-  sub: '#999999',
-  border: '#F0ECEA',
-  inputBg: '#FFFFFF',
-  overlay: 'rgba(0,0,0,0.5)',
-  error: '#E53935',
-};
-
-/** "오늘", "어제", 날짜 형식 반환 */
 function formatDateLabel(dateStr: string) {
   const d = new Date(dateStr);
   const today = new Date();
@@ -62,7 +49,7 @@ function buildListItems(messages: Message[]): ListItem[] {
 function Avatar({ photoUrl, name, size = 36 }: { photoUrl?: string; name: string; size?: number }) {
   const s = {
     width: size, height: size, borderRadius: size / 2,
-    backgroundColor: C.primary + '30',
+    backgroundColor: colors.primaryLight,
     alignItems: 'center' as const, justifyContent: 'center' as const,
   };
   if (photoUrl) {
@@ -70,7 +57,7 @@ function Avatar({ photoUrl, name, size = 36 }: { photoUrl?: string; name: string
   }
   return (
     <View style={s}>
-      <AppText style={{ fontSize: size * 0.4, color: C.primary, fontWeight: '700' }}>
+      <AppText style={{ fontSize: size * 0.4, color: colors.primaryDark, fontWeight: typography.bold }}>
         {name.charAt(0)}
       </AppText>
     </View>
@@ -105,7 +92,7 @@ function Bubble({
                     <AppText style={styles.failedMark}>!</AppText>
                   </TouchableOpacity>
                 ) : (
-                  <AppText style={styles.deliveredMark}>{'\u2713'}</AppText>
+                  <AppText style={styles.deliveredMark}>{'✓'}</AppText>
                 )}
               </View>
             </View>
@@ -147,7 +134,6 @@ export default function ChatRoomScreen() {
   const listRef = useRef<FlatList>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // 캐시: userId → sender 정보 (Realtime 이벤트 수신 시 사용)
   const senderMapRef = useRef<Record<string, Message['sender']>>({});
 
   const REPORT_REASONS = [
@@ -172,9 +158,7 @@ export default function ChatRoomScreen() {
     }
   }, [match_id]);
 
-  const handleReport = () => {
-    setShowReportModal(true);
-  };
+  const handleReport = () => setShowReportModal(true);
 
   const submitReport = async (reason: string) => {
     setShowReportModal(false);
@@ -190,20 +174,18 @@ export default function ChatRoomScreen() {
     nav.setOptions({
       title: other_name,
       headerRight: () => (
-        <TouchableOpacity onPress={handleReport} style={{ paddingHorizontal: 8 }}>
-          <AppText style={{ fontSize: 14, color: '#999' }}>신고</AppText>
+        <TouchableOpacity onPress={handleReport} style={{ paddingHorizontal: spacing.xs }}>
+          <AppText style={{ fontSize: typography.caption + 1, color: colors.muted }}>신고</AppText>
         </TouchableOpacity>
       ),
     });
     load();
 
-    // Supabase Broadcast 채널 구독 (postgres_changes 대비 Dashboard 설정 불필요)
     const channel = supabase
       .channel(`chat_${match_id}`, { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'new_message' }, async (payload) => {
         const msg = payload.payload?.message as Message;
         if (!msg?.id || !msg.content || !msg.sender_id) return;
-        // sender 정보가 없으면 캐시에서 보충
         if (!msg.sender && senderMapRef.current[msg.sender_id]) {
           msg.sender = senderMapRef.current[msg.sender_id];
         }
@@ -212,7 +194,6 @@ export default function ChatRoomScreen() {
           if (prev.find(m => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
-        // 읽었음을 DB에 반영하고 발신자에게 알림
         await markRead(match_id).catch(() => {});
         channel.send({
           type: 'broadcast',
@@ -221,7 +202,6 @@ export default function ChatRoomScreen() {
         });
       })
       .on('broadcast', { event: 'read_receipt' }, (payload) => {
-        // 상대방이 읽었으면 내 메시지의 read_at 업데이트
         const readAt = payload.payload?.read_at as string;
         if (!readAt) return;
         setMessages(prev =>
@@ -247,18 +227,15 @@ export default function ChatRoomScreen() {
     try {
       const newMsg = await sendMessage(match_id, trimmed);
       if (newMsg.sender) senderMapRef.current[newMsg.sender_id] = newMsg.sender;
-      // 내 화면에 즉시 추가
       setMessages(prev => {
         if (prev.find(m => m.id === newMsg.id)) return prev;
         return [...prev, newMsg];
       });
-      // 전송 성공 시 failedIds에서 제거 (재시도 성공 케이스)
       setFailedIds(prev => {
         const next = new Set(prev);
         next.delete(newMsg.id);
         return next;
       });
-      // 상대방에게 실시간 전달 (구독된 채널 재사용)
       channelRef.current?.send({
         type: 'broadcast',
         event: 'new_message',
@@ -273,11 +250,10 @@ export default function ChatRoomScreen() {
     }
   };
 
-  const handleRetry = async (failedMsg: Message) => {
+  const handleRetry = useCallback(async (failedMsg: Message) => {
     try {
       const newMsg = await sendMessage(match_id, failedMsg.content);
       if (newMsg.sender) senderMapRef.current[newMsg.sender_id] = newMsg.sender;
-      // 실패 메시지를 성공 메시지로 교체
       setMessages(prev => prev.map(m => m.id === failedMsg.id ? newMsg : m));
       setFailedIds(prev => {
         const next = new Set(prev);
@@ -292,7 +268,7 @@ export default function ChatRoomScreen() {
     } catch (err: any) {
       Alert.alert('오류', getErrorMessage(err, '재전송 실패'));
     }
-  };
+  }, [match_id]);
 
   const renderItem = useCallback(({ item }: { item: ListItem }) => {
     if (item.type === 'date') {
@@ -317,7 +293,7 @@ export default function ChatRoomScreen() {
   }, []);
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   const listItems = buildListItems(messages);
@@ -332,7 +308,7 @@ export default function ChatRoomScreen() {
         {messages.length === 0 ? (
           <View style={styles.emptyChat}>
             <AppText style={styles.emptyChatEmoji}>💌</AppText>
-            <AppText style={styles.emptyChatText}>첫 메시지를 보내보세요!</AppText>
+            <AppText style={styles.emptyChatText}>첫 메시지를 보내보세요</AppText>
             <AppText style={styles.emptyChatSub}>{other_name}님과의 대화를 시작해보세요.</AppText>
             <View style={styles.icebreakers}>
               {[
@@ -363,7 +339,6 @@ export default function ChatRoomScreen() {
           />
         )}
 
-        {/* 입력창 — 키보드 닫혀 있을 때 하단 인디케이터 영역 회피 */}
         <View style={[styles.inputArea, { paddingBottom: Math.max(0, insets.bottom) }]}>
           <View style={styles.inputRow}>
             <TextInput
@@ -371,7 +346,7 @@ export default function ChatRoomScreen() {
               value={text}
               onChangeText={setText}
               placeholder="메시지 입력"
-              placeholderTextColor={C.sub}
+              placeholderTextColor={colors.muted}
               multiline
               maxLength={MAX_LENGTH}
             />
@@ -390,7 +365,6 @@ export default function ChatRoomScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      {/* 신고 사유 선택 Modal */}
       <Modal
         visible={showReportModal}
         transparent
@@ -428,111 +402,237 @@ export default function ChatRoomScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
+  container: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  messageList: { padding: 12, paddingBottom: 8, gap: 4 },
+  messageList: {
+    padding: spacing.sm,
+    paddingBottom: spacing.xs,
+    gap: 4,
+  },
 
   dateSep: {
-    flexDirection: 'row', alignItems: 'center',
-    marginVertical: 14, paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.xs,
   },
-  dateSepLine: { flex: 1, height: 1, backgroundColor: C.border },
+  dateSepLine: { flex: 1, height: 1, backgroundColor: colors.divider },
   dateSepText: {
-    fontSize: 12, color: '#AA8888', marginHorizontal: 10,
-    backgroundColor: '#FCEEF1', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 10, overflow: 'hidden',
+    fontSize: typography.caption - 1,
+    color: colors.muted,
+    marginHorizontal: spacing.xs + 2,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    fontWeight: typography.medium,
   },
 
-  bubbleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginVertical: 3 },
+  bubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    marginVertical: 3,
+  },
   bubbleRowMe: { flexDirection: 'row-reverse' },
   bubbleOuter: { flex: 1 },
-  senderName: { fontSize: 12, color: '#886666', fontWeight: '600', marginBottom: 3, marginLeft: 2 },
+  senderName: {
+    fontSize: typography.caption - 1,
+    color: colors.muted,
+    fontWeight: typography.semibold,
+    marginBottom: 3,
+    marginLeft: 2,
+  },
 
   bubbleWrap: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
   bubbleWrapMe: { flexDirection: 'row-reverse' },
 
-  metaLeft: { alignItems: 'flex-end', justifyContent: 'flex-end', gap: 2, paddingBottom: 2 },
-  unreadMark: { fontSize: 11, color: C.primary, fontWeight: '700' },
-  timeText: { fontSize: 11, color: '#AA9999', paddingBottom: 2 },
+  metaLeft: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+    gap: 2,
+    paddingBottom: 2,
+  },
+  unreadMark: {
+    fontSize: typography.caption - 2,
+    color: colors.primary,
+    fontWeight: typography.bold,
+  },
+  timeText: {
+    fontSize: typography.caption - 2,
+    color: colors.muted,
+    paddingBottom: 2,
+  },
   timeTextOther: { paddingBottom: 2 },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  deliveredMark: { fontSize: 11, color: '#AA9999' },
-  failedMark: { fontSize: 13, color: C.error, fontWeight: '700', paddingHorizontal: 2 },
+  deliveredMark: {
+    fontSize: typography.caption - 2,
+    color: colors.muted,
+  },
+  failedMark: {
+    fontSize: typography.caption + 1,
+    color: colors.danger,
+    fontWeight: typography.bold,
+    paddingHorizontal: 2,
+  },
 
-  bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, maxWidth: 260, elevation: 1 },
-  bubbleMe: { backgroundColor: C.myBubble, borderBottomRightRadius: 4 },
-  bubbleOther: { backgroundColor: C.otherBubble, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#F0ECEA' },
-  bubbleText: { fontSize: 15, color: C.text, lineHeight: 21 },
+  bubble: {
+    borderRadius: 18,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
+    maxWidth: 260,
+  },
+  bubbleMe: {
+    backgroundColor: colors.primary,
+    borderBottomRightRadius: 4,
+  },
+  bubbleOther: {
+    backgroundColor: colors.surface,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bubbleText: {
+    fontSize: typography.body,
+    color: colors.text,
+    lineHeight: typography.body * typography.lineNormal,
+  },
   bubbleTextMe: { color: '#FFFFFF' },
 
   inputArea: {
-    backgroundColor: '#FFF8F5', borderTopWidth: 1, borderTopColor: C.border,
-    paddingTop: 10, paddingHorizontal: 10,
+    backgroundColor: colors.bg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xs + 2,
+    paddingHorizontal: spacing.xs + 2,
   },
   inputRow: {
-    flexDirection: 'row', gap: 8,
+    flexDirection: 'row',
+    gap: spacing.xs,
     alignItems: 'flex-end',
   },
   charCounter: {
-    fontSize: 11, color: C.sub, textAlign: 'right',
-    paddingRight: 4, paddingTop: 4, paddingBottom: 6,
+    fontSize: typography.caption - 2,
+    color: colors.muted,
+    textAlign: 'right',
+    paddingRight: 4,
+    paddingTop: 4,
+    paddingBottom: 6,
   },
   input: {
-    flex: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10,
-    fontSize: 15, color: C.text, maxHeight: 100,
-    backgroundColor: C.inputBg, borderWidth: 1, borderColor: '#E8D8D5',
+    flex: 1,
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    fontSize: typography.body,
+    color: colors.text,
+    maxHeight: 100,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  sendBtn: { backgroundColor: C.primary, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 11 },
+  sendBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: 11,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
   sendBtnDisabled: { opacity: 0.4 },
-  sendBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  sendBtnText: {
+    color: '#FFF',
+    fontSize: typography.caption + 1,
+    fontWeight: typography.bold,
+  },
 
-  emptyChat: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyChatEmoji: { fontSize: 64, marginBottom: 16 },
-  emptyChatText: { fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 6 },
-  emptyChatSub: { fontSize: 15, color: C.sub, textAlign: 'center' },
+  emptyChat: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  emptyChatEmoji: { fontSize: 64, marginBottom: spacing.md },
+  emptyChatText: {
+    fontSize: typography.title,
+    fontWeight: typography.bold,
+    color: colors.text,
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  emptyChatSub: {
+    fontSize: typography.body,
+    color: colors.sub,
+    textAlign: 'center',
+  },
 
-  // 대화 시작 제안 칩
   icebreakers: {
-    marginTop: 24,
-    gap: 10,
+    marginTop: spacing.lg,
+    gap: spacing.xs + 2,
     alignItems: 'center',
     width: '100%',
   },
   icebreakerChip: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.sm,
     borderWidth: 1.5,
-    borderColor: C.primary,
-    elevation: 1,
+    borderColor: colors.primary,
   },
   icebreakerText: {
-    fontSize: 14,
-    color: C.primary,
-    fontWeight: '600',
+    fontSize: typography.caption + 1,
+    color: colors.primaryDark,
+    fontWeight: typography.semibold,
     textAlign: 'center',
   },
 
-  // 신고 Modal
   modalOverlay: {
-    flex: 1, backgroundColor: C.overlay,
-    justifyContent: 'center', alignItems: 'center', padding: 32,
+    flex: 1,
+    backgroundColor: palette.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
   },
   modalContent: {
-    backgroundColor: '#FFF', borderRadius: 16, padding: 24,
-    width: '100%', maxWidth: 340,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 340,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 4 },
-  modalSub: { fontSize: 14, color: C.sub, marginBottom: 16 },
+  modalTitle: {
+    fontSize: typography.bodyLarge,
+    fontWeight: typography.bold,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  modalSub: {
+    fontSize: typography.caption + 1,
+    color: colors.sub,
+    marginBottom: spacing.md,
+  },
   modalOption: {
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0ECEA',
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
   },
-  modalOptionText: { fontSize: 16, color: C.text },
+  modalOptionText: {
+    fontSize: typography.body,
+    color: colors.text,
+  },
   modalCancelBtn: {
-    marginTop: 12, paddingVertical: 14, alignItems: 'center',
-    backgroundColor: '#F5F5F5', borderRadius: 10,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
   },
-  modalCancelText: { fontSize: 16, color: C.sub, fontWeight: '600' },
+  modalCancelText: {
+    fontSize: typography.body,
+    color: colors.sub,
+    fontWeight: typography.semibold,
+  },
 });

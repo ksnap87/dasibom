@@ -10,14 +10,10 @@ import { useAuthStore, supabase } from '../store/authStore';
 import Config from '../config';
 import { getErrorMessage } from '../utils/error';
 import { LEGAL_URLS } from '../constants';
+import { colors, radius, spacing, typography } from '../theme';
 
-const C = {
-  primary: '#E8556D',
-  bg: '#FFF8F5',
-  sub: '#777777',
-  kakaoYellow: '#FEE500',
-  kakaoText: '#191919',
-};
+const KAKAO_YELLOW = '#FEE500';
+const KAKAO_TEXT = '#191919';
 
 export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
@@ -28,7 +24,6 @@ export default function AuthScreen() {
     try {
       await kakaoLogin();
     } catch (err: any) {
-      // 사용자가 카카오 로그인을 취소한 경우
       if (err?.message?.includes('cancel')) return;
       Alert.alert('로그인 실패', getErrorMessage(err, '다시 시도해주세요.'));
     } finally {
@@ -39,22 +34,20 @@ export default function AuthScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
-        {/* Logo */}
         <View style={styles.logoArea}>
           <AppText style={styles.logoEmoji}>🌸</AppText>
           <AppText style={styles.logoText}>다시봄</AppText>
           <AppText style={styles.tagline}>당신의 봄날을 다시</AppText>
         </View>
 
-        {/* 카카오 로그인 버튼 */}
         <TouchableOpacity
           style={[styles.kakaoBtn, loading && styles.kakaoBtnDisabled]}
           onPress={handleKakaoLogin}
           disabled={loading}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
           {loading ? (
-            <ActivityIndicator color={C.kakaoText} />
+            <ActivityIndicator color={KAKAO_TEXT} />
           ) : (
             <>
               <AppText style={styles.kakaoIcon}>💬</AppText>
@@ -63,7 +56,6 @@ export default function AuthScreen() {
           )}
         </TouchableOpacity>
 
-        {/* 약관·개인정보 동의 고지 — 회원가입 버튼 누르면 동의한 것으로 간주 */}
         <View style={styles.consentBox}>
           <AppText style={styles.consentText}>
             시작하시면 아래 내용에 동의한 것으로 간주합니다.
@@ -97,7 +89,6 @@ export default function AuthScreen() {
             onPress={async () => {
               try {
                 setLoading(true);
-                // 서버에서 실제 Supabase 세션 발급
                 const res = await axios.post(`${Config.API_URL}/api/auth/dev-login`);
                 const { access_token, refresh_token, user } = res.data;
 
@@ -124,30 +115,63 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  inner: { flex: 1, justifyContent: 'center', padding: 28, paddingBottom: 20 },
-  logoArea: { alignItems: 'center', marginBottom: 40 },
-  logoEmoji: { fontSize: 64, marginBottom: 10 },
-  logoText: { fontSize: 44, fontWeight: '700', color: C.primary, letterSpacing: 2 },
-  tagline: { fontSize: 16, color: C.sub, marginTop: 8 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  inner: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: spacing.lg + 4,
+    paddingBottom: spacing.lg,
+  },
+  logoArea: { alignItems: 'center', marginBottom: spacing.xl + 8 },
+  logoEmoji: { fontSize: 64, marginBottom: spacing.xs + 2 },
+  logoText: {
+    fontSize: 44,
+    fontWeight: typography.bold,
+    color: colors.primaryDark,
+    letterSpacing: 2,
+  },
+  tagline: {
+    fontSize: typography.body,
+    color: colors.sub,
+    marginTop: spacing.xs,
+  },
   kakaoBtn: {
-    backgroundColor: C.kakaoYellow,
-    borderRadius: 14,
+    backgroundColor: KAKAO_YELLOW,
+    borderRadius: radius.md,
     paddingVertical: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.lg,
+    minHeight: 52,
   },
   kakaoBtnDisabled: { opacity: 0.6 },
-  kakaoIcon: { fontSize: 22, marginRight: 10 },
-  kakaoLabel: { color: C.kakaoText, fontSize: 18, fontWeight: '600' },
-  footer: { textAlign: 'center', color: C.sub, fontSize: 14, lineHeight: 22 },
-  consentBox: { alignItems: 'center', marginBottom: 20 },
-  consentText: { fontSize: 13, color: C.sub, lineHeight: 20 },
+  kakaoIcon: { fontSize: 22, marginRight: spacing.xs + 2 },
+  kakaoLabel: {
+    color: KAKAO_TEXT,
+    fontSize: typography.bodyLarge,
+    fontWeight: typography.semibold,
+  },
+  footer: {
+    textAlign: 'center',
+    color: colors.sub,
+    fontSize: typography.caption + 1,
+    lineHeight: (typography.caption + 1) * typography.lineRelaxed,
+  },
+  consentBox: { alignItems: 'center', marginBottom: spacing.md + 4 },
+  consentText: {
+    fontSize: typography.caption,
+    color: colors.sub,
+    lineHeight: typography.caption * typography.lineRelaxed,
+  },
   consentLinks: { flexDirection: 'row', marginTop: 4 },
-  consentLink: { fontSize: 13, color: C.primary, textDecorationLine: 'underline', fontWeight: '600' },
-  consentDot: { fontSize: 13, color: C.sub },
-  devSkip: { marginTop: 16, padding: 12, alignItems: 'center' },
-  devSkipText: { color: '#999', fontSize: 13 },
+  consentLink: {
+    fontSize: typography.caption,
+    color: colors.primaryDark,
+    textDecorationLine: 'underline',
+    fontWeight: typography.semibold,
+  },
+  consentDot: { fontSize: typography.caption, color: colors.sub },
+  devSkip: { marginTop: spacing.md, padding: spacing.sm, alignItems: 'center' },
+  devSkipText: { color: colors.muted, fontSize: typography.caption },
 });

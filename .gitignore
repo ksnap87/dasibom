@@ -10,6 +10,7 @@ mobile/android/gradle.properties
 # 키스토어 (debug.keystore는 허용)
 *.keystore
 !debug.keystore
+dasibom-secrets-backup/
 
 # Node.js 의존성
 node_modules/

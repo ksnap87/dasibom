@@ -4,30 +4,30 @@
  * 질문 순서: 감성/성격 → 생활방식 → 취미 → 가족·주변 → 관계목표 → 종교 → 현실조건
  * 이 순서는 사람 본연의 성격부터 시작해 현실적 조건으로 자연스럽게 이어집니다.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppText from '../components/AppText';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { updateMyProfile, checkNickname } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { RootStackParamList } from '../types';
-import { getErrorMessage } from '../utils/error';
+import { colors } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const C = {
-  primary: '#E8556D',
-  primaryLight: '#FCEEF1',
-  bg: '#FFF8F5',
-  card: '#FFFFFF',
-  text: '#2D2D2D',
-  sub: '#777777',
-  border: '#E0D5D0',
+  primary: colors.primary,
+  primaryLight: colors.primaryLight,
+  bg: colors.bg,
+  card: colors.surface,
+  text: colors.text,
+  sub: colors.sub,
+  border: colors.border,
 };
 
 // ── 재사용 컴포넌트 ────────────────────────────────────────
@@ -44,7 +44,7 @@ function OptionButton({ label, selected, onPress }: { label: string; selected: b
   );
 }
 
-function BigOption({ label, desc, selected, onPress }: {
+function _BigOption({ label, desc, selected, onPress }: {
   label: string; desc: string; selected: boolean; onPress: () => void;
 }) {
   return (
@@ -400,7 +400,21 @@ export default function QuestionnaireScreen() {
         nav.goBack();
       }
     } catch (err: any) {
-      Alert.alert('오류', getErrorMessage(err, '저장 중 오류가 발생했습니다.'));
+      // 디버그: 서버가 돌려준 실제 응답 전체를 확인할 수 있도록 노출
+      const status = err?.response?.status;
+      const serverData = err?.response?.data;
+      const serverMsg =
+        typeof serverData === 'string'
+          ? serverData
+          : serverData?.error ?? (serverData ? JSON.stringify(serverData) : null);
+      const axiosMsg = err?.message;
+      const detail = [
+        status ? `HTTP ${status}` : null,
+        serverMsg ? `서버: ${serverMsg}` : null,
+        axiosMsg ? `메시지: ${axiosMsg}` : null,
+      ].filter(Boolean).join('\n');
+      Alert.alert('저장 실패', detail || '저장 중 오류가 발생했습니다.');
+      console.warn('[Questionnaire submit error]', { status, serverData, axiosMsg });
     } finally {
       setSaving(false);
     }
@@ -445,8 +459,15 @@ export default function QuestionnaireScreen() {
                     set('_nicknameChecked', true);
                     set('_nicknameAvailable', result.available);
                     Alert.alert(result.available ? '사용 가능' : '사용 불가', result.available ? '사용할 수 있는 닉네임입니다!' : '이미 사용 중인 닉네임입니다.');
-                  } catch {
-                    Alert.alert('오류', '중복확인에 실패했습니다.');
+                  } catch (err: any) {
+                    const status = err?.response?.status;
+                    const serverMsg = err?.response?.data?.error;
+                    const msg =
+                      status === 401 ? '로그인이 만료되었습니다. 다시 로그인해주세요.'
+                      : status === 429 ? '너무 자주 확인하셨어요. 잠시 후 다시 시도해주세요.'
+                      : status === 400 ? (serverMsg ?? '닉네임 형식을 확인해주세요.')
+                      : serverMsg ?? err?.message ?? '중복확인에 실패했습니다.';
+                    Alert.alert('오류', `${msg}${status ? `\n(코드: ${status})` : ''}`);
                   }
                 }}
               >
