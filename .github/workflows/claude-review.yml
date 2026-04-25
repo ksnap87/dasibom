@@ -1,0 +1,90 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} > /tmp/pr.diff
+          echo "diff_lines=$(wc -l < /tmp/pr.diff)" >> "$GITHUB_OUTPUT"
+          # Cap to 4000 lines so we don't blow context
+          head -n 4000 /tmp/pr.diff > /tmp/pr.diff.capped
+
+      - name: Run Claude review
+        id: claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::ANTHROPIC_API_KEY not set — skipping Claude review"
+            exit 0
+          fi
+
+          DIFF_CONTENT=$(cat /tmp/pr.diff.capped)
+          PR_TITLE='${{ github.event.pull_request.title }}'
+          PR_BODY=$(cat <<'BODYEOF'
+          ${{ github.event.pull_request.body }}
+          BODYEOF
+          )
+
+          # Build request payload via jq for safety
+          jq -n \
+            --arg diff "$DIFF_CONTENT" \
+            --arg title "$PR_TITLE" \
+            --arg body "$PR_BODY" \
+            '{
+              model: "claude-opus-4-5",
+              max_tokens: 4096,
+              messages: [{
+                role: "user",
+                content: ("PR 코드 리뷰를 부탁해. 한국어로 답해.\n\n## PR 제목\n" + $title + "\n\n## 본문\n" + $body + "\n\n## Diff\n```diff\n" + $diff + "\n```\n\n다음 형식으로 출력해:\n\n### 🔴 Critical (배포 차단급 — 보안/데이터 손실/런타임 크래시)\n- (없으면 \"없음\" 한 줄)\n\n### 🟡 Major (논리 버그/성능/유지보수 위험)\n- ...\n\n### 🟢 Minor (스타일/네이밍/주석)\n- ...\n\n### 👀 Codex가 놓쳤을 만한 것 (이 모델만의 시각)\n- ...\n\n각 항목은 파일:라인 + 한 줄 이유. 코드 인용 최소화. 추측이면 \"추측: ~\" 명시.")
+              }]
+            }' > /tmp/claude_req.json
+
+          curl -sS https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d @/tmp/claude_req.json > /tmp/claude_resp.json
+
+          jq -r '.content[0].text // .error.message // "리뷰 실패"' /tmp/claude_resp.json > /tmp/claude_review.md
+
+          echo "## 🤖 Claude Review (Opus 4.5)" > /tmp/comment.md
+          echo "" >> /tmp/comment.md
+          cat /tmp/claude_review.md >> /tmp/comment.md
+          echo "" >> /tmp/comment.md
+          echo "_diff lines: ${{ steps.diff.outputs.diff_lines }}_" >> /tmp/comment.md
+
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f /tmp/comment.md ]; then
+            echo "리뷰 산출물 없음 — 건너뜀"
+            exit 0
+          fi
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body-file /tmp/comment.md
