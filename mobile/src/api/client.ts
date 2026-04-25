@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from '../config';
 
@@ -13,7 +13,7 @@ const api = axios.create({
 // ── Request deduplication for GET requests ───────────────
 const pendingRequests = new Map<string, Promise<any>>();
 
-function deduplicatedGet<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+function deduplicatedGet<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
   const key = url + (config?.params ? JSON.stringify(config.params) : '');
   if (pendingRequests.has(key)) {
     return pendingRequests.get(key)!;
@@ -43,14 +43,14 @@ async function retryRequest<T = any>(
     const axiosErr = error as AxiosError;
     if (retriesLeft > 0 && isRetryable(axiosErr)) {
       const delay = RETRY_DELAYS[RETRY_DELAYS.length - retriesLeft] ?? RETRY_DELAYS[RETRY_DELAYS.length - 1];
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise<void>(resolve => setTimeout(() => resolve(), delay));
       return retryRequest(fn, retriesLeft - 1);
     }
     throw error;
   }
 }
 
-function getWithRetry<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+function getWithRetry<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
   return retryRequest(() => deduplicatedGet<T>(url, config));
 }
 
