@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Dimensions } from 'react-native';
 import AppText from '../components/AppText';
+import { colors, typography } from '../theme';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -8,7 +9,7 @@ interface Props {
   onFinish: () => void;
 }
 
-// 떨어지는 꽃잎 컴포넌트
+// 떨어지는 꽃잎
 function FallingPetal({ delay, startX, duration }: { delay: number; startX: number; duration: number }) {
   const translateY = useRef(new Animated.Value(-40)).current;
   const translateX = useRef(new Animated.Value(0)).current;
@@ -28,14 +29,12 @@ function FallingPetal({ delay, startX, duration }: { delay: number; startX: numb
           Animated.timing(opacity, { toValue: 0.7, duration: duration - 600, useNativeDriver: true }),
           Animated.timing(opacity, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]),
-        // 좌우 흔들림
         Animated.loop(
           Animated.sequence([
             Animated.timing(translateX, { toValue: 20, duration: 800, useNativeDriver: true }),
             Animated.timing(translateX, { toValue: -20, duration: 800, useNativeDriver: true }),
           ]),
         ),
-        // 회전
         Animated.loop(
           Animated.timing(rotate, { toValue: 1, duration: 2000, useNativeDriver: true }),
         ),
@@ -60,7 +59,7 @@ function FallingPetal({ delay, startX, duration }: { delay: number; startX: numb
         },
       ]}
     >
-      {'*'}
+      {'✿'}
     </Animated.Text>
   );
 }
@@ -71,34 +70,18 @@ export default function SplashScreen({ onFinish }: Props) {
   const subtitleFade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // 메인 로고 애니메이션
     Animated.sequence([
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 5,
-          tension: 40,
-          useNativeDriver: true,
-        }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
       ]),
-      // 서브타이틀 페이드인
-      Animated.timing(subtitleFade, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
+      Animated.timing(subtitleFade, { toValue: 1, duration: 500, useNativeDriver: true }),
     ]).start();
 
     const timer = setTimeout(onFinish, 2500);
     return () => clearTimeout(timer);
   }, [fadeAnim, scaleAnim, subtitleFade, onFinish]);
 
-  // 꽃잎 위치/타이밍 랜덤 생성
   const petals = Array.from({ length: 8 }, (_, i) => ({
     id: i,
     delay: i * 200 + Math.random() * 300,
@@ -108,19 +91,16 @@ export default function SplashScreen({ onFinish }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* 떨어지는 꽃잎들 */}
       {petals.map(p => (
         <FallingPetal key={p.id} delay={p.delay} startX={p.startX} duration={p.duration} />
       ))}
 
-      {/* 메인 로고 */}
       <Animated.View
         style={[
           styles.content,
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
         ]}
       >
-        {/* 벚꽃 아이콘 (SVG 대신 텍스트 기반) */}
         <View style={styles.flowerContainer}>
           <View style={styles.flowerBg}>
             <AppText style={styles.flowerIcon}>{'✿'}</AppText>
@@ -133,7 +113,6 @@ export default function SplashScreen({ onFinish }: Props) {
         다시 찾는 봄날의 인연
       </Animated.Text>
 
-      {/* 하단 장식 */}
       <View style={styles.bottomDecor}>
         <AppText style={styles.decorDot}>{'·'}</AppText>
         <AppText style={styles.decorDot}>{'·'}</AppText>
@@ -146,43 +125,39 @@ export default function SplashScreen({ onFinish }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8F5',
+    backgroundColor: colors.bg,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {
-    alignItems: 'center',
-  },
-  flowerContainer: {
-    marginBottom: 20,
-  },
+  content: { alignItems: 'center' },
+  flowerContainer: { marginBottom: 20 },
   flowerBg: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#FCEEF1',
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#E8556D',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
     elevation: 6,
   },
   flowerIcon: {
     fontSize: 52,
-    color: '#E8556D',
+    color: colors.primary,
   },
   title: {
     fontSize: 40,
-    fontWeight: '800',
-    color: '#E8556D',
+    fontWeight: typography.bold,
+    color: colors.primaryDark,
     letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#C0A0A0',
-    fontWeight: '500',
+    fontSize: typography.body,
+    color: colors.muted,
+    fontWeight: typography.medium,
     marginTop: 12,
     letterSpacing: 1,
   },
@@ -190,7 +165,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     fontSize: 18,
-    color: '#F8B0C0',
+    color: '#E4A89A', // 연한 테라코타 꽃잎 — 크림 배경 위에서 은은히 보이도록
   },
   bottomDecor: {
     position: 'absolute',
@@ -200,6 +175,6 @@ const styles = StyleSheet.create({
   },
   decorDot: {
     fontSize: 20,
-    color: '#E0C8C8',
+    color: colors.border,
   },
 });

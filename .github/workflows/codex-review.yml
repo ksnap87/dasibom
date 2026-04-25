@@ -1,0 +1,92 @@
+name: Codex (OpenAI) PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  codex-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} > /tmp/pr.diff
+          echo "diff_lines=$(wc -l < /tmp/pr.diff)" >> "$GITHUB_OUTPUT"
+          head -n 4000 /tmp/pr.diff > /tmp/pr.diff.capped
+
+      - name: Run Codex (OpenAI) review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::warning::OPENAI_API_KEY not set — skipping Codex review"
+            exit 0
+          fi
+
+          DIFF_CONTENT=$(cat /tmp/pr.diff.capped)
+          PR_TITLE='${{ github.event.pull_request.title }}'
+          PR_BODY=$(cat <<'BODYEOF'
+          ${{ github.event.pull_request.body }}
+          BODYEOF
+          )
+
+          jq -n \
+            --arg diff "$DIFF_CONTENT" \
+            --arg title "$PR_TITLE" \
+            --arg body "$PR_BODY" \
+            '{
+              model: "gpt-5",
+              max_completion_tokens: 4096,
+              messages: [
+                {
+                  role: "system",
+                  content: "당신은 React Native + Express + Supabase 스택에 능숙한 시니어 코드 리뷰어입니다. 한국어로 답합니다. 추측은 \"추측:\"로 명시합니다."
+                },
+                {
+                  role: "user",
+                  content: ("PR 코드 리뷰. 다른 모델(Claude)도 같은 PR을 보고 있으니, 너는 특히 다음에 강한 시각을 보여줘:\n- 흔한 보안 함정 (CSRF/XSS/SQL injection/secret leak/permission)\n- 동시성/race condition\n- 성능 (N+1, 불필요한 리렌더, 큰 list rendering)\n- 라이브러리 API 오용\n\n## PR 제목\n" + $title + "\n\n## 본문\n" + $body + "\n\n## Diff\n```diff\n" + $diff + "\n```\n\n다음 형식으로 출력:\n\n### 🔴 Critical\n- (없으면 \"없음\")\n\n### 🟡 Major\n- ...\n\n### 🟢 Minor\n- ...\n\n### 👀 Claude가 놓쳤을 만한 것\n- ...\n\n각 항목은 파일:라인 + 한 줄 이유.")
+                }
+              ]
+            }' > /tmp/codex_req.json
+
+          curl -sS https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/codex_req.json > /tmp/codex_resp.json
+
+          jq -r '.choices[0].message.content // .error.message // "리뷰 실패"' /tmp/codex_resp.json > /tmp/codex_review.md
+
+          echo "## 🧠 Codex Review (GPT-5)" > /tmp/comment.md
+          echo "" >> /tmp/comment.md
+          cat /tmp/codex_review.md >> /tmp/comment.md
+          echo "" >> /tmp/comment.md
+          echo "_diff lines: ${{ steps.diff.outputs.diff_lines }}_" >> /tmp/comment.md
+
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f /tmp/comment.md ]; then
+            echo "리뷰 산출물 없음 — 건너뜀"
+            exit 0
+          fi
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body-file /tmp/comment.md

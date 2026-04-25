@@ -15,65 +15,10 @@ import {
   RELIGION_QA, REALITY_QA, HOBBY_LABELS as HOBBY_LABELS_QA,
   QAItem, getAnswerText,
 } from '../data/questionLabels';
+import { Button, colors, radius, spacing, typography } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'FriendProfile'>;
-
-const C = {
-  primary: '#E8556D',
-  primaryLight: '#FCEEF1',
-  bg: '#FFF8F5',
-  card: '#FFFFFF',
-  text: '#2D2D2D',
-  sub: '#777777',
-  border: '#E0D5D0',
-};
-
-const LABELS: Record<string, Record<string, string>> = {
-  gender: { male: '남성', female: '여성' },
-  relationship_goal: { marriage: '결혼', companionship: '동반자 관계', friendship: '우정', open: '열린 마음' },
-  personality_type: { introvert: '혼자 있을 때 에너지 충전', extrovert: '사람들과 함께할 때 활기', ambivert: '혼자도 함께도 편안' },
-  emotional_expression: { suppress: '혼자 정리하는 편', delayed_share: '나중에 털어놓는 편', expressive: '바로 표현하는 편' },
-  communication_style: { listener: '주로 들어주는 편', balanced: '듣기도 말하기도', talker: '이야기 나누기 좋아함' },
-  conflict_style: { space: '시간 두고 이야기', direct: '바로 솔직하게', accommodate: '상대방에게 맞춤' },
-  social_frequency: { rarely: '낯설고 어렵게 느껴짐', sometimes: '자연스럽게 편해짐', often: '자주 모임을 즐김', very_often: '언제나 기대되고 즐거움' },
-  chronotype: { morning: '아침형 (일찍 자고 일찍 기상)', evening: '저녁형 (늦게 자고 늦게 기상)', flexible: '그날그날 달라요' },
-  rest_style: { home: '집에서 조용히 휴식', light_out: '가볍게 산책·나들이', active: '활발하게 밖에서 활동' },
-  meal_style: { regular: '규칙적으로 챙겨 먹음', flexible: '입맛 따라 먹음', cook: '직접 요리 즐김', dine_out: '외식·배달 자주 함' },
-  religion: { none: '무교', buddhism: '불교', christianity: '기독교', catholicism: '천주교', other: '기타' },
-  financial_stability: { stable: '안정적', comfortable: '여유로움', wealthy: '풍요로움' },
-  health_status: { excellent: '매우 좋음', good: '좋음', fair: '보통', managing: '관리 중' },
-  exercise_frequency: { never: '안 함', rarely: '가끔', sometimes: '주 1–2회', regularly: '주 3회 이상' },
-  smoking: { never: '비흡연', quit: '금연', occasionally: '가끔', regularly: '흡연' },
-  drinking: { never: '안 마심', rarely: '거의 안 마심', socially: '사교적으로', regularly: '자주' },
-  living_situation: { alone: '혼자', with_family: '가족과 함께', with_children: '자녀와 함께', other: '기타' },
-};
-
-const HOBBY_LABELS: Record<string, string> = {
-  hiking: '등산', travel: '여행', cooking: '요리', reading: '독서',
-  music: '음악', gardening: '원예', golf: '골프', swimming: '수영',
-  yoga: '요가/필라테스', photography: '사진', volunteering: '봉사활동',
-  movies: '영화 감상', dancing: '댄스', art: '미술/공예', walking: '산책', fishing: '낚시',
-};
-
-function Row({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null;
-  return (
-    <View style={styles.row}>
-      <AppText style={styles.rowLabel}>{label}</AppText>
-      <AppText style={styles.rowValue}>{value}</AppText>
-    </View>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <AppText style={styles.sectionTitle}>{title}</AppText>
-      {children}
-    </View>
-  );
-}
 
 function QARow({ qa, profile }: { qa: QAItem; profile: any }) {
   const answer = getAnswerText(qa, profile);
@@ -140,9 +85,7 @@ export default function FriendProfileScreen() {
     }
   };
 
-  const handleReport = () => {
-    setShowReportModal(true);
-  };
+  const handleReport = () => setShowReportModal(true);
 
   const submitReport = async (reason: string) => {
     setShowReportModal(false);
@@ -174,12 +117,16 @@ export default function FriendProfileScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>;
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
   }
 
   if (error || !profile) {
@@ -187,22 +134,17 @@ export default function FriendProfileScreen() {
       <View style={styles.center}>
         <AppText style={styles.errorIcon}>⚠️</AppText>
         <AppText style={styles.errorText}>프로필을 불러올 수 없습니다.</AppText>
-        <TouchableOpacity style={styles.retryBtn} onPress={loadProfile} activeOpacity={0.7}>
-          <AppText style={styles.retryBtnText}>다시 시도</AppText>
-        </TouchableOpacity>
+        <Button label="다시 시도" onPress={loadProfile} fullWidth={false} />
       </View>
     );
   }
 
   const age = profile.birth_year ? new Date().getFullYear() - profile.birth_year : null;
-  const l = (category: string, val?: string | null) =>
-    val ? (LABELS[category]?.[val] ?? val) : null;
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Hero */}
         <View style={styles.hero}>
           {profile.photo_url ? (
             <Image source={{ uri: profile.photo_url }} style={styles.bigPhoto} />
@@ -212,27 +154,29 @@ export default function FriendProfileScreen() {
             </View>
           )}
           <AppText style={styles.heroName}>{profile.name}</AppText>
-          <AppText style={styles.heroSub}>{age != null ? `${age}세` : ''}{age != null && profile.city ? ' · ' : ''}{profile.city ?? ''}</AppText>
+          <AppText style={styles.heroSub}>
+            {age != null ? `${age}세` : ''}
+            {age != null && profile.city ? ' · ' : ''}
+            {profile.city ?? ''}
+          </AppText>
           {profile.bio ? <AppText style={styles.heroBio}>{profile.bio}</AppText> : null}
           {!profile.photo_url && (
             <View style={styles.noPhotoHint}>
-              <AppText style={styles.noPhotoHintText}>아직 사진을 등록하지 않은 분이에요</AppText>
+              <AppText style={styles.noPhotoHintText}>
+                아직 사진을 등록하지 않은 분이에요
+              </AppText>
             </View>
           )}
         </View>
 
-        {/* 성격 & 감성 - Q&A 형식 */}
         <QASection title="성격 & 감성" icon="💭" qaList={PERSONALITY_QA} profile={profile} />
-
-        {/* 일상 & 생활 습관 - Q&A 형식 */}
         <QASection title="일상 & 생활 습관" icon="🌅" qaList={DAILY_LIFE_QA} profile={profile} />
 
-        {/* 취미 */}
         {profile.hobbies && profile.hobbies.length > 0 && (
           <View style={styles.section}>
             <AppText style={styles.sectionTitle}>🎨 취미 & 관심사</AppText>
             <AppText style={styles.qaQuestion}>Q. 여가 시간에 나는...</AppText>
-            <View style={[styles.chipRow, { marginTop: 8 }]}>
+            <View style={[styles.chipRow, { marginTop: spacing.xs }]}>
               {profile.hobbies.map((h: string) => (
                 <View key={h} style={styles.chip}>
                   <AppText style={styles.chipText}>{HOBBY_LABELS_QA[h] ?? h}</AppText>
@@ -242,19 +186,11 @@ export default function FriendProfileScreen() {
           </View>
         )}
 
-        {/* 가족 & 주변 상황 - Q&A 형식 */}
         <QASection title="가족 & 주변 상황" icon="👨‍👩‍👧" qaList={FAMILY_QA} profile={profile} />
-
-        {/* 관계 & 가치관 - Q&A 형식 */}
         <QASection title="관계 & 가치관" icon="💝" qaList={RELATIONSHIP_QA} profile={profile} />
-
-        {/* 종교 & 신념 - Q&A 형식 */}
         <QASection title="종교 & 신념" icon="⛪" qaList={RELIGION_QA} profile={profile} />
-
-        {/* 현실 조건 - Q&A 형식 */}
         <QASection title="현실 조건" icon="🏠" qaList={REALITY_QA} profile={profile} />
 
-        {/* 신고/차단 */}
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={styles.reportBtn}
@@ -274,20 +210,19 @@ export default function FriendProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 채팅 버튼 공간 확보 (매칭된 경우만) */}
-        {match_id ? <View style={{ height: 80 }} /> : <View style={{ height: 16 }} />}
+        {match_id ? <View style={{ height: 90 }} /> : <View style={{ height: spacing.md }} />}
       </ScrollView>
 
-      {/* 하단 고정 채팅 버튼 — 매칭된 경우에만 표시 */}
       {match_id && (
-        <View style={[styles.footer, { paddingBottom: Math.max(16, insets.bottom + 8) }]}>
-          <TouchableOpacity style={styles.chatBtn} onPress={handleChat} activeOpacity={0.8}>
-            <AppText style={styles.chatBtnText}>💌 채팅 시작하기</AppText>
-          </TouchableOpacity>
+        <View style={[styles.footer, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.xs) }]}>
+          <Button
+            label="💌 채팅 시작하기"
+            variant="primary"
+            onPress={handleChat}
+          />
         </View>
       )}
 
-      {/* 신고 사유 선택 Modal */}
       <Modal
         visible={showReportModal}
         transparent
@@ -325,105 +260,191 @@ export default function FriendProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  errorIcon: { fontSize: 48, marginBottom: 12 },
-  errorText: { fontSize: 16, color: C.sub, marginBottom: 20, textAlign: 'center' },
-  retryBtn: {
-    backgroundColor: C.primary, borderRadius: 12,
-    paddingHorizontal: 28, paddingVertical: 12,
+  container: { flex: 1, backgroundColor: colors.bg },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+    backgroundColor: colors.bg,
+    gap: spacing.sm,
   },
-  retryBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-  content: { padding: 16, paddingBottom: 20 },
+  errorIcon: { fontSize: 48, marginBottom: spacing.sm },
+  errorText: {
+    fontSize: typography.body,
+    color: colors.sub,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  content: { padding: spacing.md, paddingBottom: spacing.md + 4 },
 
-  hero: { alignItems: 'center', paddingVertical: 24, marginBottom: 8 },
-  bigPhoto: { width: 140, height: 140, borderRadius: 70, borderWidth: 3, borderColor: C.primary, marginBottom: 12 },
+  hero: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  bigPhoto: {
+    width: 140, height: 140, borderRadius: 70,
+    borderWidth: 3,
+    borderColor: colors.primary,
+    marginBottom: spacing.sm,
+  },
   bigAvatar: {
-    width: 140, height: 140, borderRadius: 70, backgroundColor: C.primaryLight,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    width: 140, height: 140, borderRadius: 70,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
-  bigAvatarText: { fontSize: 56, color: C.primary, fontWeight: '700' },
+  bigAvatarText: {
+    fontSize: 56,
+    color: colors.primaryDark,
+    fontWeight: typography.bold,
+  },
   noPhotoHint: {
-    marginTop: 8, paddingHorizontal: 14, paddingVertical: 6,
-    backgroundColor: '#F5F0EE', borderRadius: 12,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
   },
-  noPhotoHintText: { fontSize: 13, color: C.sub },
-  heroName: { fontSize: 28, fontWeight: '700', color: C.text },
-  heroSub: { fontSize: 16, color: C.sub, marginTop: 4 },
-  heroBio: { fontSize: 15, color: '#555', marginTop: 10, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16 },
+  noPhotoHintText: {
+    fontSize: typography.caption,
+    color: colors.sub,
+  },
+  heroName: {
+    fontSize: typography.heading,
+    fontWeight: typography.bold,
+    color: colors.text,
+    letterSpacing: -0.3,
+  },
+  heroSub: {
+    fontSize: typography.body,
+    color: colors.sub,
+    marginTop: 4,
+  },
+  heroBio: {
+    fontSize: typography.body - 1,
+    color: colors.sub,
+    marginTop: spacing.xs + 2,
+    textAlign: 'center',
+    lineHeight: (typography.body - 1) * typography.lineRelaxed,
+    paddingHorizontal: spacing.md,
+  },
 
   section: {
-    backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 12, elevation: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: C.primary, marginBottom: 12 },
-
-  row: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F0ECEA',
+  sectionTitle: {
+    fontSize: typography.body,
+    fontWeight: typography.bold,
+    color: colors.primaryDark,
+    marginBottom: spacing.sm,
   },
-  rowLabel: { fontSize: 15, color: C.sub },
-  rowValue: { fontSize: 15, color: C.text, fontWeight: '600', flex: 1, textAlign: 'right' },
 
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { backgroundColor: C.primaryLight, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7 },
-  chipText: { fontSize: 14, color: C.primary, fontWeight: '600' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 7,
+  },
+  chipText: {
+    fontSize: typography.caption + 1,
+    color: colors.primaryDark,
+    fontWeight: typography.semibold,
+  },
 
-  // Q&A 스타일
   qaRow: {
-    paddingVertical: 10,
+    paddingVertical: spacing.xs + 2,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0ECEA',
+    borderBottomColor: colors.divider,
   },
   qaQuestion: {
-    fontSize: 14,
-    color: C.sub,
+    fontSize: typography.caption + 1,
+    color: colors.sub,
     marginBottom: 4,
-    lineHeight: 20,
+    lineHeight: (typography.caption + 1) * typography.lineNormal,
   },
   qaAnswer: {
-    fontSize: 16,
-    color: C.text,
-    fontWeight: '600',
-    lineHeight: 22,
+    fontSize: typography.body,
+    color: colors.text,
+    fontWeight: typography.semibold,
+    lineHeight: typography.body * typography.lineNormal,
     paddingLeft: 4,
   },
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: C.bg, padding: 16,
-    borderTopWidth: 1, borderTopColor: C.border,
-    // paddingBottom 은 인라인에서 insets.bottom 적용
+    backgroundColor: colors.bg,
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  chatBtn: {
-    backgroundColor: C.primary, borderRadius: 14, paddingVertical: 16,
-    alignItems: 'center', elevation: 3,
+
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xs,
   },
-  chatBtnText: { fontSize: 17, fontWeight: '700', color: '#FFF' },
+  reportBtn: { paddingVertical: spacing.xs + 2, paddingHorizontal: spacing.md + 4 },
+  reportBtnText: {
+    fontSize: typography.caption + 1,
+    color: colors.sub,
+  },
+  blockBtn: { paddingVertical: spacing.xs + 2, paddingHorizontal: spacing.md + 4 },
+  blockBtnText: {
+    fontSize: typography.caption + 1,
+    color: colors.danger,
+  },
 
-  actionRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 8 },
-  reportBtn: { paddingVertical: 10, paddingHorizontal: 20 },
-  reportBtnText: { fontSize: 14, color: C.sub },
-  blockBtn: { paddingVertical: 10, paddingHorizontal: 20 },
-  blockBtnText: { fontSize: 14, color: '#D44' },
-
-  // 신고 Modal
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', alignItems: 'center', padding: 32,
+    flex: 1, backgroundColor: colors.overlay,
+    justifyContent: 'center', alignItems: 'center',
+    padding: spacing.xl,
   },
   modalContent: {
-    backgroundColor: '#FFF', borderRadius: 16, padding: 24,
-    width: '100%', maxWidth: 340,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 340,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: C.text, marginBottom: 4 },
-  modalSub: { fontSize: 14, color: C.sub, marginBottom: 16 },
+  modalTitle: {
+    fontSize: typography.bodyLarge,
+    fontWeight: typography.bold,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  modalSub: {
+    fontSize: typography.caption + 1,
+    color: colors.sub,
+    marginBottom: spacing.md,
+  },
   modalOption: {
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0ECEA',
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
   },
-  modalOptionText: { fontSize: 16, color: C.text },
+  modalOptionText: {
+    fontSize: typography.body,
+    color: colors.text,
+  },
   modalCancelBtn: {
-    marginTop: 12, paddingVertical: 14, alignItems: 'center',
-    backgroundColor: '#F5F5F5', borderRadius: 10,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
   },
-  modalCancelText: { fontSize: 16, color: C.sub, fontWeight: '600' },
+  modalCancelText: {
+    fontSize: typography.body,
+    color: colors.sub,
+    fontWeight: typography.semibold,
+  },
 });

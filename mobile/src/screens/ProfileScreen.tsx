@@ -24,6 +24,7 @@ import {
   QAItem, getAnswerText,
 } from '../data/questionLabels';
 import { getErrorMessage } from '../utils/error';
+import { colors } from '../theme';
 
 // ── 설정 상수 ────────────────────────────────────────────
 
@@ -79,17 +80,18 @@ const STORAGE_KEYS = {
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
+// 테마 토큰을 C 별칭으로 재노출 — 본 파일 1400+ 라인이 C.* 사용 중
 const C = {
-  primary: '#E8556D',
-  primaryLight: '#FCEEF1',
-  bg: '#FFF8F5',
-  card: '#FFFFFF',
-  text: '#2D2D2D',
-  sub: '#777777',
-  border: '#E0D5D0',
-  gold: '#F9A825',
-  success: '#27AE60',
-  muted: '#6C7B95',
+  primary: colors.primary,
+  primaryLight: colors.primaryLight,
+  bg: colors.bg,
+  card: colors.surface,
+  text: colors.text,
+  sub: colors.sub,
+  border: colors.border,
+  gold: colors.warn,
+  success: colors.success,
+  muted: colors.muted,
 };
 
 const LABELS: Record<string, Record<string, string>> = {
@@ -113,7 +115,7 @@ const LABELS: Record<string, Record<string, string>> = {
   living_situation: { alone: '혼자', with_family: '가족과 함께', with_children: '자녀와 함께', other: '기타' },
 };
 
-const HOBBY_LABELS: Record<string, string> = {
+const _HOBBY_LABELS: Record<string, string> = {
   hiking: '등산', travel: '여행', cooking: '요리', reading: '독서',
   music: '음악', gardening: '원예', golf: '골프', swimming: '수영',
   yoga: '요가/필라테스', photography: '사진', volunteering: '봉사활동',
@@ -356,7 +358,7 @@ export default function ProfileScreen() {
 
   // 사진 갤러리
   const [photos, setPhotos] = useState<{ id: string; url: string; sort_order: number }[]>([]);
-  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [_showPhotoGallery, _setShowPhotoGallery] = useState(false);
 
   // 자기소개 편집
   const [editingBio, setEditingBio] = useState(false);
@@ -369,7 +371,7 @@ export default function ProfileScreen() {
   const [regionFilter, setRegionFilter] = useState<string>('nationwide');
   const [goalMatch, setGoalMatch] = useState<boolean>(false);
   const [showPreviewPicker, setShowPreviewPicker] = useState(false);
-  const [showRequiredPicker, setShowRequiredPicker] = useState(false);
+  const [_showRequiredPicker, _setShowRequiredPicker] = useState(false);
   const [showRegionSection, setShowRegionSection] = useState(false);
   const [showRequiredSection, setShowRequiredSection] = useState(false);
 
@@ -654,6 +656,7 @@ export default function ProfileScreen() {
   };
 
   const changeCity = async (newCity: string) => {
+    if (!profile) return;
     try {
       await updateMyProfile({ city: newCity });
       await deductCredit(1);

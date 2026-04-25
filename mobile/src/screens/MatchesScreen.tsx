@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, FlatList, TouchableOpacity, StyleSheet,
+  View, TouchableOpacity, StyleSheet,
   RefreshControl, SafeAreaView, Alert, Image, ScrollView,
 } from 'react-native';
 import { CompositeNavigationProp, useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -12,22 +12,15 @@ import { useAuthStore } from '../store/authStore';
 import { MutualMatch, RootStackParamList, MainTabParamList } from '../types';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { getErrorMessage } from '../utils/error';
+import {
+  Button, Tag, Badge, Card, ScreenHeader,
+  colors, spacing, typography,
+} from '../theme';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Matches'>,
   NativeStackNavigationProp<RootStackParamList>
 >;
-
-const C = {
-  primary: '#E8556D',
-  primaryLight: '#FCEEF1',
-  bg: '#FFF8F5',
-  card: '#FFFFFF',
-  text: '#2D2D2D',
-  sub: '#999999',
-  border: '#F0ECEA',
-  unread: '#E8556D',
-};
 
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -36,7 +29,6 @@ function formatTime(dateStr: string): string {
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
-    // 오늘: 시간만 표시
     return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true });
   } else if (diffDays === 1) {
     return '어제';
@@ -56,7 +48,6 @@ function ChatRow({ match, onPress }: { match: MutualMatch; onPress: () => void }
 
   return (
     <TouchableOpacity style={styles.chatRow} onPress={onPress} activeOpacity={0.6}>
-      {/* 프로필 사진 */}
       <View style={styles.avatarContainer}>
         {u.photo_url ? (
           <Image source={{ uri: u.photo_url }} style={styles.avatar} />
@@ -65,37 +56,34 @@ function ChatRow({ match, onPress }: { match: MutualMatch; onPress: () => void }
             <AppText style={styles.avatarInitial}>{(u.nickname || u.name).charAt(0)}</AppText>
           </View>
         )}
-        {isNewMatch && (
-          <View style={styles.newBadge}>
-            <AppText style={styles.newBadgeText}>N</AppText>
-          </View>
-        )}
+        {isNewMatch && <View style={styles.newDot} />}
       </View>
 
-      {/* 이름 + 마지막 메시지 */}
       <View style={styles.chatInfo}>
         <View style={styles.chatNameRow}>
-          <AppText style={[styles.chatName, hasUnread && styles.chatNameBold]}>{(u.nickname || u.name)}</AppText>
-          {isNewMatch && (
-            <View style={styles.newMatchTag}>
-              <AppText style={styles.newMatchTagText}>새 매칭</AppText>
-            </View>
-          )}
+          <AppText style={[styles.chatName, hasUnread && styles.chatNameBold]} numberOfLines={1}>
+            {(u.nickname || u.name)}
+          </AppText>
+          {isNewMatch && <Tag tone="accent" label="새 매칭" />}
         </View>
-        <AppText style={[styles.chatPreview, hasUnread && styles.chatPreviewBold, isNewMatch && styles.chatPreviewNew]} numberOfLines={1}>
-          {last_message ? last_message.content : '첫 인사를 건네보세요!'}
+        <AppText
+          style={[
+            styles.chatPreview,
+            hasUnread && styles.chatPreviewBold,
+            isNewMatch && styles.chatPreviewNew,
+          ]}
+          numberOfLines={1}
+        >
+          {last_message ? last_message.content : '첫 인사를 건네보세요'}
         </AppText>
       </View>
 
-      {/* 시간 + 안 읽은 배지 */}
       <View style={styles.chatMeta}>
         <AppText style={styles.chatTime}>{timeStr}</AppText>
-        {hasUnread && (
-          <View style={styles.unreadBadge}>
-            <AppText style={styles.unreadText}>
-              {(unread_count ?? 0) > 99 ? '99+' : unread_count}
-            </AppText>
-          </View>
+        {hasUnread ? (
+          <Badge value={unread_count ?? 0} />
+        ) : (
+          <View style={styles.badgePlaceholder} />
         )}
       </View>
     </TouchableOpacity>
@@ -126,9 +114,9 @@ function formatRemaining(hours: number): string {
 }
 
 const STATUS_CONFIG = {
-  pending: { label: '대기중', color: '#F9A825', icon: '⏳' },
-  matched: { label: '매칭됨', color: '#27AE60', icon: '💕' },
-  expired: { label: '만료', color: '#999', icon: '⌛' },
+  pending: { label: '대기중', color: colors.warn, icon: '⏳' },
+  matched: { label: '매칭됨', color: colors.success, icon: '💕' },
+  expired: { label: '만료', color: colors.muted, icon: '⌛' },
 };
 
 function SentInterestRow({ item, onPress }: { item: SentInterest; onPress: () => void }) {
@@ -136,6 +124,7 @@ function SentInterestRow({ item, onPress }: { item: SentInterest; onPress: () =>
   const currentYear = new Date().getFullYear();
   const age = item.birth_year ? currentYear - item.birth_year : null;
   const isExpired = item.status === 'expired';
+  const isUrgent = item.status === 'pending' && item.remaining_hours <= 12;
 
   return (
     <TouchableOpacity
@@ -151,21 +140,20 @@ function SentInterestRow({ item, onPress }: { item: SentInterest; onPress: () =>
         </AppText>
       </View>
       <View style={styles.sentInfo}>
-        <AppText style={[styles.sentName, isExpired && styles.sentExpiredText]}>
+        <AppText style={[styles.sentName, isExpired && styles.sentExpiredText]} numberOfLines={1}>
           {item.name ?? '알 수 없음'}{age ? `, ${age}세` : ''}
         </AppText>
-        <AppText style={[styles.sentSub, isExpired && styles.sentExpiredText]}>
+        <AppText style={[styles.sentSub, isExpired && styles.sentExpiredText]} numberOfLines={1}>
           {item.city ?? ''}{item.relationship_goal ? ` · ${item.relationship_goal}` : ''}
         </AppText>
       </View>
       <View style={styles.sentStatus}>
-        <AppText style={{ fontSize: 16 }}>{cfg.icon}</AppText>
-        {item.status === 'pending' && (
-          <AppText style={[styles.sentCountdown, { color: item.remaining_hours <= 12 ? '#E53935' : '#F9A825' }]}>
+        <AppText style={styles.sentStatusIcon}>{cfg.icon}</AppText>
+        {item.status === 'pending' ? (
+          <AppText style={[styles.sentCountdown, { color: isUrgent ? colors.danger : colors.warn }]}>
             {formatRemaining(item.remaining_hours)}
           </AppText>
-        )}
-        {item.status !== 'pending' && (
+        ) : (
           <AppText style={[styles.sentStatusText, { color: cfg.color }]}>{cfg.label}</AppText>
         )}
       </View>
@@ -203,8 +191,6 @@ export default function MatchesScreen() {
     }
   }, []);
 
-  // 탭 진입할 때마다 새로 가져오기
-  // (다른 탭에서 관심 누른 직후 매칭 탭 와도 즉시 반영되도록)
   useFocusEffect(
     useCallback(() => {
       load();
@@ -227,41 +213,38 @@ export default function MatchesScreen() {
     }
   };
 
-  // 보낸 관심 중 대기중인 것만 필터
   const pendingSent = sentInterests.filter(s => s.status === 'pending');
   const otherSent = sentInterests.filter(s => s.status !== 'pending');
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <AppText style={styles.headerTitle}>채팅</AppText>
-        </View>
+        <ScreenHeader title="채팅" />
         <SkeletonLoader variant="match-row" count={6} />
       </SafeAreaView>
     );
   }
 
+  const headerRight = matches.length > 0
+    ? <Tag tone="accent" label={String(matches.length)} />
+    : undefined;
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <AppText style={styles.headerTitle}>채팅</AppText>
-        {matches.length > 0 && (
-          <AppText style={styles.headerCount}>{matches.length}</AppText>
-        )}
-      </View>
+      <ScreenHeader title="채팅" right={headerRight} />
 
       <ScrollView
+        contentContainerStyle={styles.scroll}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); load(); }}
-            tintColor={C.primary}
+            tintColor={colors.primary}
           />
         }
       >
-        {/* ── 보낸 관심 섹션 ── */}
-        <View style={styles.sentSection}>
+        {/* 보낸 관심 섹션 */}
+        <Card padded={false} style={styles.sentCard}>
           <TouchableOpacity
             style={styles.sentHeader}
             onPress={() => setShowSent(v => !v)}
@@ -276,7 +259,7 @@ export default function MatchesScreen() {
                     : ''
               }
             </AppText>
-            <AppText style={styles.sentToggle}>{showSent ? '접기 ▲' : '펼치기 ▼'}</AppText>
+            <AppText style={styles.sentToggle}>{showSent ? '접기 ▴' : '펼치기 ▾'}</AppText>
           </TouchableOpacity>
           {showSent && (
             sentInterests.length === 0 ? (
@@ -311,31 +294,32 @@ export default function MatchesScreen() {
               </View>
             )
           )}
-        </View>
+        </Card>
 
-        {/* ── 채팅 목록 ── */}
+        {/* 채팅 목록 */}
         {matches.length === 0 ? (
           <View style={styles.empty}>
-            <AppText style={styles.emptyEmoji}>💬</AppText>
             <AppText style={styles.emptyTitle}>아직 채팅이 없어요</AppText>
             <AppText style={styles.emptySub}>
               추천 탭에서 마음에 드는 분께 관심을 표현해보세요.{'\n'}
-              서로 관심을 표현하면 채팅이 시작됩니다!
+              서로 관심을 표현하면 채팅이 시작됩니다
             </AppText>
-            <TouchableOpacity
-              style={styles.goSuggestionsBtn}
+            <Button
+              label="추천 보러가기"
+              variant="primary"
               onPress={() => nav.navigate('Suggestions')}
-            >
-              <AppText style={styles.goSuggestionsBtnText}>추천 보러가기</AppText>
-            </TouchableOpacity>
+              fullWidth={false}
+            />
           </View>
         ) : (
-          matches.map((item, idx) => (
-            <React.Fragment key={item.match_id}>
-              {idx > 0 && <View style={styles.separator} />}
-              <ChatRow match={item} onPress={() => handlePress(item)} />
-            </React.Fragment>
-          ))
+          <Card padded={false} style={styles.chatListCard}>
+            {matches.map((item, idx) => (
+              <React.Fragment key={item.match_id}>
+                {idx > 0 && <View style={styles.separator} />}
+                <ChatRow match={item} onPress={() => handlePress(item)} />
+              </React.Fragment>
+            ))}
+          </Card>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -343,112 +327,174 @@ export default function MatchesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: C.text },
-  headerCount: {
-    fontSize: 14, fontWeight: '700', color: C.primary,
-    backgroundColor: C.primaryLight, borderRadius: 12,
-    paddingHorizontal: 8, paddingVertical: 2, overflow: 'hidden',
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { paddingHorizontal: spacing.md, paddingBottom: spacing.xl, gap: spacing.sm },
 
-  // 채팅 목록 행
+  // 채팅 목록
+  chatListCard: { overflow: 'hidden' },
   chatRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: C.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
   },
   avatarContainer: { position: 'relative' },
   avatar: {
-    width: 52, height: 52, borderRadius: 26,
-    borderWidth: 1, borderColor: C.border,
+    width: 56, height: 56, borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   avatarPlaceholder: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: C.primaryLight,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitial: { fontSize: 22, color: C.primary, fontWeight: '700' },
-  newBadge: {
-    position: 'absolute', top: -2, right: -2,
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#FFF',
+  avatarInitial: {
+    fontSize: 22,
+    color: colors.primaryDark,
+    fontWeight: typography.bold,
   },
-  newBadgeText: { fontSize: 10, color: '#FFF', fontWeight: '800' },
-
-  chatInfo: { flex: 1, marginLeft: 14 },
-  chatNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  chatName: { fontSize: 16, fontWeight: '600', color: C.text },
-  chatNameBold: { fontWeight: '800' },
-  newMatchTag: {
-    backgroundColor: C.primaryLight, borderRadius: 8,
-    paddingHorizontal: 6, paddingVertical: 1,
+  newDot: {
+    position: 'absolute',
+    top: 2, right: 2,
+    width: 12, height: 12, borderRadius: 6,
+    backgroundColor: colors.primary,
+    borderWidth: 2, borderColor: colors.surface,
   },
-  newMatchTagText: { fontSize: 12, color: C.primary, fontWeight: '700' },
-  chatPreview: { fontSize: 14, color: C.sub, marginTop: 4, lineHeight: 18 },
-  chatPreviewBold: { color: C.text, fontWeight: '500' },
-  chatPreviewNew: { color: C.primary, fontStyle: 'italic' },
 
-  chatMeta: { alignItems: 'flex-end', marginLeft: 10, gap: 6 },
-  chatTime: { fontSize: 13, color: C.sub },
-  unreadBadge: {
-    backgroundColor: C.unread, borderRadius: 11,
-    minWidth: 22, height: 22, paddingHorizontal: 6,
-    alignItems: 'center', justifyContent: 'center',
+  chatInfo: { flex: 1, marginLeft: spacing.sm + 2 },
+  chatNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
-  unreadText: { fontSize: 12, color: '#FFF', fontWeight: '700' },
+  chatName: {
+    fontSize: typography.body + 1,
+    fontWeight: typography.semibold,
+    color: colors.text,
+    flexShrink: 1,
+  },
+  chatNameBold: { fontWeight: typography.bold },
+  chatPreview: {
+    fontSize: typography.caption + 2,
+    color: colors.sub,
+    marginTop: 4,
+    lineHeight: (typography.caption + 2) * typography.lineNormal,
+  },
+  chatPreviewBold: { color: colors.text, fontWeight: typography.medium },
+  chatPreviewNew: { color: colors.primaryDark, fontStyle: 'italic' },
 
-  separator: { height: 1, backgroundColor: C.border, marginLeft: 82 },
+  chatMeta: {
+    alignItems: 'flex-end',
+    marginLeft: spacing.xs + 2,
+    gap: spacing.xs - 2,
+  },
+  chatTime: {
+    fontSize: typography.caption,
+    color: colors.muted,
+  },
+  badgePlaceholder: { width: 22, height: 22 },
+
+  separator: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginLeft: spacing.md + 56 + spacing.sm + 2,
+  },
 
   // 보낸 관심
-  sentSection: {
-    backgroundColor: C.card, marginBottom: 8,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
+  sentCard: { overflow: 'hidden' },
   sentHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
   },
-  sentHeaderText: { fontSize: 15, fontWeight: '700', color: C.text },
-  sentToggle: { fontSize: 13, color: C.sub },
+  sentHeaderText: {
+    fontSize: typography.body,
+    fontWeight: typography.semibold,
+    color: colors.text,
+  },
+  sentToggle: {
+    fontSize: typography.caption,
+    color: colors.muted,
+    fontWeight: typography.medium,
+  },
   sentRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderTopWidth: 1, borderTopColor: C.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
   },
-  sentRowExpired: { opacity: 0.5 },
+  sentRowExpired: { opacity: 0.55 },
   sentAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: C.primaryLight, borderWidth: 2,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
   },
-  sentAvatarText: { fontSize: 16, color: C.primary, fontWeight: '700' },
-  sentInfo: { flex: 1, marginLeft: 12 },
-  sentName: { fontSize: 14, fontWeight: '600', color: C.text },
-  sentSub: { fontSize: 13, color: C.sub, marginTop: 2 },
-  sentExpiredText: { color: '#BBB' },
-  sentStatus: { alignItems: 'center', gap: 2 },
-  sentCountdown: { fontSize: 12, fontWeight: '700' },
-  sentStatusText: { fontSize: 12, fontWeight: '600' },
-  sentEmpty: {
-    paddingHorizontal: 20, paddingVertical: 24,
-    borderTopWidth: 1, borderTopColor: C.border,
+  sentAvatarText: {
+    fontSize: typography.body,
+    color: colors.primaryDark,
+    fontWeight: typography.bold,
   },
-  sentEmptyText: { fontSize: 14, color: C.sub, textAlign: 'center', lineHeight: 20 },
+  sentInfo: { flex: 1, marginLeft: spacing.sm },
+  sentName: {
+    fontSize: typography.caption + 2,
+    fontWeight: typography.semibold,
+    color: colors.text,
+  },
+  sentSub: {
+    fontSize: typography.caption + 1,
+    color: colors.sub,
+    marginTop: 2,
+  },
+  sentExpiredText: { color: colors.muted },
+  sentStatus: { alignItems: 'center', gap: 2, minWidth: 60 },
+  sentStatusIcon: { fontSize: typography.body },
+  sentCountdown: {
+    fontSize: typography.caption,
+    fontWeight: typography.bold,
+  },
+  sentStatusText: {
+    fontSize: typography.caption,
+    fontWeight: typography.semibold,
+  },
+  sentEmpty: {
+    paddingHorizontal: spacing.md + 4,
+    paddingVertical: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  sentEmptyText: {
+    fontSize: typography.caption + 1,
+    color: colors.sub,
+    textAlign: 'center',
+    lineHeight: (typography.caption + 1) * typography.lineRelaxed,
+  },
 
   // 빈 상태
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyEmoji: { fontSize: 56, marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 10 },
-  emptySub: { fontSize: 15, color: C.sub, textAlign: 'center', lineHeight: 22, marginBottom: 24 },
-  goSuggestionsBtn: {
-    backgroundColor: C.primary,
-    paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12,
+  empty: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
+    gap: spacing.sm,
   },
-  goSuggestionsBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  emptyTitle: {
+    fontSize: typography.title,
+    fontWeight: typography.bold,
+    color: colors.text,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  emptySub: {
+    fontSize: typography.body,
+    color: colors.sub,
+    textAlign: 'center',
+    lineHeight: typography.body * typography.lineRelaxed,
+    marginBottom: spacing.sm,
+  },
 });

@@ -1,6 +1,7 @@
 export interface Profile {
   id: string;
   name: string;
+  nickname?: string;
   birth_year: number;
   gender: 'male' | 'female';
   looking_for: 'male' | 'female' | 'any';
@@ -60,6 +61,7 @@ export interface Profile {
 export interface SuggestionProfile {
   id: string;
   name: string;
+  nickname?: string;
   birth_year: number;
   gender: string;
   city: string;

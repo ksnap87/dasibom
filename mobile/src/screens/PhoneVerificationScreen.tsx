@@ -16,20 +16,10 @@ import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { useAuthStore } from '../store/authStore';
 import { savePhoneHash, verifyPhone } from '../api/client';
 import { RootStackParamList } from '../types';
+import { Button, colors, radius, spacing, typography } from '../theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'PhoneVerification'>;
-
-const C = {
-  primary: '#E8556D',
-  primaryLight: '#FCEEF1',
-  bg: '#FFF8F5',
-  card: '#FFFFFF',
-  text: '#2D2D2D',
-  sub: '#777777',
-  border: '#E0D5D0',
-  green: '#27AE60',
-};
 
 export default function PhoneVerificationScreen() {
   const nav = useNavigation<Nav>();
@@ -48,14 +38,12 @@ export default function PhoneVerificationScreen() {
   const otpRef = useRef<TextInput>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // 언마운트 시 타이머 정리 (메모리 누수 방지)
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  // 쿨다운 타이머 시작 (재발송 방지)
   const startCooldown = () => {
     setCooldown(60);
     if (timerRef.current) clearInterval(timerRef.current);
@@ -77,12 +65,9 @@ export default function PhoneVerificationScreen() {
     return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
   };
 
-  // 전화번호를 국제 형식으로 변환 (010-1234-5678 → +821012345678)
   const toE164 = (phoneNumber: string): string => {
     const digits = phoneNumber.replace(/\D/g, '');
-    if (digits.startsWith('0')) {
-      return `+82${digits.slice(1)}`;
-    }
+    if (digits.startsWith('0')) return `+82${digits.slice(1)}`;
     return `+82${digits}`;
   };
 
@@ -120,7 +105,6 @@ export default function PhoneVerificationScreen() {
     if (cooldown > 0) return;
     setOtp('');
     setStep('phone');
-    // 사용자가 다시 발송 버튼 누르도록
   };
 
   const handleVerify = async () => {
@@ -136,26 +120,20 @@ export default function PhoneVerificationScreen() {
     setLoading(true);
     try {
       await confirmation.confirm(otp);
-      // Firebase 인증 성공 → 앱 인증 상태 업데이트
       await setPhoneVerified(true);
 
-      // 전화번호를 서버에 저장 (해시 + 암호화)
       try {
         const digits = phone.replace(/\D/g, '');
         const normalized = digits.startsWith('0') ? `+82${digits.slice(1)}` : `+82${digits}`;
-        // 해시 저장 (연락처 기반 추천 제외용)
         const { createHash } = await import('../utils/hash');
         const hash = await createHash(normalized);
         await savePhoneHash(hash);
-        // 암호화된 전화번호 저장 (안전 대응용 — 서버에서 AES-256 암호화)
         await verifyPhone(normalized);
       } catch (_) { /* 저장 실패해도 인증은 완료 */ }
 
-      // Firebase 전화 인증 계정은 로그아웃 (Supabase 인증과 별개)
       try { await auth().signOut(); } catch {}
 
       setLoading(false);
-      // 인증 완료 → match_id가 있으면 채팅방, 없으면 뒤로가기
       if (match_id) {
         nav.replace('ChatRoom', { match_id, other_name, other_user_id });
       } else {
@@ -186,7 +164,6 @@ export default function PhoneVerificationScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.inner}>
-          {/* 헤더 */}
           <View style={styles.headerArea}>
             <AppText style={styles.headerEmoji}>📱</AppText>
             <AppText style={styles.headerTitle}>본인인증</AppText>
@@ -195,7 +172,6 @@ export default function PhoneVerificationScreen() {
             </AppText>
           </View>
 
-          {/* 인증 이유 설명 */}
           <View style={styles.reasonCard}>
             <AppText style={styles.reasonTitle}>왜 인증이 필요한가요?</AppText>
             <AppText style={styles.reasonText}>
@@ -204,7 +180,6 @@ export default function PhoneVerificationScreen() {
             </AppText>
           </View>
 
-          {/* 전화번호 입력 */}
           <View style={styles.card}>
             <AppText style={styles.inputLabel}>휴대폰 번호</AppText>
             <View style={styles.phoneRow}>
@@ -215,7 +190,7 @@ export default function PhoneVerificationScreen() {
                 placeholder="010-0000-0000"
                 keyboardType="phone-pad"
                 editable={step === 'phone'}
-                placeholderTextColor={C.sub}
+                placeholderTextColor={colors.muted}
               />
               {step === 'phone' && (
                 <TouchableOpacity
@@ -242,10 +217,11 @@ export default function PhoneVerificationScreen() {
               )}
             </View>
 
-            {/* OTP 입력 (2단계) */}
             {step === 'otp' && (
               <>
-                <AppText style={[styles.inputLabel, { marginTop: 16 }]}>인증번호 (6자리)</AppText>
+                <AppText style={[styles.inputLabel, { marginTop: spacing.md }]}>
+                  인증번호 (6자리)
+                </AppText>
                 <TextInput
                   ref={otpRef}
                   style={styles.otpInput}
@@ -254,35 +230,25 @@ export default function PhoneVerificationScreen() {
                   placeholder="인증번호 입력"
                   keyboardType="number-pad"
                   maxLength={6}
-                  placeholderTextColor={C.sub}
+                  placeholderTextColor={colors.muted}
                 />
                 <AppText style={styles.otpHint}>📩 {phone}으로 발송된 6자리 번호를 입력하세요</AppText>
               </>
             )}
           </View>
 
-          {/* 확인 버튼 */}
           {step === 'otp' && (
-            <TouchableOpacity
-              style={[styles.verifyBtn, loading && styles.btnDisabled]}
+            <Button
+              label="인증 완료"
+              variant="primary"
               onPress={handleVerify}
-              disabled={loading}
-            >
-              {loading
-                ? <ActivityIndicator color="#fff" />
-                : <AppText style={styles.verifyBtnText}>인증 완료</AppText>
-              }
-            </TouchableOpacity>
+              loading={loading}
+            />
           )}
 
-          {/* 건너뛰기 (나중에 인증) */}
-          <TouchableOpacity
-            style={styles.skipBtn}
-            onPress={() => nav.goBack()}
-          >
+          <TouchableOpacity style={styles.skipBtn} onPress={() => nav.goBack()}>
             <AppText style={styles.skipText}>나중에 인증하기</AppText>
           </TouchableOpacity>
-
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -290,57 +256,120 @@ export default function PhoneVerificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  inner: { flex: 1, padding: 24 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  inner: { flex: 1, padding: spacing.lg },
 
-  headerArea: { alignItems: 'center', marginBottom: 24 },
-  headerEmoji: { fontSize: 52, marginBottom: 12 },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: C.text, marginBottom: 8 },
-  headerSub: { fontSize: 15, color: C.sub, textAlign: 'center', lineHeight: 22 },
+  headerArea: { alignItems: 'center', marginBottom: spacing.lg },
+  headerEmoji: { fontSize: 52, marginBottom: spacing.sm },
+  headerTitle: {
+    fontSize: typography.heading,
+    fontWeight: typography.bold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+    letterSpacing: -0.3,
+  },
+  headerSub: {
+    fontSize: typography.body,
+    color: colors.sub,
+    textAlign: 'center',
+    lineHeight: typography.body * typography.lineRelaxed,
+  },
 
   reasonCard: {
-    backgroundColor: '#FFF9E6', borderRadius: 12, padding: 16, marginBottom: 20,
-    borderWidth: 1, borderColor: '#F9E09A',
+    backgroundColor: '#F6ECDA',
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md + 4,
+    borderWidth: 1,
+    borderColor: '#E4D4B2',
   },
-  reasonTitle: { fontSize: 14, fontWeight: '700', color: '#7D5A00', marginBottom: 6 },
-  reasonText: { fontSize: 13, color: '#9E7500', lineHeight: 20 },
+  reasonTitle: {
+    fontSize: typography.caption + 1,
+    fontWeight: typography.bold,
+    color: '#7D5A00',
+    marginBottom: 6,
+  },
+  reasonText: {
+    fontSize: typography.caption,
+    color: '#8A6322',
+    lineHeight: typography.caption * typography.lineRelaxed,
+  },
 
-  card: { backgroundColor: C.card, borderRadius: 16, padding: 20, marginBottom: 16, elevation: 2 },
-  inputLabel: { fontSize: 15, fontWeight: '600', color: C.text, marginBottom: 8 },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md + 4,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  inputLabel: {
+    fontSize: typography.body - 1,
+    fontWeight: typography.semibold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
 
-  phoneRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  phoneRow: { flexDirection: 'row', gap: spacing.xs + 2, alignItems: 'center' },
   phoneInput: {
-    flex: 1, borderWidth: 1.5, borderColor: C.border, borderRadius: 10,
-    paddingHorizontal: 16, paddingVertical: 14, fontSize: 18, color: C.text,
-    backgroundColor: '#FFFAF8',
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    fontSize: typography.bodyLarge,
+    color: colors.text,
+    backgroundColor: colors.surfaceAlt,
   },
-  inputDone: { borderColor: C.green, backgroundColor: '#F0FBF4' },
+  inputDone: {
+    borderColor: colors.success,
+    backgroundColor: '#F0F6EE',
+  },
   sendBtn: {
-    backgroundColor: C.primary, borderRadius: 10,
-    paddingHorizontal: 18, paddingVertical: 14,
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: 14,
+    minHeight: 48,
+    justifyContent: 'center',
   },
-  sendBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-  resendBtn: {
-    paddingHorizontal: 14, paddingVertical: 14,
+  sendBtnText: {
+    color: '#FFF',
+    fontSize: typography.body - 1,
+    fontWeight: typography.bold,
   },
-  resendText: { color: C.sub, fontSize: 14, textDecorationLine: 'underline' },
+  resendBtn: { paddingHorizontal: spacing.sm + 2, paddingVertical: 14 },
+  resendText: {
+    color: colors.sub,
+    fontSize: typography.caption + 1,
+    textDecorationLine: 'underline',
+  },
 
   otpInput: {
-    borderWidth: 1.5, borderColor: C.border, borderRadius: 10,
-    paddingHorizontal: 16, paddingVertical: 14, fontSize: 24,
-    color: C.text, letterSpacing: 8, backgroundColor: '#FFFAF8',
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    fontSize: typography.title + 2,
+    color: colors.text,
+    letterSpacing: 8,
+    backgroundColor: colors.surfaceAlt,
     textAlign: 'center',
   },
-  otpHint: { fontSize: 12, color: C.sub, marginTop: 8 },
-
-  verifyBtn: {
-    backgroundColor: C.primary, borderRadius: 14, paddingVertical: 18,
-    alignItems: 'center', marginBottom: 12,
+  otpHint: {
+    fontSize: typography.caption,
+    color: colors.muted,
+    marginTop: spacing.xs,
   },
-  verifyBtnText: { fontSize: 18, fontWeight: '700', color: '#FFF' },
 
-  skipBtn: { alignItems: 'center', paddingVertical: 12 },
-  skipText: { fontSize: 15, color: C.sub, textDecorationLine: 'underline' },
+  skipBtn: { alignItems: 'center', paddingVertical: spacing.sm },
+  skipText: {
+    fontSize: typography.body - 1,
+    color: colors.sub,
+    textDecorationLine: 'underline',
+  },
 
-  btnDisabled: { opacity: 0.6 },
+  btnDisabled: { opacity: 0.5 },
 });
