@@ -108,3 +108,44 @@
 ### Supabase 마이그레이션
 - `purchase_history`에 `order_id` 컬럼 추가
 - `purchase_token` UNIQUE 제약 추가 (DB 레벨 중복 방지)
+
+## Sprint 9: 디자인 시스템 + IAP v14 + CI 자동 검증 (2026-04-25)
+
+### Theme System 도입
+- `mobile/src/theme/tokens.ts` — colors / spacing / radius / typography 토큰 정의
+- 컴포넌트 5종: `Button` / `Card` / `Tag` / `Badge` / `ScreenHeader`
+- 12개 화면 theme 시스템 기반으로 마이그레이션 (Auth / Welcome / Splash / Profile / Friend / Suggestions / Matches / ChatRoom / CreditStore / PhoneVerification / Questionnaire / AppNavigator)
+
+### react-native-iap v14 마이그레이션 (CreditStoreScreen)
+- `getProducts` → `fetchProducts`
+- `requestPurchase` 새 시그니처 (`request.android.skus` / `request.ios.sku`)
+- `ProductPurchase` → `Purchase` 타입
+- `transactionReceipt` → `purchaseToken`
+- `ErrorCode.UserCancelled`, `displayPrice`, `p.id` 매칭
+- ⚠️ Nitro 모듈로 내부 구현 변경 — 타입체크 통과가 런타임 보장하지 않음, **실기기 결제 사이클 테스트 필수**
+
+### 코드 품질 정리
+- TypeScript 에러 14 → **0**
+- ESLint 에러 27 → **0** (경고 76은 inline-style — 동작 무관)
+- `Profile` / `SuggestionProfile`에 `nickname?: string` 보강
+- `api/client.ts` 리턴 타입 `Promise<AxiosResponse<T>>`로 정확화, `setTimeout` 시그니처 수정
+- ESLint `_`-prefix ignore 패턴 추가
+- `ChatRoomScreen.handleRetry` `useCallback`로 안정화
+
+### PR 자동 교차 검증 CI
+- `.github/workflows/claude-review.yml` — Claude Opus 4.5가 PR diff를 한국어로 리뷰 후 코멘트 게시
+- `.github/workflows/codex-review.yml` — OpenAI GPT-5가 동일 diff 리뷰 후 코멘트 게시
+- 두 모델이 서로 다른 시각으로 포커싱 (Claude: 신중함/타입, Codex: 보안/race)
+- diff 4000줄 cap, 시크릿(`ANTHROPIC_API_KEY` / `OPENAI_API_KEY`) 없으면 워크플로우 통과 (선택적 운영)
+- `docs/CI_REVIEW_SETUP.md` — 시크릿 발급 / 비용 / 머지 게이팅 가이드
+
+### 자동 빌드 · 릴리즈 흐름 (현재 상태)
+- **트리거**: `main` push (자동) + `workflow_dispatch` (수동)
+- **빌드**: `.github/workflows/build-apk.yml` — Node 20 + JDK 17 + Android SDK 36 → APK + AAB
+- **출력**: GitHub Releases에 `app-release.apk` (~86 MB) + `intermediary-bundle.aab` (~186 MB) 자동 첨부
+- **시크릿**: `CONFIG_TS`, `GOOGLE_SERVICES_JSON`, `RELEASE_KEYSTORE_BASE64`
+- **최신**: [v0.0.1-202604250454](https://github.com/ksnap87/dasibom/releases/tag/v0.0.1-202604250454) (#7 + #8 통합 빌드)
+
+### PR 정리
+- **#8** (CI 자동 교차 검증, 27 파일) — squash merge → main. PR #7 코드까지 함께 통합됨
+- **#7** (theme + IAP v14) — #8 squash에 포함되어 main 반영 완료, 별도 머지 불필요
